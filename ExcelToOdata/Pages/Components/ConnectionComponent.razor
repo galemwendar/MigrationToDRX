@@ -1,0 +1,34 @@
+﻿@using ExcelToOdata.Data.Models.ViewModels
+@using Radzen.Blazor
+
+<RadzenNotification />
+
+<RadzenTemplateForm TItem="ConnectionViewModel" Data="Model" Submit="@SubmitAsync">
+    <div class="row flex-between-center mb-2">
+        <div class="col-auto">
+            <h5>Подключение</h5>
+        </div>
+    </div>
+    <div class="mb-3">
+        <RadzenTextBox @bind-Value="@Model.Url" class="w-100 form-control"
+            Placeholder="http://localhost:5000/Integration/Odata/" Name="Url" />
+        <RadzenRequiredValidator Component="Url" Text="Введите URL" />
+
+    </div>
+
+    <div class="mb-3">
+
+        <RadzenTextBox @bind-Value="@Model.UserName" class="w-100 form-control" Placeholder="Administrator"
+            Name="UserName" />
+        <RadzenRequiredValidator Component="UserName" Text="Введите имя пользователя" />
+    </div>
+
+    <div class="mb-3">
+        <RadzenPassword @bind-Value="@Model.Password" class="w-100 form-control" Name="Password" />
+        <RadzenRequiredValidator Component="Password" Text="Введите пароль" />
+    </div>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary" style="width: auto;">Подключиться к серверу</button>
+    </div>
+</RadzenTemplateForm>

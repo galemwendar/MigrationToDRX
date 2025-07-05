@@ -1,0 +1,177 @@
+﻿@page "/mainpage"
+@using ExcelToOdata.Data.Models
+@using Radzen.Blazor
+@using System.Data
+@using System.Dynamic
+
+<RadzenComponents />
+
+@if (!IsConnected)
+{
+    <p> Подключение не настроено <a href="/">Вернуться на страницу подключения</a> </p>
+}
+
+@* @if(!EntitySets.Any())
+{
+    <p> Загрузка...</p>
+}
+else
+{
+
+
+    <div class="row mb-3">
+        
+        <RadzenDataGrid Data="@EntityProperties" TItem="@EdmxField" AllowFiltering="true" AllowSorting="true">
+            <Columns>
+               <RadzenDataGridColumn Property="@nameof(EdmxField.Name)" Title="Название" />
+               <RadzenDataGridColumn Property="@nameof(EdmxField.Type)" Title="Тип" />
+               <RadzenDataGridColumn Property="@nameof(EdmxField.Nullable)" Title="Nullable" />
+            </Columns>
+        </RadzenDataGrid>
+    </div>
+} *@
+
+<div class="row mb-3">
+    <div class="text-description">Выберите сущность</div>
+    <RadzenDropDown Data="@EntitySets" TValue="string" TextProperty="Name" ValueProperty="Name"
+        @bind-Value="SelectedEntitySetName" Change="@(() => InvokeAsync(OnSelectChanged))" />
+</div>
+
+<div class="row mb-3">
+    <div class="text-description">Выберите файл для загрузки</div>
+    <div class="text-description">Поддерживаемые форматы: .xlsx, .xls, .odf, .ods, .csv</div>
+
+    <RadzenUpload Accept=".xlsx,.xls,.odf,.ods,.csv" Multiple="false" Change="@OnFileUpload" />
+</div>
+
+    @* <table>
+        <thead>
+            <tr>
+                <th>Колонка Excel</th>
+                <th>Свойство EntitySet</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var col in columns)
+            {
+                <tr>
+                    <td>@col</td>
+                    <td>
+                        <RadzenDropDown TValue="string"
+                                        Data="@EntityProperties"
+                                        TextProperty="Summary"
+                                        ValueProperty="Name"
+                                        @bind-Value="columnMapping[col]"
+                                        Style="width: 100%"
+                                        Placeholder="Выберите свойство" />
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table> *@
+
+ <RadzenDataGrid TItem="ExpandoObject" Data="@items">
+    <Columns>
+        @foreach (var col in columns)
+        {
+            <RadzenDataGridColumn TItem="ExpandoObject" Title="@col">
+                <HeaderTemplate>
+                    <RadzenDropDown TValue="string"
+                        Data="@EntityProperties"
+                        TextProperty="Summary"
+                        ValueProperty="Name"
+                        @bind-Value="columnMapping[col]"
+                        Style="width: 100%"
+                        Placeholder="Выберите свойство" />
+                </HeaderTemplate>
+                <Template Context="data">
+                    @{
+                        var dict = (IDictionary<string, object>)data!;
+                        if (dict.ContainsKey(col))
+                        {
+                            <text>@dict[col]</text>
+                        }
+                    }
+                </Template>
+            </RadzenDataGridColumn>
+        }
+    </Columns>
+</RadzenDataGrid> 
+
+@*<RadzenTable>
+    <RadzenTableHeader>
+        <RadzenTableHeaderRow>
+
+            @foreach (var col in columns)
+            {
+                <RadzenTableHeaderCell>
+                    @($"Column {col}")
+                    <RadzenDropDown TValue="string"
+                        Data="@EntityProperties"
+                        TextProperty="Summary"
+                        ValueProperty="Name"
+                        @bind-Value="columnMapping[col]"
+                        Style="width: 100%"
+                        Placeholder="Выберите свойство" />
+                </RadzenTableHeaderCell>
+            }
+        </RadzenTableHeaderRow>
+    </RadzenTableHeader>
+    <RadzenTableBody>
+    @* @for (var i = 0; i < rows; i++)
+    {
+        var row = i;
+        <RadzenTableRow>
+            @for (var j = 0; j < cols; j++)
+            {
+                var cell = j;
+                <RadzenTableCell>
+                    @($"Cell {row} {cell}")
+                </RadzenTableCell>
+            }
+        </RadzenTableRow>
+    } 
+
+    @foreach (var item in items)
+    {
+        <RadzenTableRow>
+            <RadzenTableCell>@item</RadzenTableCell>
+        </RadzenTableRow>
+    }
+    </RadzenTableBody>
+</RadzenTable> *@
+
+
+
+@* <InputFile OnChange="@HandleFileUpload" />
+
+@if (ExcelHeaders.Count > 0 && EdmxFields.Count > 0)
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Колонка Excel</th>
+                <th>Поле EDMX</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var header in ExcelHeaders)
+            {
+                <tr>
+                    <td>@header</td>
+                    <td>
+                        <InputSelect @bind-Value="FieldMap[header]">
+                            <option value="">-- Не выбрано --</option>
+                            @foreach (var edm in EdmxFields)
+                            {
+                                <option value="@edm.Name">@edm.Name (@edm.Type)</option>
+                            }
+                        </InputSelect>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <button class="btn btn-primary" @onclick="@SubmitData">Импортировать</button>
+} *@
