@@ -4,3 +4,18 @@
     -webkit-box-pack: center;
     justify-content: center;
 }
+
+.upload-custom {
+    .rz-fileupload-buttonbar {
+        background-color: transparent;
+    }
+ .rz-fileupload-content {
+    width: 100%;
+ }
+}
+
+.text-description {
+    font-size: 13px;
+    line-height: 20px;
+    color: #5d6e82;
+}

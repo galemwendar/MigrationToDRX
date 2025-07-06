@@ -4,8 +4,14 @@ using ExcelToOdata.Data;
 using ExcelToOdata.Data.Services;
 using Radzen;
 using Radzen.Blazor;
+using Microsoft.AspNetCore.Http.Features;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 100 * 1024 * 1024; // 100 МБ
+});
 
 // Add services to the container.
 builder.Services.AddRazorPages();
@@ -17,7 +23,6 @@ builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<DialogService>();
 builder.Services.AddScoped<ContextMenuService>();
 builder.Services.AddScoped<TooltipService>();
-
 
 var app = builder.Build();
 

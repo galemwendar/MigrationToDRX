@@ -1,6 +1,7 @@
 using System;
 using System.Text;
 using ExcelToOdata.Data.Models;
+using ExcelToOdata.Data.Models.Dto;
 using Microsoft.OData.Edm;
 using NLog;
 using Simple.OData.Client;
@@ -13,6 +14,8 @@ public class OdataClientService
     private HttpResponseMessage? _response = null;
     private ODataClientSettings? _settings = null;
     private IEdmModel? _metadata = null;
+
+    private IEdmEntityContainer? _container = null;
 
     private string? _url;
     private string? _username;
@@ -62,6 +65,7 @@ public class OdataClientService
         {
             _client = new ODataClient(_settings);
             _metadata = await _client.GetMetadataAsync<IEdmModel>();
+            _container = _metadata.EntityContainer;
 
             return _metadata != null;
         }
@@ -78,105 +82,117 @@ public class OdataClientService
         }
 
     }
-    
-    public async Task<IEnumerable<IEdmEntitySet>> ConfigureAsync(string url, string userName, string password)
-    {
-        _url = url;
-        _username = userName;
-        _password = password;
-
-
-        _settings = new ODataClientSettings(new Uri(_url));
-        _settings.IgnoreResourceNotFoundException = true;
-        _settings.OnTrace = (x, y) =>
-        {
-            logger.Trace(string.Format(x, y));
-        };
-        _settings.RequestTimeout = new TimeSpan(0, 0, 600);
-        _settings.BeforeRequest += delegate (HttpRequestMessage message)
-        {
-            var authHeaderValue = Convert.ToBase64String(Encoding.UTF8.GetBytes(string.Format("{0}:{1}", _username, _password)));
-            message.Headers.Add("Authorization", "Basic " + authHeaderValue);
-        };
-        _settings.AfterResponse += httpResonse => { _response = httpResonse; };
-
-        try
-        {
-            _client = new ODataClient(_settings);
-            var metadata = await _client.GetMetadataAsync<IEdmModel>();
-            var container = metadata.EntityContainer;
-            return container.EntitySets().ToList();
-
-        }
-
-        catch (WebRequestException ex)
-        {
-            logger.Error(ex);
-            return Enumerable.Empty<IEdmEntitySet>();
-        }
-        catch (Exception ex)
-        {
-            logger.Error(ex);
-            return Enumerable.Empty<IEdmEntitySet>();
-        }
-    }
 
     /// <summary>
     /// Получить текущий ODataClient
     /// </summary>
-    /// <returns></returns>
-    /// <exception cref="InvalidOperationException"></exception>
+    /// <returns>ODataClient</returns>
+    /// <exception cref="InvalidOperationException"> Если клиент не инициализирован </exception>
     public ODataClient GetClient()
     {
         if (_client == null)
-            throw new InvalidOperationException("OData client not initialized. Call SetConnection first.");
+            throw new InvalidOperationException("Odata клиент не инициализирован. Вызовите метод SetConnection");
 
         return _client;
     }
 
-    /// <summary>
-    /// Получить текущий EntityContainer
-    /// </summary>
-    /// <returns>экземпляр IEdmEntityContainer</returns>
-    public async Task<IEdmEntityContainer> GetEntityContainerAsync()
-    {
-        var metadata = await _client!.GetMetadataAsync<IEdmModel>();
-        return metadata.EntityContainer;
-    }
 
     /// <summary>
     /// Получить все коллекции сущностей
     /// </summary>
     /// <returns>IEnumerable<IEdmEntitySet></returns>
-    public async Task<List<IEdmEntitySet>> GetEntitySetsAsync()
+    public List<IEdmEntitySet> GetEntitySets()
     {
-        var metadata = await _client!.GetMetadataAsync<IEdmModel>();
-        var container = metadata.EntityContainer;
-        return container.EntitySets().ToList();
+        return _container.EntitySets().ToList();
     }
 
     /// <summary>
     /// Получить схему выбранного типа сущности
     /// </summary>
     /// <param name="entitySet">выбранная коллекция сущностей</param>
-    /// <returns>коллекция свойств в виде строки</returns>
-    public async Task<List<EdmxField>> GetPropertiesOfEntitySetAsync(string entitySetName)
+    /// <returns>dto с описанием структуры сущности</returns>
+    public EdmxEntityDto GetEdmxEntityDto(string typeOrEntitySetName)
     {
-        var metadata = await _client!.GetMetadataAsync<IEdmModel>();
-        var container = metadata.EntityContainer;
+        var entitySet = _container!.FindEntitySet(typeOrEntitySetName);
 
-        var entitySet = container.FindEntitySet(entitySetName);
-        var entityType = entitySet?.EntityType();
+        var entityType = entitySet?.EntityType()
+            ?? _metadata!.FindDeclaredType(typeOrEntitySetName) as IEdmEntityType;
 
         if (entityType == null)
-            return new List<EdmxField>();
+            return new EdmxEntityDto();
 
-        return entityType.StructuralProperties()
-            .Select(p => new EdmxField
+        var keys = entityType.Key().Select(k => k.Name).ToList();
+
+        return new EdmxEntityDto()
+        {
+
+            Name = entityType.Name,
+            FullName = entityType.FullName(),
+            BaseType = entityType.BaseType?.FullTypeName(),
+            EntitySetName = typeOrEntitySetName,
+            IsAbstract = entityType.IsAbstract,
+            IsOpen = entityType.IsOpen,
+            Keys = keys,
+
+            StructuralProperties = entityType.StructuralProperties().Select(p => new StructuralFieldDto
             {
                 Name = p.Name,
                 Type = p.Type.FullName(),
                 Nullable = p.Type.IsNullable
-            }).ToList();
+            }).ToList(),
+
+            NavigationProperties = entityType.NavigationProperties().Select(p => new NavigationPropertyDto
+            {
+                Name = p.Name,
+                Type = p.Type.FullName(),
+                IsCollection = p.Type.IsCollection(),
+                Nullable = p.Type.IsNullable
+            }).ToList(),
+        };
+    }
+
+    /// <summary>
+    /// Получить список свойств свойства-коллекции
+    /// </summary>
+    /// <param name="prop">Свойство-коллекция</param>
+    /// <returns>Структура сущности с заполненным именем и списком свойств</returns>
+    public EdmxEntityDto GetChildEntities(NavigationPropertyDto prop)
+    {
+        if (prop.IsCollection == false)
+        {
+            throw new Exception("Свойство не является коллекцией");
+        }
+
+        if (string.IsNullOrWhiteSpace(prop.Type))
+        {
+            throw new Exception("Не указан тип свойства");
+        }
+
+        var propertyDeclaredType = string.Empty;
+
+        const string prefix = "Collection(";
+        const string suffix = ")";
+
+        if (prop.Type.StartsWith(prefix) && prop.Type.EndsWith(suffix))
+        {
+            propertyDeclaredType = prop.Type.Substring(prefix.Length, prop.Type.Length - prefix.Length - suffix.Length);
+        }
+
+        var edmType = _metadata!.FindDeclaredType(propertyDeclaredType);
+
+        var structuredType = edmType as IEdmStructuredType;
+
+        return new EdmxEntityDto()
+        {
+            Name = structuredType?.FullTypeName(),
+            StructuralProperties = structuredType?
+            .DeclaredProperties?
+            .Select(p => new StructuralFieldDto
+            {
+                Name = p.Name,
+                Type = p.Type.FullName(),
+                Nullable = p.Type.IsNullable
+            }).ToList() ?? new()
+        };
     }
 }
