@@ -1,6 +1,6 @@
 using System.Data;
 using ClosedXML.Excel;
-namespace ExcelToOdata.Data.Services;
+namespace MigrationToDRX.Data.Services;
 
 public class ExcelService
 {

@@ -1,6 +1,6 @@
 using System;
 
-namespace ExcelToOdata.Data.Helpers;
+namespace MigrationToDRX.Data.Helpers;
 
 /// <summary>
 /// Вспомогательный класс для работы с типами Edm

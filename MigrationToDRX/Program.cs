@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
-using ExcelToOdata.Data;
-using ExcelToOdata.Data.Services;
+using MigrationToDRX.Data;
+using MigrationToDRX.Data.Services;
 using Radzen;
 using Radzen.Blazor;
 using Microsoft.AspNetCore.Http.Features;

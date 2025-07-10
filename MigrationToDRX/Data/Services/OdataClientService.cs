@@ -1,12 +1,12 @@
 using System;
 using System.Text;
-using ExcelToOdata.Data.Models;
-using ExcelToOdata.Data.Models.Dto;
+using MigrationToDRX.Data.Models;
 using Microsoft.OData.Edm;
+using MigrationToDRX.Data.Models.Dto;
 using NLog;
 using Simple.OData.Client;
 
-namespace ExcelToOdata.Data.Services;
+namespace MigrationToDRX.Data.Services;
 
 public class OdataClientService
 {

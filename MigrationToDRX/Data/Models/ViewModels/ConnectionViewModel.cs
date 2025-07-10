@@ -1,6 +1,6 @@
 using System;
 
-namespace ExcelToOdata.Data.Models.ViewModels;
+namespace MigrationToDRX.Data.Models.ViewModels;
 
 /// <summary>
 /// Модель для подключения к Odata серверу

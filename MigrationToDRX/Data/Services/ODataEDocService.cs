@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using NLog;
 using Simple.OData.Client;
 
-namespace ExcelToOdata.Data.Services;
+namespace MigrationToDRX.Data.Services;
 
 /// <summary>
 /// Сервис для работы с электронными документами

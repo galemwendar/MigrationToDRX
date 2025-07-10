@@ -1,6 +1,6 @@
 using System;
 
-namespace ExcelToOdata.Data.Models.Dto;
+namespace MigrationToDRX.Data.Models.Dto;
 
 /// <summary>
 /// Навигационное свойство сущности

@@ -1,11 +1,11 @@
 using System;
 using System.ComponentModel;
-using ExcelToOdata.Data.Models.ViewModels;
-using ExcelToOdata.Data.Services;
 using Microsoft.AspNetCore.Components;
+using MigrationToDRX.Data.Models.ViewModels;
+using MigrationToDRX.Data.Services;
 using Radzen;
 
-namespace ExcelToOdata.Pages.Components;
+namespace MigrationToDRX.Pages.Components;
 
 public partial class ConnectionComponent : ComponentBase
 {

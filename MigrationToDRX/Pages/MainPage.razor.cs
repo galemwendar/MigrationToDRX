@@ -1,15 +1,15 @@
 using System;
 using System.Data;
 using System.Dynamic;
-using ExcelToOdata.Data.Models;
-using ExcelToOdata.Data.Models.Dto;
-using ExcelToOdata.Data.Services;
+using MigrationToDRX.Data.Models;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.OData.Edm;
+using MigrationToDRX.Data.Models.Dto;
+using MigrationToDRX.Data.Services;
 using Radzen;
 
-namespace ExcelToOdata.Pages;
+namespace MigrationToDRX.Pages;
 
 public partial class MainPage
 {
