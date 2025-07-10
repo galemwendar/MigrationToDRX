@@ -30,7 +30,7 @@ public class ODataEDocService
     /// </summary>
     /// <param name="eDocId">Идентификатор электронного документа</param>
     /// <returns>Коллекция свойств электронного документа</returns>
-    public async Task<IDictionary<string, object>> FindEdocAsync(int eDocId)
+    public async Task<IDictionary<string, object>> FindEdocAsync(long eDocId)
     {
         logger.Trace("FindEdocAsync");
         return await _client
@@ -61,7 +61,7 @@ public class ODataEDocService
     /// <param name="note">Описание версии</param>
     /// <param name="associatedApp">связанное приложение по расширению файла</param>
     /// <returns>Коллекция свойств версии документа</returns>
-    public async Task<IDictionary<string, object>?> CreateNewVersion(int eDocId, string note, IDictionary<string, object> associatedApp)
+    public async Task<IDictionary<string, object>?> CreateNewVersion(long eDocId, string note, IDictionary<string, object> associatedApp)
     {
         try
         {
@@ -90,12 +90,12 @@ public class ODataEDocService
     /// <param name="eDocId">идентификатор документа</param>
     /// <param name="body">тело документа</param>
     /// <param name="lastVersion">последняя версия документа</param>
-    public async Task FillBodyAsync(int eDocId, byte[] body, IDictionary<string, object> lastVersion)
+    public async Task FillBodyAsync(long eDocId, byte[] body, IDictionary<string, object> lastVersion)
     {
         try
         {
             lastVersion.TryGetValue("Id", out var lastVersionKey);
-            if (int.TryParse(lastVersionKey?.ToString(), out int lastVersionId))
+            if (long.TryParse(lastVersionKey?.ToString(), out long lastVersionId))
             {
                 var eDocBody = await _client.For("IElectronicDocuments")
                     .Key(eDocId)
