@@ -11,20 +11,21 @@
     </div>
     <div class="mb-3">
         <RadzenTextBox @bind-Value="@Model.Url" class="w-100 form-control"
-            Placeholder="http://localhost:5000/Integration/Odata/" Name="Url" />
+                       Placeholder="Введите URL, например http://localhost/Integration/Odata/" Name="Url" />
         <RadzenRequiredValidator Component="Url" Text="Введите URL" />
 
     </div>
 
     <div class="mb-3">
 
-        <RadzenTextBox @bind-Value="@Model.UserName" class="w-100 form-control" Placeholder="Administrator"
-            Name="UserName" />
+        <RadzenTextBox @bind-Value="@Model.UserName" class="w-100 form-control"
+                       Placeholder="Введите логин, например Administrator" Name="UserName" />
         <RadzenRequiredValidator Component="UserName" Text="Введите имя пользователя" />
     </div>
 
     <div class="mb-3">
-        <RadzenPassword @bind-Value="@Model.Password" class="w-100 form-control" Name="Password" />
+        <RadzenPassword @bind-Value="@Model.Password" class="w-100 form-control"
+                        Placeholder="Введите пароль" Name="Password" />
         <RadzenRequiredValidator Component="Password" Text="Введите пароль" />
     </div>
 
