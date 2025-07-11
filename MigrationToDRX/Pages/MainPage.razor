@@ -11,109 +11,113 @@
     {
         <p> Подключение не настроено <a href="/">Вернуться на страницу подключения</a> </p>
     }
-    <div class="card card-body">
-        <div class="row mb-3">
-            <div class="col-3">
-                <div class="text-description">Выберите сущность</div>
-            </div>
-            <div class="col-9">
-                <RadzenDropDown Data="@EntitySets" TValue="string" TextProperty="Name" ValueProperty="Name" AllowFiltering="true"
-                                @bind-Value="SelectedEntitySetName" Style="width: 100%" Change="@(() => InvokeAsync(OnEntitySetsSelectChanged))" />
-            </div>
+    <div class="card">
+        <div class="card-header">
+            Необходимо выбрать сущность для миграции данных
         </div>
-
-        @if (WorkWithCollectionProperty && CollectionPropeties != null)
-        {
+        <div class="card-body">
             <div class="row mb-3">
                 <div class="col-3">
-                    <div class="text-description">Выберите свойство-коллекцию</div>
+                    <div class="text-description">Выберите сущность</div>
                 </div>
                 <div class="col-9">
-                    <RadzenDropDown Data="@CollectionPropeties" TValue="string" TextProperty="Name" ValueProperty="Name" AllowFiltering="true"
-                                    @bind-Value="SelectedCollectionPropertyName" Style="width: 100%" Change="@(() => InvokeAsync(OnCollectionPropertyChanged))" />
+                    <RadzenDropDown Data="@EntitySets" TValue="string" TextProperty="Name" ValueProperty="Name"
+                        AllowFiltering="true" @bind-Value="SelectedEntitySetName" Style="width: 100%"
+                        Change="@(() => InvokeAsync(OnEntitySetsSelectChanged))" />
                 </div>
             </div>
-        }
+
+            @if (WorkWithCollectionProperty && CollectionPropeties != null)
+            {
+                <div class="row mb-3">
+                    <div class="col-3">
+                        <div class="text-description">Выберите свойство-коллекцию</div>
+                    </div>
+                    <div class="col-9">
+                        <RadzenDropDown Data="@CollectionPropeties" TValue="string" TextProperty="Name" ValueProperty="Name"
+                            AllowFiltering="true" @bind-Value="SelectedCollectionPropertyName" Style="width: 100%"
+                            Change="@(() => InvokeAsync(OnCollectionPropertyChanged))" />
+                    </div>
+                </div>
+            }
 
 
-        <div class="row mb-3 d-flex">
-            <div class="col-3">
-                <div class="text-description">Выберите файл для загрузки</div>
-                <div class="text-description">Поддерживаемые форматы: .xlsx, .xls, .odf, .ods, .csv</div>
+            <div class="row mb-3 d-flex">
+                <div class="col-3">
+                    <div class="text-description">Выберите файл для загрузки</div>
+                    <div class="text-description">Поддерживаемые форматы: .xlsx, .xls, .odf, .ods, .csv</div>
+                </div>
+
+                <div class="col-9">
+                    <RadzenUpload Accept=".xlsx,.xls,.odf,.ods,.csv" Multiple="false" Progress=@OnProgressUploadFile
+                        Complete=@OnCompleteUploadFile Change="@OnFileUpload" class="upload-custom d-flex" />
+                    <RadzenProgressBar Value=@progressUploadFile class="rz-mt-6" Visible=@showProgressUploadFile />
+                    <RadzenButton Text="Отменить загрузку" Click=@OnCancelUploadFile Visible=@showProgressUploadFile
+                        class="btn btn-primary" />
+                </div>
+
             </div>
 
-            <div class="col-9">
-                <RadzenUpload Accept=".xlsx,.xls,.odf,.ods,.csv" Multiple="false" Progress=@OnProgressUploadFile Complete=@OnCompleteUploadFile Change="@OnFileUpload" class="upload-custom d-flex" />
-                <RadzenProgressBar Value=@progressUploadFile class="rz-mt-6" Visible=@showProgressUploadFile />
-                <RadzenButton Text="Отменить загрузку" Click=@OnCancelUploadFile Visible=@showProgressUploadFile class="btn btn-primary" />
+            <div class="row mb-3">
+                <div class="col-auto">
+                    <RadzenSwitch @bind-Value=@WorkWithCollectionProperty Change=@OnWorkWithCollectionPropertyChanged
+                        InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Switch value" }})" />
+                </div>
+                <div class="col-auto">
+                    <div class="text-description">Работаем со свойством-коллекцией?</div>
+                </div>
+
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-auto">
+                    <RadzenSwitch @bind-Value=@WorkWithExistedEntities Change=@OnWorkWithExistedEntitiesChanged
+                        InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Switch value" }})" />
+
+                </div>
+                <div class="col-auto">
+                    <div class="text-description">Обновляем сущность?</div>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-auto">
+                    <RadzenSwitch @bind-Value=@WorkWithEdocBodies Change=@OnWorkWithEdocBodiesChanged
+                        InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Switch value" }})" />
+                </div>
+                <div class="col-auto">
+                    <div class="text-description">Будем создавать тело документа?</div>
+                </div>
+            </div>
+
+            <div class="row mb-3 d-flex">
+                <div class="col-auto"><button class="btn btn-primary" style="width: auto;"
+                        @onclick="@LoadData">Загрузить
+                        данные</button></div>
+                <div class="col-auto"><button class="btn btn-secondary" style="width: auto;"
+                        @onclick="@ValidateData">Проверить данные</button></div>
             </div>
 
         </div>
-
-        <div class="row mb-3">
-            <div class="col-auto">
-                <RadzenSwitch @bind-Value=@WorkWithCollectionProperty
-                              Change=@OnWorkWithCollectionPropertyChanged
-                              InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Switch value" }})" />
-            </div>
-            <div class="col-auto"><div class="text-description">Работаем со свойством-коллекцией?</div></div>
-
-        </div>
-
-        <div class="row mb-3">
-            <div class="col-auto">
-                <RadzenSwitch @bind-Value=@WorkWithExistedEntities
-                              Change=@OnWorkWithExistedEntitiesChanged
-                              InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Switch value" }})" />
-
-            </div>
-            <div class="col-auto"><div class="text-description">Обновляем сущность?</div></div>
-        </div>
-
-        <div class="row mb-3">
-            <div class="col-auto">
-                <RadzenSwitch @bind-Value=@WorkWithEdocBodies
-                              Change=@OnWorkWithEdocBodiesChanged
-                              InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Switch value" }})" />
-            </div>
-            <div class="col-auto"><div class="text-description">Будем создавать тело документа?</div></div>
-        </div>
-
-        <div class="row mb-3 d-flex">
-            <div class="col-auto"><button class="btn btn-primary" style="width: auto;" @onclick="@LoadData">Загрузить данные</button></div>
-            <div class="col-auto"><button class="btn btn-secondary" style="width: auto;" @onclick="@ValidateData">Проверить данные</button></div>
-        </div>
-
     </div>
-
-
 
     <div class="card mt-5">
         <div class="card-header">
             Необходимо сопоставить поля Excel с полями сущности
         </div>
         <div class="card-body">
-            <RadzenDataGrid TItem="ExpandoObject" Data="@items" AllowColumnResize="true"
-                            AllowPaging="true"
-                            AllowSorting="true"
-                            AllowFiltering="true"
-                            AllowColumnReordering="true"
-                            PageSize="50"
-                            AllowVirtualization="true">
+            <RadzenDataGrid TItem="ExpandoObject" Data="@items" AllowColumnResize="true" AllowPaging="true"
+                AllowSorting="true" AllowFiltering="true" AllowColumnReordering="true" PageSize="100"
+                AllowVirtualization="true">
                 <Columns>
                     @foreach (var col in columns)
                     {
                         <RadzenDataGridColumn TItem="ExpandoObject" Title="@col">
                             <HeaderTemplate>
                                 <p>@col</p>
-                                <RadzenDropDown TValue="string"
-                                                Data="@EntityFieldsToMap"
-                                                TextProperty="Summary"
-                                                ValueProperty="Name"
-                                                @bind-Value="columnMapping[col]"
-                                                AllowFiltering="true"
-                                                Style="width: 100%"
-                                                Placeholder="Выберите свойство" />
+                                <RadzenDropDown TValue="string" Data="@EntityFieldsToMap" TextProperty="Summary"
+                                    ValueProperty="Name" @bind-Value="columnMapping[col]" AllowFiltering="true"
+                                    Style="width: 100%" Placeholder="Выберите свойство" />
                             </HeaderTemplate>
                             <Template Context="data">
                                 @{
@@ -130,5 +134,4 @@
             </RadzenDataGrid>
         </div>
     </div>
-
 </div>

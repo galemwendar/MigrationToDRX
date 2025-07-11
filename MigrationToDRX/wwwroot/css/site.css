@@ -5,15 +5,30 @@ html, body {
 }
 
 .page-background-auth {
-    background-image: url(/images/b111b32.jpg);
-    background-position: center;
+
+    margin: 0;
+    padding: 0;
+    background-image: url('/images/b111b32.jpg');
+    background-size: cover;      /* Масштабирует изображение, чтобы покрыть весь экран */
+    background-repeat: no-repeat;/* Отключает повтор */
+    background-position: center; /* Центрирует */
+    height: 100vh;               /* Обеспечивает высоту на весь экран */
 }
 
 .page-background-main::before {
-    content: url(/images/maxresdefault.jpeg);
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('/images/maxresdefault.jpeg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     opacity: 0.8;
-    display: inline-block;
-    position: absolute;
+    z-index: -1;
+    pointer-events: none; /* Чтобы не мешал кликам */
 }
 
 h1:focus {
