@@ -191,7 +191,7 @@ public partial class MainPage
             await file.OpenReadStream(100 * 1024 * 1024).CopyToAsync(stream);
             stream.Position = 0;
 
-            var dictList = ExcelService!.ReadExcelClosedXml(stream);
+            var dictList = ExcelService!.ReadExcel(stream);
 
             columns = dictList.FirstOrDefault()?.Keys.ToList() ?? new();
             items = dictList.Select(dict =>
