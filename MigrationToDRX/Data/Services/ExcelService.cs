@@ -1,11 +1,33 @@
 using System.Data;
+using System.Runtime.InteropServices;
+using System.Text;
 using ClosedXML.Excel;
+using ExcelDataReader;
 namespace MigrationToDRX.Data.Services;
 
 public class ExcelService
 {
+    /// <summary>
+    /// Чтение Excel файла и преобразование в список словарей
+    /// </summary>
+    /// <param name="stream">Поток данных Excel файла</param>
+    /// <returns>Список словарей, представляющих строки Excel файла</returns>
+    public List<Dictionary<string, object>> ReadExcel(Stream stream)
+    {
+        if (SystemService.GetOSPlatform() == OSPlatform.Windows)
+        {
+            return ReadExcelWithExcelReader(stream);
+        }
 
-    public List<Dictionary<string, object>> ReadExcelClosedXml(Stream stream)
+        return ReadExcelWithClosedXml(stream);
+    }
+
+    /// <summary>
+    /// Чтение Excel файла с помощью ClosedXML и преобразование в список словарей
+    /// </summary>
+    /// <param name="stream">Поток данных Excel файла</param>
+    /// <returns>Список словарей, представляющих строки Excel файла</returns>
+    private List<Dictionary<string, object>> ReadExcelWithClosedXml(Stream stream)
     {
         var result = new List<Dictionary<string, object>>();
 
@@ -29,25 +51,43 @@ public class ExcelService
         return result;
     }
 
-    // public DataSet ReadExcelToDataTable(Stream stream)
-    // {
-    //     var encoding = Encoding.GetEncoding("UTF-8");
-    //     using (var reader = ExcelReaderFactory.CreateReader(stream, new ExcelReaderConfiguration
-    //     {
-    //         FallbackEncoding = encoding
-    //     }))
-    //     {
-    //         var result = reader.AsDataSet(new ExcelDataSetConfiguration()
-    //         {
-    //             ConfigureDataTable = (_) => new ExcelDataTableConfiguration()
-    //             {
-    //                 UseHeaderRow = true
-    //             }
-    //         });
+    /// <summary>
+    /// Чтение Excel файла с помощью ExcelDataReader и преобразование в список словарей
+    /// </summary>
+    /// <param name="stream">Поток данных Excel файла</param>
+    /// <returns>Список словарей, представляющих строки Excel файла</returns>
+    private List<Dictionary<string, object>> ReadExcelWithExcelReader(Stream stream)
+    {
+        var result = new List<Dictionary<string, object>>();
+        Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 
-    //         return result;
-    //     }
-    // }
+        using var reader = ExcelReaderFactory.CreateReader(stream, new ExcelReaderConfiguration
+        {
+            FallbackEncoding = Encoding.UTF8
+        });
+
+        var dataSet = reader.AsDataSet(new ExcelDataSetConfiguration
+        {
+            ConfigureDataTable = _ => new ExcelDataTableConfiguration
+            {
+                UseHeaderRow = true
+            }
+        });
+
+        var table = dataSet.Tables[0]; // читаем только первый лист, как и в ClosedXml
+
+        foreach (DataRow row in table.Rows)
+        {
+            var dict = new Dictionary<string, object>();
+            foreach (DataColumn column in table.Columns)
+            {
+                dict[column.ColumnName] = row[column];
+            }
+            result.Add(dict);
+        }
+
+        return result; ;
+    }
 
     // public void WriteExcrlFile(DataTable dataTable, string entitySetName)
     // {
