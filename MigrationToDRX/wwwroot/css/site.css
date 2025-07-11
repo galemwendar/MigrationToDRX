@@ -4,6 +4,18 @@ html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
+.page-background-auth {
+    background-image: url(/images/b111b32.jpg);
+    background-position: center;
+}
+
+.page-background-main::before {
+    content: url(/images/maxresdefault.jpeg);
+    opacity: 0.8;
+    display: inline-block;
+    position: absolute;
+}
+
 h1:focus {
     outline: none;
 }

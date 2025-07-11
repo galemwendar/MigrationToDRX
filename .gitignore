@@ -1,0 +1,8 @@
+.vs
+/bin/
+/obj/
+/Properties/launchSettings.json
+*.csproj.user
+*.sln.user
+*.suo
+*.user
