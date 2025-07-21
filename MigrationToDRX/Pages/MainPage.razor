@@ -9,7 +9,7 @@
 
     @if (!IsConnected)
     {
-        <p> Подключение не настроено <a href="/">Вернуться на страницу подключения</a> </p>
+        <p><b> Подключение не настроено </b><a href="/" style="color: red; font-size: 18px; background-color: lightslategray;"><b>Вернуться на страницу подключения</b></a></p>
     }
     <div class="card">
         <div class="card-header">
@@ -107,8 +107,7 @@
         </div>
         <div class="card-body">
             <RadzenDataGrid TItem="ExpandoObject" Data="@items" AllowColumnResize="true" AllowPaging="true"
-                AllowSorting="true" AllowFiltering="true" AllowColumnReordering="true" PageSize="100"
-                AllowVirtualization="true">
+                 AllowColumnReorder="true" PageSize="100" AllowVirtualization="true" AllowColumnPicking = "true">
                 <Columns>
                     @foreach (var col in columns)
                     {
@@ -117,7 +116,7 @@
                                 <p>@col</p>
                                 <RadzenDropDown TValue="string" Data="@EntityFieldsToMap" TextProperty="Summary"
                                     ValueProperty="Name" @bind-Value="columnMapping[col]" AllowFiltering="true"
-                                    Style="width: 100%" Placeholder="Выберите свойство" />
+                                    Style="width: 200%" Placeholder="Выберите свойство" />
                             </HeaderTemplate>
                             <Template Context="data">
                                 @{
