@@ -18,11 +18,13 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddScoped<OdataClientService>();
 builder.Services.AddScoped<ODataEDocService>();
+builder.Services.AddScoped<EntityService>();
 builder.Services.AddScoped<ExcelService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<DialogService>();
 builder.Services.AddScoped<ContextMenuService>();
 builder.Services.AddScoped<TooltipService>();
+builder.Services.AddScoped<FileService>();
 
 var app = builder.Build();
 

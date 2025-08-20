@@ -1,13 +1,13 @@
 using System;
 using System.Data;
 using System.Dynamic;
-using MigrationToDRX.Data.Models;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.OData.Edm;
 using MigrationToDRX.Data.Models.Dto;
 using MigrationToDRX.Data.Services;
 using Radzen;
+using MigrationToDRX.Data.Enums;
+using MigrationToDRX.Data;
 
 namespace MigrationToDRX.Pages;
 
@@ -31,6 +31,9 @@ public partial class MainPage
     /// </summary>
     [Inject]
     private ExcelService? ExcelService { get; set; }
+
+    [Inject]
+    private EntityService? EntityService { get; set; }
 
     #endregion
 
@@ -105,15 +108,10 @@ public partial class MainPage
     /// </summary>
     private bool WorkWithCollectionProperty = false;
 
-    /// <summary>
-    /// Флаг работы с обновлением сущностей
-    /// </summary>
-    private bool WorkWithExistedEntities = false;
 
-    /// <summary>
-    /// Флаг работы с телами документов
-    /// </summary>
-    private bool WorkWithEdocBodies = false;
+    private int SearchEntityBy = 1;
+
+    private OdataScenario CurrentScenario = OdataScenario.CreateEntity;
 
     private List<StructuralFieldDto> EntityFieldsToMap = new();
 
@@ -212,57 +210,74 @@ public partial class MainPage
         }
     }
 
-    /// <summary>
-    /// Обработчик изменения свойства WorkWithCollection
-    /// </summary>
-    private void OnWorkWithCollectionPropertyChanged()
+    private void OnScenarioChanged(bool isOn, OdataScenario scenario)
     {
-        var mainIdProp = new StructuralFieldDto() { Name = "Id главной сущности", Type = "Edm.String", Nullable = false };
-        if (WorkWithCollectionProperty)
-        {
-            EntityFieldsToMap.Add(mainIdProp);
-        }
-        else if (WorkWithCollectionProperty == false && EntityFieldsToMap.Contains(mainIdProp))
+        var mainIdProp = new StructuralFieldDto() { Name = StringConstants.MainIdPropertyName, Type = "Edm.String", Nullable = false };
+        var pathProp = new StructuralFieldDto() { Name = StringConstants.PathPropertyName, Type = "Edm.String", Nullable = false };
+
+        if (EntityFieldsToMap.Contains(mainIdProp))
         {
             EntityFieldsToMap.Remove(mainIdProp);
         }
 
-        StateHasChanged();
-    }
-
-    /// <summary>
-    /// Обработчик изменения свойства WorkWithEdocBodies
-    /// </summary>
-    private void OnWorkWithEdocBodiesChanged()
-    {
-        var pathProp = new StructuralFieldDto() { Name = "Путь до файла", Type = "Edm.String", Nullable = false };
-        if (WorkWithCollectionProperty)
-        {
-            EntityFieldsToMap.Add(pathProp);
-        }
-        else if (WorkWithCollectionProperty == false && EntityFieldsToMap.Contains(pathProp))
+        if (EntityFieldsToMap.Contains(pathProp))
         {
             EntityFieldsToMap.Remove(pathProp);
         }
 
+        if (isOn)
+        {
+            CurrentScenario = scenario;
+
+            switch (scenario)
+            {
+                case OdataScenario.CreateEntity:
+                    break;
+
+                case OdataScenario.UpdateEntity:
+                    EntityFieldsToMap.Add(mainIdProp);
+                    break;
+
+                case OdataScenario.CreateDocumentWithVersion:
+                    EntityFieldsToMap.Add(pathProp);
+                    break;
+
+                case OdataScenario.AddVersionToExistedDocument:
+                    EntityFieldsToMap.Add(mainIdProp);
+                    EntityFieldsToMap.Add(pathProp);
+                    break;
+
+                case OdataScenario.AddEntityToCollection:
+                    EntityFieldsToMap.Add(mainIdProp);
+                    break;
+
+                case OdataScenario.UpdateEntityInCollection:
+                    EntityFieldsToMap.Add(mainIdProp);
+                    break;
+            }
+        }
+        
         StateHasChanged();
+
+    }
+
+
+    /// <summary>
+    /// Обработчик завершения загрузки файла
+    /// </summary>
+    void OnCompleteUploadFile(UploadCompleteEventArgs args)
+    {
+        showProgressUploadFile = false; //TODO на текущий момент это не работает
     }
 
     /// <summary>
-    /// Обработчик изменения свойства WorkWithExistedEntities
+    /// Обработчик прогресса загрузки файла
     /// </summary>
-    private void OnWorkWithExistedEntitiesChanged()
-    {
-        StateHasChanged();
-    }
-
-    void OnCompleteUploadFile(UploadCompleteEventArgs args)
-    {
-        showProgressUploadFile = false;
-    }
-
+    /// <param name="args"></param>
     void OnProgressUploadFile(UploadProgressArgs args)
     {
+        //TODO на текущий момент это не работает.
+        // Должен показываться прогресс загрузки excel файла на случай, если файл большой и все затянется.
         showProgressUploadFile = true;
         progressUploadFile = args.Progress;
 
@@ -277,14 +292,102 @@ public partial class MainPage
     {
         cancelUploadFile = true;
     }
-    
+
+    /// <summary>
+    /// Загружает данные из Excel в OData
+    /// </summary>
+    /// <returns></returns>
     private async Task LoadData()
     {
+        if (OdataClientService == null || string.IsNullOrEmpty(SelectedEntitySetName))
+            return;
+
+        var entities = BuildEntityDictionaries();
+
+
+        // TODO: сначала нужно проверить, что все обязательные свойства указаны в Excel
+        // если нет, то выводить ошибку
+        foreach (var entity in entities)
+        {
+            var result = await EntityService!.ProceedEntitiesToOdata(entity, SelectedEntitySetName, CurrentScenario);
+
+            if (result == null)
+            {
+                NotificationService!.Notify(new NotificationMessage
+                {
+                    Summary = "Ошибка",
+                    Detail = "Не удалось выполнить сценарий",
+                    Severity = NotificationSeverity.Error,
+                    Duration = 4000
+                });
+
+                continue;
+            }
+
+            if (!result.Success && result.Error != null)
+            {
+                NotificationService!.Notify(new NotificationMessage
+                {
+                    Summary = "Ошибка",
+                    Detail = result.Error,
+                    Severity = NotificationSeverity.Error,
+                    Duration = 4000
+                });
+            }
+        }
+
+         NotificationService!.Notify(new NotificationMessage
+            {
+                Summary = "Сообщение",
+                Detail = "Сценарий выполнен",
+                Severity = NotificationSeverity.Info,
+                Duration = 4000
+            });
+
 
     }
 
     private async Task ValidateData()
     {
-        
+        NotificationService!.Notify(new NotificationMessage
+        {
+            Summary = "Ошибка",
+            Detail = "Валидация еще не реализована",
+            Severity = NotificationSeverity.Error,
+            Duration = 4000
+        });
     }
+    
+    /// <summary>
+    /// Собирает данные из Excel в список словарей для отправки в OData.
+    /// </summary>
+    private IEnumerable<IDictionary<string, object>> BuildEntityDictionaries()
+    {
+        foreach (var item in items) // item = ExpandoObject (строка из Excel)
+        {
+            var rowDict = new Dictionary<string, object>();
+            var itemDict = item as IDictionary<string, object>;
+
+            if (itemDict == null)
+            {
+                throw new ArgumentException("");
+            }
+
+            foreach (var col in columns) // колонки Excel
+                {
+                    if (!columnMapping.TryGetValue(col, out var entityProperty))
+                        continue; // колонка не сматчена
+
+                    if (string.IsNullOrWhiteSpace(entityProperty))
+                        continue; // не указано, куда мапить
+
+                    var value = itemDict[col];
+                    rowDict[entityProperty] = value ?? string.Empty;
+                }
+
+            if (rowDict.Count > 0)
+                yield return rowDict;
+        }
+    }
+
 }
