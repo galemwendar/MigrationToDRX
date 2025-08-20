@@ -27,7 +27,7 @@ public class ExcelService
     /// </summary>
     /// <param name="stream">Поток данных Excel файла</param>
     /// <returns>Список словарей, представляющих строки Excel файла</returns>
-    private List<Dictionary<string, object>> ReadExcelWithClosedXml(Stream stream)
+    private static List<Dictionary<string, object>> ReadExcelWithClosedXml(Stream stream)
     {
         var result = new List<Dictionary<string, object>>();
 
@@ -86,7 +86,7 @@ public class ExcelService
             result.Add(dict);
         }
 
-        return result; ;
+        return result;
     }
 
     // public void WriteExcrlFile(DataTable dataTable, string entitySetName)
