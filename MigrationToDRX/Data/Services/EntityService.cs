@@ -102,7 +102,7 @@ public class EntityService
             "Edm.Int64" => long.TryParse(value.ToString(), out var l) ? l : null,
             "Edm.String" => value.ToString(),
             "Edm.Boolean" => bool.TryParse(value.ToString(), out var b) ? b : null,
-            "Edm.DateTimeOffset" => DateTimeOffset.Parse(value.ToString() ?? string.Empty, new CultureInfo("ru-RU")),
+            "Edm.DateTimeOffset" => DateTimeOffset.Parse(value.ToString() ?? string.Empty),
             "Edm.Double" => double.TryParse(value.ToString(), out var d) ? d : null,
             _ => value // по умолчанию
         };
