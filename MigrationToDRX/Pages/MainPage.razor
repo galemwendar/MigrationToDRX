@@ -101,7 +101,7 @@
                                 InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Switch value" }})" />
                         </div>
                         <div class="col-auto">
-                            <div class="text-description">Создание документов или справочников</div>
+                            <div class="text-description">Создание сущностей (документы/справочники/прочее)</div>
                         </div>
 
                     </div>
@@ -114,7 +114,7 @@
                                 InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Switch value" }})" />
                         </div>
                         <div class="col-auto">
-                            <div class="text-description">Обновление документов или справочников</div>
+                            <div class="text-description">Обновление сущностей</div>
                         </div>
 
                     </div>
@@ -127,7 +127,7 @@
                                 InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Switch value" }})" />
                         </div>
                         <div class="col-auto">
-                            <div class="text-description">Создание документа с версией</div>
+                            <div class="text-description">Создание документа с версией (для сущностей документы)</div>
                         </div>
 
                     </div>
@@ -140,7 +140,7 @@
                                 InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Switch value" }})" />
                         </div>
                         <div class="col-auto">
-                            <div class="text-description">Добавление версии в существующий документ</div>
+                            <div class="text-description">Добавление версии в существующий документ (для сущностей документы)</div>
                         </div>
 
                     </div>
@@ -203,7 +203,7 @@
 
     <div class="card mt-5">
         <div class="card-header">
-            Необходимо сопоставить поля Excel с полями сущности
+            Необходимо сопоставить столбцы Excel со свойствами сущности
         </div>
         <div class="card-body">
             <RadzenDataGrid TItem="ExpandoObject" Data="@items" AllowColumnResize="true" AllowPaging="true"

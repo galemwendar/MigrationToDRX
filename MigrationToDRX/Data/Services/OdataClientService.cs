@@ -226,7 +226,7 @@ public class OdataClientService
     /// <param name="entitySetName">коллекция сущности</param>
     /// <param name="key">ключ, по которому идет фильтр</param>
     /// <returns>сущность</returns>
-    public async Task<IDictionary<string, object>> GetEntityAsync(string entitySetName, int key)
+    public async Task<IDictionary<string, object>> GetEntityAsync(string entitySetName, long key)
     {
         if (_client == null)
         {
@@ -252,7 +252,7 @@ public class OdataClientService
     /// </summary>
     /// <param name="eDocId">Идентификатор документа</param>
     /// <returns>Документ</returns>
-    public async Task<IDictionary<string, object>> FindEdocAsync(int eDocId)
+    public async Task<IDictionary<string, object>> FindEdocAsync(long eDocId)
     {
         return await _client!
             .For("IElectronicDocuments")
@@ -286,7 +286,7 @@ public class OdataClientService
     /// <param name="note">Описание версии</param>
     /// <param name="associatedApp">Приложение, связанное с документом</param>
     /// <returns>Сущность созданной версии документа</returns>
-    public async Task<IDictionary<string, object>?> CreateNewVersion(int eDocId, string note, IDictionary<string, object> associatedApp)
+    public async Task<IDictionary<string, object>?> CreateNewVersion(long eDocId, string note, IDictionary<string, object> associatedApp)
     {
         try
         {
@@ -311,7 +311,7 @@ public class OdataClientService
     /// <param name="body">Тело документа</param>
     /// <param name="lastVersion">Последняя версия документа</param>
     /// <returns></returns>
-    public async Task FillBodyAsync(int eDocId, byte[] body, IDictionary<string, object> lastVersion)
+    public async Task FillBodyAsync(long eDocId, byte[] body, IDictionary<string, object> lastVersion)
     {
         try
         {
@@ -377,7 +377,7 @@ public class OdataClientService
     /// <param name="collectionPropertyName">Имя свойства-коллекции</param>
     /// <returns>Новая сущность</returns>
     public async Task<IDictionary<string, object>> InsertChildEntityAsync(IDictionary<string, object> childEntity,
-        int mainId,
+        long mainId,
         string entitySet,
         string collectionPropertyName)
     {
@@ -411,7 +411,7 @@ public class OdataClientService
     /// <param name="id">ключ сущности</param>
     /// <returns>Обновленная сущность</returns>
     /// <exception cref="Exception"></exception>
-    public async Task<IDictionary<string, object>> UpdateEntityAsync(IDictionary<string, object> newEntity, string entityset, int id)
+    public async Task<IDictionary<string, object>> UpdateEntityAsync(IDictionary<string, object> newEntity, string entityset, long id)
     {
         if (_client == null)
         {
@@ -443,7 +443,7 @@ public class OdataClientService
     /// <param name="propertyName">имя свойства - коллекции</param>
     /// <returns></returns>
     /// <exception cref="Exception"></exception>
-    public async Task<IDictionary<string, object>> UpdateChildEntityAsync(IDictionary<string, object> childEntity, string entityset, int id, string propertyName)
+    public async Task<IDictionary<string, object>> UpdateChildEntityAsync(IDictionary<string, object> childEntity, string entityset, long id, string propertyName)
     {
         if (_client == null)
         {

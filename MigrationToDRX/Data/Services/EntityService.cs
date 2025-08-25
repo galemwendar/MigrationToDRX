@@ -102,7 +102,7 @@ public class EntityService
             "Edm.Int64" => long.TryParse(value.ToString(), out var l) ? l : null,
             "Edm.String" => value.ToString(),
             "Edm.Boolean" => bool.TryParse(value.ToString(), out var b) ? b : null,
-            "Edm.DateTimeOffset" => DateTimeOffset.Parse(value.ToString() ?? string.Empty, new CultureInfo("ru-RU")),
+            "Edm.DateTimeOffset" => DateTimeOffset.Parse(value.ToString() ?? string.Empty),
             "Edm.Double" => double.TryParse(value.ToString(), out var d) ? d : null,
             _ => value // по умолчанию
         };
@@ -151,7 +151,7 @@ public class EntityService
 
     private async Task<SaveEntityResult> UpdateEntityAsync(IDictionary<string, object> entity, string entitySet)
     {
-        var eDocId = entity.TryGetValue(StringConstants.MainIdPropertyName, out var id) ? (int)id : 0;
+        var eDocId = entity.TryGetValue(StringConstants.MainIdPropertyName, out var id) ? (long)id : 0;
 
         if (eDocId == 0)
         {
@@ -231,7 +231,7 @@ public class EntityService
 
                 if (string.IsNullOrWhiteSpace(filePath) == false && _fileService.IsFileExists(filePath) && _fileService.IsLessThenTwoGb(filePath))
                 {
-                    var eDocId = Convert.ToInt32(id);
+                    var eDocId = Convert.ToInt64(id);
                     await SetBody(eDocId, filePath);
                     return new SaveEntityResult()
                     {
@@ -269,13 +269,13 @@ public class EntityService
     }
 
     /// <summary>
-    /// Создть тело документа
+    /// Создать тело документа
     /// </summary>
-    /// <param name="eDoc"></param>
+    /// <param name="eDocId"></param>
     /// <param name="filePath"></param>
     /// <param name="ForceUpdateBody"></param>
     /// <returns></returns>
-    public async Task SetBody(int eDocId, string filePath, bool ForceUpdateBody = false)
+    public async Task SetBody(long eDocId, string filePath, bool ForceUpdateBody = false)
     {
         var eDoc = await _odataClientService.FindEdocAsync(eDocId);
 
@@ -293,7 +293,7 @@ public class EntityService
             throw new ArgumentException("Не удалось найти Id документа");
         }
 
-        var docId = Convert.ToInt32(docIdObj);
+        var docId = Convert.ToInt64(docIdObj);
 
         var version = GetLastVersion(extension, eDoc);
         var targetApp = await _odataClientService.FindAssociatedApplication(extension);

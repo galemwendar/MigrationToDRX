@@ -12,6 +12,7 @@ public static class EdmTypeHelper
     /// </summary>
     public static Dictionary<string, Type> StructuralTypes = new Dictionary<string, Type>()
     {
+        ["Int64"] = typeof(long),
         ["String"] = typeof(string),
         ["Int32"] = typeof(int),
         ["Boolean"] = typeof(bool),
