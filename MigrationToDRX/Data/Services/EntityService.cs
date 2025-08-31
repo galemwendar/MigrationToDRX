@@ -117,41 +117,41 @@ public class EntityService
     /// <param name="scenario">Сценарий работы</param>
     /// <returns>Результат выполнения</returns>
     /// <exception cref="ArgumentException"></exception>
-    public async Task<SaveEntityResult> ProceedEntitiesToOdata(IDictionary<string, object> entity, string entitySet, OdataScenario scenario)
+    public async Task<SaveEntityResult> ProceedEntitiesToOdata(ProcessedEntityDto dto)
     {
-        return scenario switch
+        return dto.Scenario switch
         {
-            OdataScenario.CreateEntity => await CreateEntityAsync(entity, entitySet),
-            OdataScenario.UpdateEntity => await UpdateEntityAsync(entity, entitySet),
-            OdataScenario.CreateDocumentWithVersion => await CreateDocumentWithVersionAsync(entity, entitySet),
-            OdataScenario.AddVersionToExistedDocument => await AddVersionToExistedDocumentAsync(entity, entitySet),
-            OdataScenario.AddEntityToCollection => await AddEntityToCollectionAsync(entity, entitySet),
-            OdataScenario.UpdateEntityInCollection => await UpdateEntityInCollectionAsync(entity, entitySet),
+            OdataScenario.CreateEntity => await CreateEntityAsync(dto),
+            OdataScenario.UpdateEntity => await UpdateEntityAsync(dto),
+            OdataScenario.CreateDocumentWithVersion => await CreateDocumentWithVersionAsync(dto),
+            OdataScenario.AddVersionToExistedDocument => await AddVersionToExistedDocumentAsync(dto),
+            OdataScenario.AddEntityToCollection => await AddEntityToCollectionAsync(dto),
+            OdataScenario.UpdateEntityInCollection => await UpdateEntityInCollectionAsync(dto),
             _ => throw new ArgumentException("Не удалось обработать сценарий")
         };
     }
 
-    private async Task<SaveEntityResult> UpdateEntityInCollectionAsync(IDictionary<string, object> entity, string entitySet)
+    private async Task<SaveEntityResult> UpdateEntityInCollectionAsync(ProcessedEntityDto dto)
     {
         throw new NotImplementedException();
     }
 
 
-    private async Task<SaveEntityResult> AddEntityToCollectionAsync(IDictionary<string, object> entity, string entitySet)
+    private async Task<SaveEntityResult> AddEntityToCollectionAsync(ProcessedEntityDto dto)
     {
         throw new NotImplementedException();
     }
 
 
-    private async Task<SaveEntityResult> AddVersionToExistedDocumentAsync(IDictionary<string, object> entity, string entitySet)
+    private async Task<SaveEntityResult> AddVersionToExistedDocumentAsync(ProcessedEntityDto dto)
     {
         throw new NotImplementedException();
     }
 
 
-    private async Task<SaveEntityResult> UpdateEntityAsync(IDictionary<string, object> entity, string entitySet)
+    private async Task<SaveEntityResult> UpdateEntityAsync(ProcessedEntityDto dto)
     {
-        var eDocId = entity.TryGetValue(StringConstants.MainIdPropertyName, out var id) ? (int)id : 0;
+        var eDocId = dto.Entity!.TryGetValue(StringConstants.MainIdPropertyName, out var id) ? (int)id : 0;
 
         if (eDocId == 0)
         {
@@ -162,11 +162,11 @@ public class EntityService
             };
         }
 
-        var filePath = entity.TryGetValue(StringConstants.PathPropertyName, out var path) ? (string)path : "";
+        var filePath = dto.Entity!.TryGetValue(StringConstants.PathPropertyName, out var path) ? (string)path : "";
 
         if (filePath != null && _fileService.IsFileExists(filePath) && _fileService.IsLessThenTwoGb(filePath))
         {
-            await SetBody(eDocId, filePath);
+            await FindEdocAndSetBodyAsync(eDocId, filePath);
             return new SaveEntityResult()
             {
                 Success = true,
@@ -190,16 +190,16 @@ public class EntityService
     /// <param name="entity"></param>
     /// <param name="entitySet"></param>
     /// <returns>Дто результата создания сущности</returns>
-    public async Task<SaveEntityResult> CreateEntityAsync(IDictionary<string, object> entity, string entitySet)
+    public async Task<SaveEntityResult> CreateEntityAsync(ProcessedEntityDto dto)
     {
         var result = new SaveEntityResult();
         try
         {
-            var entityToSave = entity
+            var entityToSave = dto.Entity!
                 .Where(p => p.Key != StringConstants.PathPropertyName && p.Key != StringConstants.MainIdPropertyName)
                 .ToDictionary(p => p.Key, p => p.Value);
 
-            var savedEntity = await _odataClientService.InsertEntityAsync(entityToSave, entitySet);
+            var savedEntity = await _odataClientService.InsertEntityAsync(entityToSave, dto.EntitySet!);
             result.Entity = savedEntity;
             result.Success = true;
         }
@@ -212,19 +212,19 @@ public class EntityService
         return result;
     }
 
-    public async Task<SaveEntityResult> CreateDocumentWithVersionAsync(IDictionary<string, object> entity, string entitySet)
+    public async Task<SaveEntityResult> CreateDocumentWithVersionAsync(ProcessedEntityDto dto)
     {
         try
         {
-            var entityToSave = entity
+            var entityToSave = dto.Entity!
                 .Where(p => p.Key != StringConstants.PathPropertyName && p.Key != StringConstants.MainIdPropertyName)
                 .ToDictionary(p => p.Key, p => p.Value);
 
-            var savedEntity = await _odataClientService.InsertEntityAsync(entityToSave, entitySet);
+            var savedEntity = await _odataClientService.InsertEntityAsync(entityToSave, dto.EntitySet!);
 
             if (savedEntity != null && savedEntity.TryGetValue("Id", out var id))
             {
-                var filePath = entity.TryGetValue(StringConstants.PathPropertyName, out var path) 
+                var filePath = dto.Entity!.TryGetValue(StringConstants.PathPropertyName, out var path) 
                     ? path?.ToString() ?? "" 
                     : "";
 
@@ -232,7 +232,7 @@ public class EntityService
                 if (string.IsNullOrWhiteSpace(filePath) == false && _fileService.IsFileExists(filePath) && _fileService.IsLessThenTwoGb(filePath))
                 {
                     var eDocId = Convert.ToInt32(id);
-                    await SetBody(eDocId, filePath);
+                    await FindEdocAndSetBodyAsync(eDocId, filePath);
                     return new SaveEntityResult()
                     {
                         Entity = savedEntity,
@@ -275,7 +275,7 @@ public class EntityService
     /// <param name="filePath"></param>
     /// <param name="ForceUpdateBody"></param>
     /// <returns></returns>
-    public async Task SetBody(int eDocId, string filePath, bool ForceUpdateBody = false)
+    public async Task FindEdocAndSetBodyAsync(int eDocId, string filePath, bool ForceUpdateBody = false)
     {
         var eDoc = await _odataClientService.FindEdocAsync(eDocId);
 

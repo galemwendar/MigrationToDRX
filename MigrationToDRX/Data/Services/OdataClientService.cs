@@ -1,6 +1,4 @@
-using System;
 using System.Text;
-using MigrationToDRX.Data.Models;
 using Microsoft.OData.Edm;
 using MigrationToDRX.Data.Models.Dto;
 using NLog;
@@ -97,7 +95,7 @@ public class OdataClientService
     /// <summary>
     /// Получить все коллекции сущностей
     /// </summary>
-    /// <returns>IEnumerable<IEdmEntitySet></returns>
+    /// <returns>Коллекция сущностей</returns>
     public List<IEdmEntitySet> GetEntitySets()
     {
         return _container.EntitySets().ToList();
@@ -106,7 +104,7 @@ public class OdataClientService
     /// <summary>
     /// Получить схему выбранного типа сущности
     /// </summary>
-    /// <param name="entitySet">выбранная коллекция сущностей</param>
+    /// <param name="typeOrEntitySetName">выбранная коллекция сущностей</param>
     /// <returns>dto с описанием структуры сущности</returns>
     public EdmxEntityDto GetEdmxEntityDto(string typeOrEntitySetName)
     {
@@ -131,7 +129,7 @@ public class OdataClientService
             IsOpen = entityType.IsOpen,
             Keys = keys,
 
-            StructuralProperties = entityType.StructuralProperties().Where(p => p.Name != "Id" && p.Name != "Created" && p.Name != "Modified").Select(p => new StructuralFieldDto
+            StructuralProperties = entityType.StructuralProperties().Select(p => new StructuralFieldDto
             {
                 Name = p.Name,
                 Type = p.Type.FullName(),

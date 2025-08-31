@@ -39,11 +39,6 @@ public partial class MainPage
 
     #region Работа с Excel
 
-    private bool showProgressUploadFile = false;
-
-    private bool cancelUploadFile = false;
-
-    private int progressUploadFile;
 
     /// <summary>
     /// Список объектов, загруженных из Excel
@@ -94,26 +89,37 @@ public partial class MainPage
     private List<IEdmEntitySet> EntitySets { get; set; } = new();
 
     /// <summary>
-    /// Структурные поля сущности
-    /// </summary>
-    private List<StructuralFieldDto> StructuralFields => EdmxEntityDto == null ? new() : EdmxEntityDto.StructuralProperties.ToList();
-
-    /// <summary>
     /// Навигационные свойства коллекции
     /// </summary>
     private List<NavigationPropertyDto> CollectionPropeties => EdmxEntityDto == null ? new() : EdmxEntityDto.NavigationProperties.Where(p => p.IsCollection).ToList();
 
     /// <summary>
-    /// Флаг работы со свойством-коллекцией
+    /// Признак, по которому будет производится поиск по ссылочному свойству
     /// </summary>
-    private bool WorkWithCollectionProperty = false;
+    private SearchEntityBy SearchInMainEntityBy = SearchEntityBy.Id;
 
-
-    private int SearchEntityBy = 1;
+    /// <summary>
+    /// Признак, по которому будет производится поиск по ссылочному в свойстве-коллекции
+    /// </summary>
+    private SearchEntityBy SearchInChildEntityBy = SearchEntityBy.Id;
 
     private OdataScenario CurrentScenario = OdataScenario.CreateEntity;
 
-    private List<StructuralFieldDto> EntityFieldsToMap = new();
+    private record ScenarioOption(OdataScenario Value, string Description);
+
+    private List<ScenarioOption> ScenarioOptions = new()
+    {
+        new(OdataScenario.CreateEntity, "Создание документов или справочников"),
+        new(OdataScenario.UpdateEntity, "Обновление документов или справочников"),
+        new(OdataScenario.CreateDocumentWithVersion, "Создание документа с версией"),
+        new(OdataScenario.AddVersionToExistedDocument, "Добавление версии в существующий документ"),
+        new(OdataScenario.AddEntityToCollection, "Добавление сущности в свойство-коллекцию (еще не реализовано)"),
+        new(OdataScenario.UpdateEntityInCollection, "Обновление сущности в свойстве-коллекции (еще не реализовано)")
+    };
+
+    private List<EntityFieldDto> BaseEntityFieldsToMap = new();
+
+    private List<EntityFieldDto> EntityFieldsToMap = new();
 
     #endregion
 
@@ -135,44 +141,127 @@ public partial class MainPage
     /// </summary>
     private void OnEntitySetsSelectChanged()
     {
-        if (!string.IsNullOrWhiteSpace(SelectedEntitySetName))
+        foreach (var kvp in columnMapping)
         {
-            EdmxEntityDto = OdataClientService!.GetEdmxEntityDto(SelectedEntitySetName);
-
-            if (EdmxEntityDto == null)
-            {
-                NotificationService!.Notify(new NotificationMessage
-                {
-                    Summary = "Ошибка",
-                    Detail = "Не удалось получить свойства сущности",
-                    Severity = NotificationSeverity.Error,
-                    Duration = 4000
-                });
-
-                return;
-            }
-
-            EntityFieldsToMap = EdmxEntityDto.StructuralProperties;
+            columnMapping[kvp.Key] = string.Empty;
         }
 
+        if (!string.IsNullOrWhiteSpace(SelectedEntitySetName))
+            {
+                EdmxEntityDto = OdataClientService!.GetEdmxEntityDto(SelectedEntitySetName);
+
+                if (BaseEntityFieldsToMap == null)
+                {
+                    NotificationService!.Notify(new NotificationMessage
+                    {
+                        Summary = "Ошибка",
+                        Detail = "Не удалось получить свойства сущности",
+                        Severity = NotificationSeverity.Error,
+                        Duration = 4000
+                    });
+
+                    return;
+                }
+
+                BaseEntityFieldsToMap = new List<EntityFieldDto>();
+
+                if (EdmxEntityDto.StructuralProperties != null)
+                {
+                    EntityFieldsToMap.AddRange(EdmxEntityDto.StructuralProperties);
+                }
+
+                if (EdmxEntityDto.NavigationProperties != null)
+                {
+                    BaseEntityFieldsToMap.AddRange(EdmxEntityDto.NavigationProperties.Where(prop => prop.IsCollection == false));
+                }
+
+            }
+            else
+            {
+                BaseEntityFieldsToMap = new();
+            }
+
+        RecalculateEntityFields();
         StateHasChanged();
     }
+
 
     /// <summary>
     /// Обработчик изменения выбранного свойства коллекции
     /// </summary>
     private void OnCollectionPropertyChanged()
     {
-        if (string.IsNullOrWhiteSpace(SelectedCollectionPropertyName)) return;
-
-        var prop = CollectionPropeties?.FirstOrDefault(p => p.Name == SelectedCollectionPropertyName);
-        if (prop != null && !string.IsNullOrWhiteSpace(prop.Type))
+        if (!string.IsNullOrWhiteSpace(SelectedCollectionPropertyName))
         {
-            ChildEdmxEntityDto = OdataClientService?.GetChildEntities(prop);
-            EntityFieldsToMap = ChildEdmxEntityDto?.StructuralProperties ?? new();
+            var prop = CollectionPropeties?.FirstOrDefault(p => p.Name == SelectedCollectionPropertyName);
+            if (prop != null && !string.IsNullOrWhiteSpace(prop.Type))
+            {
+                ChildEdmxEntityDto = OdataClientService?.GetChildEntities(prop);
+
+                BaseEntityFieldsToMap = new List<EntityFieldDto>();
+                if (ChildEdmxEntityDto?.StructuralProperties != null)
+                {
+                    BaseEntityFieldsToMap.AddRange(ChildEdmxEntityDto.StructuralProperties);
+                }
+                if (ChildEdmxEntityDto?.NavigationProperties != null)
+                {
+                    BaseEntityFieldsToMap.AddRange(ChildEdmxEntityDto.NavigationProperties.Where(prop => prop.IsCollection == false));
+                }
+
+
+            }
+        }
+        else
+        {
+            BaseEntityFieldsToMap = new();
         }
 
+        RecalculateEntityFields();
         StateHasChanged();
+    }
+
+    private void RecalculateEntityFields()
+    {
+        if (BaseEntityFieldsToMap == null)
+        {
+            EntityFieldsToMap = new();
+            return;
+        }
+
+        // начинаем с "чистых" свойств сущности
+        var fields = new List<EntityFieldDto>(BaseEntityFieldsToMap);
+
+        var mainIdProp = new StructuralFieldDto { Name = StringConstants.MainIdPropertyName, Type = "Edm.String", Nullable = false };
+        var pathProp = new StructuralFieldDto { Name = StringConstants.PathPropertyName, Type = "Edm.String", Nullable = false };
+
+        switch (CurrentScenario)
+        {
+            case OdataScenario.CreateEntity:
+                break;
+
+            case OdataScenario.UpdateEntity:
+                fields.Add(mainIdProp);
+                break;
+
+            case OdataScenario.CreateDocumentWithVersion:
+                fields.Add(pathProp);
+                break;
+
+            case OdataScenario.AddVersionToExistedDocument:
+                fields.Add(mainIdProp);
+                fields.Add(pathProp);
+                break;
+
+            case OdataScenario.AddEntityToCollection:
+                fields.Add(mainIdProp);
+                break;
+
+            case OdataScenario.UpdateEntityInCollection:
+                fields.Add(mainIdProp);
+                break;
+        }
+
+        EntityFieldsToMap = fields;
     }
 
     /// <summary>
@@ -182,6 +271,16 @@ public partial class MainPage
     /// <returns></returns>
     private async Task OnFileUpload(UploadChangeEventArgs args)
     {
+        if (args.Files == null || args.Files.Count() == 0)
+        {
+            columns = new();
+            items = new();
+            columnMapping = new();
+
+            StateHasChanged();
+            return;
+        }
+
         var file = args.Files.FirstOrDefault();
         if (file != null)
         {
@@ -210,87 +309,20 @@ public partial class MainPage
         }
     }
 
-    private void OnScenarioChanged(bool isOn, OdataScenario scenario)
+    /// <summary>
+    /// Обработчик изменения выбранного сценария
+    /// </summary>
+    /// <param name="value"></param>
+    private void OnScenarioChanged(object value)
     {
-        var mainIdProp = new StructuralFieldDto() { Name = StringConstants.MainIdPropertyName, Type = "Edm.String", Nullable = false };
-        var pathProp = new StructuralFieldDto() { Name = StringConstants.PathPropertyName, Type = "Edm.String", Nullable = false };
 
-        if (EntityFieldsToMap.Contains(mainIdProp))
-        {
-            EntityFieldsToMap.Remove(mainIdProp);
-        }
+        CurrentScenario = (OdataScenario)value;
 
-        if (EntityFieldsToMap.Contains(pathProp))
-        {
-            EntityFieldsToMap.Remove(pathProp);
-        }
-
-        if (isOn)
-        {
-            CurrentScenario = scenario;
-
-            switch (scenario)
-            {
-                case OdataScenario.CreateEntity:
-                    break;
-
-                case OdataScenario.UpdateEntity:
-                    EntityFieldsToMap.Add(mainIdProp);
-                    break;
-
-                case OdataScenario.CreateDocumentWithVersion:
-                    EntityFieldsToMap.Add(pathProp);
-                    break;
-
-                case OdataScenario.AddVersionToExistedDocument:
-                    EntityFieldsToMap.Add(mainIdProp);
-                    EntityFieldsToMap.Add(pathProp);
-                    break;
-
-                case OdataScenario.AddEntityToCollection:
-                    EntityFieldsToMap.Add(mainIdProp);
-                    break;
-
-                case OdataScenario.UpdateEntityInCollection:
-                    EntityFieldsToMap.Add(mainIdProp);
-                    break;
-            }
-        }
-        
+        RecalculateEntityFields();
         StateHasChanged();
 
-    }
 
-
-    /// <summary>
-    /// Обработчик завершения загрузки файла
-    /// </summary>
-    void OnCompleteUploadFile(UploadCompleteEventArgs args)
-    {
-        showProgressUploadFile = false; //TODO на текущий момент это не работает
-    }
-
-    /// <summary>
-    /// Обработчик прогресса загрузки файла
-    /// </summary>
-    /// <param name="args"></param>
-    void OnProgressUploadFile(UploadProgressArgs args)
-    {
-        //TODO на текущий момент это не работает.
-        // Должен показываться прогресс загрузки excel файла на случай, если файл большой и все затянется.
-        showProgressUploadFile = true;
-        progressUploadFile = args.Progress;
-
-        // cancel upload
-        args.Cancel = cancelUploadFile;
-
-        // reset cancel flag
-        cancelUploadFile = false;
-    }
-
-    void OnCancelUploadFile()
-    {
-        cancelUploadFile = true;
+        StateHasChanged();
     }
 
     /// <summary>
@@ -309,7 +341,14 @@ public partial class MainPage
         // если нет, то выводить ошибку
         foreach (var entity in entities)
         {
-            var result = await EntityService!.ProceedEntitiesToOdata(entity, SelectedEntitySetName, CurrentScenario);
+            var result = await EntityService!.ProceedEntitiesToOdata( new ProcessedEntityDto
+            {
+                Entity = entity,
+                EntitySet = SelectedEntitySetName,
+                Scenario = CurrentScenario,
+                IsCollection = false,
+                SearchEntityBy = SearchInMainEntityBy
+            });
 
             if (result == null)
             {
@@ -336,13 +375,13 @@ public partial class MainPage
             }
         }
 
-         NotificationService!.Notify(new NotificationMessage
-            {
-                Summary = "Сообщение",
-                Detail = "Сценарий выполнен",
-                Severity = NotificationSeverity.Info,
-                Duration = 4000
-            });
+        NotificationService!.Notify(new NotificationMessage
+        {
+            Summary = "Сообщение",
+            Detail = "Сценарий выполнен",
+            Severity = NotificationSeverity.Info,
+            Duration = 4000
+        });
 
 
     }
@@ -357,7 +396,7 @@ public partial class MainPage
             Duration = 4000
         });
     }
-    
+
     /// <summary>
     /// Собирает данные из Excel в список словарей для отправки в OData.
     /// </summary>
@@ -374,20 +413,39 @@ public partial class MainPage
             }
 
             foreach (var col in columns) // колонки Excel
-                {
-                    if (!columnMapping.TryGetValue(col, out var entityProperty))
-                        continue; // колонка не сматчена
+            {
+                if (!columnMapping.TryGetValue(col, out var entityProperty))
+                    continue; // колонка не сматчена
 
-                    if (string.IsNullOrWhiteSpace(entityProperty))
-                        continue; // не указано, куда мапить
+                if (string.IsNullOrWhiteSpace(entityProperty))
+                    continue; // не указано, куда мапить
 
-                    var value = itemDict[col];
-                    rowDict[entityProperty] = value ?? string.Empty;
-                }
+                var value = itemDict[col];
+                rowDict[entityProperty] = value ?? string.Empty;
+            }
 
             if (rowDict.Count > 0)
                 yield return rowDict;
         }
+    }
+    
+    /// <summary>
+    /// Возвращает список доступных полей для выбора в колонке
+    /// </summary>
+    /// <param name="column">Колонка</param>
+    /// <returns></returns>
+    private IEnumerable<EntityFieldDto> GetAvailableEntityFields(string column)
+    {
+        // Берем все поля
+        var allFields = EntityFieldsToMap ?? new List<EntityFieldDto>();
+
+        // Исключаем те, что уже выбраны в других колонках
+        var selectedFields = columnMapping
+            .Where(kv => kv.Key != column && !string.IsNullOrWhiteSpace(kv.Value))
+            .Select(kv => kv.Value)
+            .ToHashSet();
+
+        return allFields.Where(f => !selectedFields.Contains(f.Name!));
     }
 
 }

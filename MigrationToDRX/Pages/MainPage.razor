@@ -41,154 +41,77 @@
             Необходимо выбрать сущность для миграции данных
         </div>
         <div class="card-body">
-            <div class="row">
-            <div class="col">
-                <div class="row mb-3">
-                    <div class="col-3">
-                        <div class="text-description">Выберите сущность</div>
-                    </div>
-                    <div class="col-9">
-                        <RadzenDropDown Data="@EntitySets" TValue="string" TextProperty="Name" ValueProperty="Name"
-                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                            AllowFiltering="true" @bind-Value="SelectedEntitySetName" Style="width: 100%"
-                            Change="@(() => InvokeAsync(OnEntitySetsSelectChanged))" />
-                    </div>
-                </div>
 
-                @if (WorkWithCollectionProperty && CollectionPropeties != null)
-                {
-                    <div class="row mb-3">
-                        <div class="col-3">
-                            <div class="text-description">Выберите свойство-коллекцию</div>
-                        </div>
+            <div class="row mb-3">
+                <div class="col-3">
+                    <div class="text-description">Выберите сценарий работы</div>
+                </div>
+                <div class="col-9">
+                    <RadzenDropDown Data="@ScenarioOptions" TextProperty="Description" ValueProperty="Value"
+                        TValue="OdataScenario"
+                        AllowClear="true"  @bind-Value="CurrentScenario" Style="width: 100%"
+                        Change="@(args => OnScenarioChanged(args))" />
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-9">
+                    <div class="text-description">Выберите сущность</div>
+
+                    <RadzenDropDown Data="@EntitySets" TValue="string" TextProperty="Name" ValueProperty="Name"
+                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                        AllowFiltering="true" AllowClear="true" @bind-Value="SelectedEntitySetName" Style="width: 100%"
+                        Change="@(() => InvokeAsync(OnEntitySetsSelectChanged))" />
+
+                </div>
+                 <div class="col-3">
+                    <div class="text-description">Поиск ссылочного свойства по</div>
+                    <RadzenRadioButtonList @bind-Value=@SearchInMainEntityBy TValue="SearchEntityBy">
+                        <Items>
+                            <RadzenRadioButtonListItem Text="Идентификатору" Value="SearchEntityBy.Id" />
+                            <RadzenRadioButtonListItem Text="Имени" Value="SearchEntityBy.Name" />
+                        </Items>
+                    </RadzenRadioButtonList>
+                </div>
+            </div>
+
+            @if ((CurrentScenario == OdataScenario.AddEntityToCollection || CurrentScenario == OdataScenario.UpdateEntityInCollection) && CollectionPropeties != null)
+            {
+                <div class="row mb-3">
+                    <div class="col-7">
+                        <div class="text-description">Выберите свойство-коллекцию</div>
+
                         <div class="col-9">
                             <RadzenDropDown Data="@CollectionPropeties" TValue="string" TextProperty="Name" ValueProperty="Name"
-                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"  AllowClear="true"
                                 AllowFiltering="true" @bind-Value="SelectedCollectionPropertyName" Style="width: 100%"
                                 Change="@(() => InvokeAsync(OnCollectionPropertyChanged))" />
                         </div>
                     </div>
-                }
-
-
-                <div class="row mb-3 d-flex">
                     <div class="col-3">
-                        <div class="text-description">Выберите файл для загрузки</div>
-                        <div class="text-description">Поддерживаемые форматы: .xlsx, .xls, .odf, .ods, .csv</div>
+                        <div class="text-description">Поиск ссылочного свойства по</div>
+                        <RadzenRadioButtonList @bind-Value=@SearchInMainEntityBy TValue="SearchEntityBy">
+                            <Items>
+                                <RadzenRadioButtonListItem Text="Идентификатору" Value="SearchEntityBy.Id" />
+                                <RadzenRadioButtonListItem Text="Имени" Value="SearchEntityBy.Name" />
+                            </Items>
+                        </RadzenRadioButtonList>
                     </div>
-
-                    <div class="col-9">
-                        <RadzenUpload Accept=".xlsx,.xls,.odf,.ods,.csv" Multiple="false" Progress=@OnProgressUploadFile
-                            Complete=@OnCompleteUploadFile Change="@OnFileUpload" class="upload-custom d-flex" />
-                        <RadzenProgressBar Value=@progressUploadFile class="rz-mt-6" Visible=@showProgressUploadFile />
-                        <RadzenButton Text="Отменить загрузку" Click=@OnCancelUploadFile Visible=@showProgressUploadFile
-                            class="btn btn-primary" />
-                    </div>
-
-                </div>
-            </div>
-
-            @if(string.IsNullOrWhiteSpace(SelectedEntitySetName) == false)
-            {
-                <div class="col-4">
-                    <h5>Сценарии работы: </h5>
-
-                    <div class="row mb-3">
-                        <div class="col-auto">
-                            <RadzenSwitch Change=@(args => OnScenarioChanged(args, OdataScenario.CreateEntity)) 
-                                Value="CurrentScenario == OdataScenario.CreateEntity"
-                                Disabled="CurrentScenario == OdataScenario.CreateEntity"
-                                InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Switch value" }})" />
-                        </div>
-                        <div class="col-auto">
-                            <div class="text-description">Создание документов или справочников</div>
-                        </div>
-
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-auto">
-                            <RadzenSwitch Change=@(args => OnScenarioChanged(args, OdataScenario.UpdateEntity)) 
-                                Value="CurrentScenario == OdataScenario.UpdateEntity"
-                                Disabled="CurrentScenario == OdataScenario.UpdateEntity"
-                                InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Switch value" }})" />
-                        </div>
-                        <div class="col-auto">
-                            <div class="text-description">Обновление документов или справочников</div>
-                        </div>
-
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-auto">
-                            <RadzenSwitch Change=@(args => OnScenarioChanged(args, OdataScenario.CreateDocumentWithVersion)) 
-                                Value="CurrentScenario == OdataScenario.CreateDocumentWithVersion"
-                                Disabled="CurrentScenario == OdataScenario.CreateDocumentWithVersion"
-                                InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Switch value" }})" />
-                        </div>
-                        <div class="col-auto">
-                            <div class="text-description">Создание документа с версией</div>
-                        </div>
-
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-auto">
-                            <RadzenSwitch Change=@(args => OnScenarioChanged(args, OdataScenario.AddVersionToExistedDocument)) 
-                                Value="CurrentScenario == OdataScenario.AddVersionToExistedDocument"
-                                Disabled="CurrentScenario == OdataScenario.AddVersionToExistedDocument"
-                                InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Switch value" }})" />
-                        </div>
-                        <div class="col-auto">
-                            <div class="text-description">Добавление версии в существующий документ</div>
-                        </div>
-
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-auto">
-                            <RadzenSwitch Change=@(args => OnScenarioChanged(args, OdataScenario.AddEntityToCollection)) 
-                                Disabled="CurrentScenario == OdataScenario.AddEntityToCollection"
-                                InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Switch value" }})" />
-                        </div>
-                        <div class="col-auto">
-                            <div class="text-description">Добавление сущности в свойство-коллекцию (еще не реализовано)</div>
-                        </div>
-
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-auto">
-                            <RadzenSwitch Change=@(args => OnScenarioChanged(args, OdataScenario.UpdateEntityInCollection)) 
-                                Disabled="CurrentScenario == OdataScenario.UpdateEntityInCollection"
-                                InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Switch value" }})" />
-                        </div>
-                        <div class="col-auto">
-                            <div class="text-description">Обновление сущности в свойстве-коллекции (еще не реализовано)</div>
-                        </div>
-
-                    </div>
-
-
-
-                    @if(CurrentScenario == OdataScenario.UpdateEntity || CurrentScenario == OdataScenario.AddVersionToExistedDocument || CurrentScenario == OdataScenario.UpdateEntityInCollection)
-                    {
-                        <h5>Настройки</h5>
-                        <div class="text-description">Поиск сущности по: (еще не реализовано)</div>
-                        <div class="row mb-3">
-                            <RadzenRadioButtonList @bind-Value=@SearchEntityBy TValue="int">
-                                <Items>
-                                    <RadzenRadioButtonListItem Text="Name" Value="1" />
-                                    <RadzenRadioButtonListItem Text="Id" Value="2" />
-                                </Items>
-                            </RadzenRadioButtonList>
-                        </div>
-                    }
-                    
                 </div>
             }
 
-            </div>
+
+            <RadzenCard Style="padding: 1rem;" class="mb-3">
+                <h5>Загрузка файла</h5>
+                <p class="text-muted mb-1">Поддерживаемые форматы: .xlsx, .xls, .odf, .ods, .csv</p>
+
+                <RadzenUpload Accept=".xlsx,.xls,.odf,.ods,.csv"
+                            Multiple="false"
+                            ChooseText="Выберите файл"
+                            Change="@OnFileUpload"
+                            class="upload-custom" />
+            </RadzenCard>
+
 
             <div class="row mb-3 d-flex" disabled="@columnMapping.Any()">
                 <div class="col-auto"><button class="btn btn-primary" style="width: auto;"
@@ -201,37 +124,41 @@
         </div>
     </div>
 
-    <div class="card mt-5">
-        <div class="card-header">
-            Необходимо сопоставить поля Excel с полями сущности
-        </div>
-        <div class="card-body">
-            <RadzenDataGrid TItem="ExpandoObject" Data="@items" AllowColumnResize="true" AllowPaging="true"
-                 AllowColumnReorder="true" PageSize="100" AllowVirtualization="true" AllowColumnPicking = "true">
-                <Columns>
-                    @foreach (var col in columns)
-                    {
-                        <RadzenDataGridColumn TItem="ExpandoObject" Title="@col">
-                            <HeaderTemplate>
-                                <p>@col</p>
-                                <RadzenDropDown TValue="string" Data="@EntityFieldsToMap" TextProperty="Summary"
-                                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                                    ValueProperty="Name" @bind-Value="columnMapping[col]" AllowFiltering="true"
-                                    Style="width: 200%" Placeholder="Выберите свойство" />
-                            </HeaderTemplate>
-                            <Template Context="data">
-                                @{
-                                    var dict = (IDictionary<string, object>)data!;
-                                    if (dict.ContainsKey(col))
-                                    {
-                                        <text>@dict[col]</text>
+    @if(items.Count > 0)
+    {
+        <div class="card mt-5">
+            <div class="card-header">
+                Необходимо сопоставить поля Excel с полями сущности
+            </div>
+            <div class="card-body">
+                <RadzenDataGrid TItem="ExpandoObject" Data="@items" AllowColumnResize="true" AllowPaging="true"
+                    AllowColumnReorder="true" PageSize="100" AllowVirtualization="true" AllowColumnPicking = "true">
+                    <Columns>
+                        @foreach (var col in columns)
+                        {
+                            <RadzenDataGridColumn TItem="ExpandoObject" Title="@col">
+                                <HeaderTemplate>
+                                    <p>@col</p>
+                                    <RadzenDropDown TValue="string" Data="@GetAvailableEntityFields(col)" TextProperty="Summary"
+                                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                        ValueProperty="Name" @bind-Value="columnMapping[col]" AllowClear="true" AllowFiltering="true"
+                                        Style="width: 200%" Placeholder="Выберите свойство" />
+                                </HeaderTemplate>
+                                <Template Context="data">
+                                    @{
+                                        var dict = (IDictionary<string, object>)data!;
+                                        if (dict.ContainsKey(col))
+                                        {
+                                            <text>@dict[col]</text>
+                                        }
                                     }
-                                }
-                            </Template>
-                        </RadzenDataGridColumn>
-                    }
-                </Columns>
-            </RadzenDataGrid>
+                                </Template>
+                            </RadzenDataGridColumn>
+                        }
+                    </Columns>
+                </RadzenDataGrid>
+            </div>
         </div>
-    </div>
+    }
+
 </div>
