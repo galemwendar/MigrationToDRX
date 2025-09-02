@@ -109,8 +109,8 @@ public partial class MainPage
 
     private List<ScenarioOption> ScenarioOptions = new()
     {
-        new(OdataScenario.CreateEntity, "Создание документов или справочников"),
-        new(OdataScenario.UpdateEntity, "Обновление документов или справочников"),
+        new(OdataScenario.CreateEntity, "Создание сущности (документ/справочник/прочее)"),
+        new(OdataScenario.UpdateEntity, "Обновление сущности"),
         new(OdataScenario.CreateDocumentWithVersion, "Создание документа с версией"),
         new(OdataScenario.AddVersionToExistedDocument, "Добавление версии в существующий документ"),
         new(OdataScenario.AddEntityToCollection, "Добавление сущности в свойство-коллекцию (еще не реализовано)"),
