@@ -104,6 +104,7 @@ public class EntityService
             "Edm.Boolean" => bool.TryParse(value.ToString(), out var b) ? b : null,
             "Edm.DateTimeOffset" => DateTimeOffset.Parse(value.ToString() ?? string.Empty),
             "Edm.Double" => double.TryParse(value.ToString(), out var d) ? d : null,
+            "Edm.Guid" => Guid.TryParse(value.ToString(), out var g) ? g : null,
             _ => value // по умолчанию
         };
     }
