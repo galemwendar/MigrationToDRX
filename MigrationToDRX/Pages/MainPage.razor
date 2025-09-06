@@ -1,6 +1,7 @@
 ﻿@page "/mainpage"
 @using MigrationToDRX.Data.Enums
 @using MigrationToDRX.Data.Models
+@using MigrationToDRX.Data.Models.Dto
 @using Radzen
 @using Radzen.Blazor
 @using System.Data
@@ -125,34 +126,68 @@
             <div class="card-header">
                 Необходимо сопоставить столбцы Excel со свойствами сущности
             </div>
-            <div class="card-body">
-                <RadzenDataGrid TItem="ExpandoObject" Data="@items" AllowColumnResize="true" AllowPaging="true"
-                    AllowColumnReorder="true" PageSize="100" AllowVirtualization="true" AllowColumnPicking = "true">
-                    <Columns>
-                        @foreach (var col in columns)
-                        {
-                            <RadzenDataGridColumn TItem="ExpandoObject" Title="@col">
-                                <HeaderTemplate>
-                                    <p>@col</p>
-                                    <RadzenDropDown TValue="string" Data="@GetAvailableEntityFields(col)" TextProperty="Summary"
-                                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                                        ValueProperty="Name" @bind-Value="columnMapping[col]" AllowClear="true" AllowFiltering="true"
-                                        Style="width: 200%" Placeholder="Выберите свойство" />
-                                </HeaderTemplate>
-                                <Template Context="data">
-                                    @{
-                                        var dict = (IDictionary<string, object>)data!;
-                                        if (dict.ContainsKey(col))
-                                        {
-                                            <text>@dict[col]</text>
-                                        }
-                                    }
-                                </Template>
-                            </RadzenDataGridColumn>
+<div class="card-body">
+    <RadzenDataGrid TItem="ExpandoObject" Data="@items" AllowColumnResize="true" 
+                    AllowPaging="true" AllowColumnReorder="true" PageSize="100" 
+                    AllowVirtualization="true" AllowColumnPicking="true">
+        <Columns>
+            @foreach (var col in columns)
+            {
+                <RadzenDataGridColumn TItem="ExpandoObject" Title="@col">
+                    <HeaderTemplate>
+                        <p>@col</p>
+
+                        @* Безопасный DropDown: проверяем наличие ключей в словарях *@
+                        @{
+                            var dropdownData = availableFields.TryGetValue(col, out var list) 
+                                                ? list 
+                                                : Enumerable.Empty<EntityFieldDto>();
+
+                            if (!columnMapping.ContainsKey(col))
+                            {
+                                columnMapping[col] = null; // инициализируем ключ
+                            }
                         }
-                    </Columns>
-                </RadzenDataGrid>
-            </div>
+
+                        <RadzenDropDown TValue="string"
+                                        Data="@dropdownData"
+                                        ValueProperty="Name"
+                                        @bind-Value="columnMapping[col]"
+                                        Change="@(args => OnColumnValueChanged(col, args))"
+                                        AllowClear="true"
+                                        AllowFiltering="true"
+                                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                        Style="width: 200%"
+                                        Placeholder="Выберите свойство">
+
+                            @* Кастомный шаблон для отображения элементов *@
+                            <Template Context="field">
+                                <div style="display:flex; flex-direction:column;">
+                                    <span>@field.Name</span>
+                                    <span style="color:gray; font-size:0.85em;">
+                                        (@field.Type) Nullable:@(field.Nullable ? "Yes" : "No")
+                                    </span>
+                                </div>
+                            </Template>    
+
+                        </RadzenDropDown>
+                    </HeaderTemplate>
+
+                    <Template Context="data">
+                        @{
+                            var dict = (IDictionary<string, object>)data!;
+                            if (dict.ContainsKey(col))
+                            {
+                                <text>@dict[col]</text>
+                            }
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+            }
+        </Columns>
+    </RadzenDataGrid>
+</div>
+
         </div>
     }
 

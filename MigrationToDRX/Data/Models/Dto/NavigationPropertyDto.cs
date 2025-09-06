@@ -13,7 +13,20 @@ public class NavigationPropertyDto : EntityFieldDto
     public bool IsCollection { get; set; }
 
     /// <summary>
-    /// Краткое описание
+    /// Тип свойства сущности
     /// </summary>
-    public override string? Summary => $"{Name} ({(IsCollection ? "Collection of " : "")}{Type}) {(Nullable ? "Nullable" : "Not Nullable")}";
+    /// <summary>
+    /// Тип свойства сущности с кастомной логикой
+    /// </summary>
+    public override string? Type
+    {
+        get
+        {
+            var baseType = base.Type;
+            return !string.IsNullOrEmpty(baseType) && baseType.Contains(".")
+                ? baseType.Split('.').Last()
+                : baseType;
+        }
+        set => base.Type = value;
+    }
 }

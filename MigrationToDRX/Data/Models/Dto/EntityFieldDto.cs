@@ -15,12 +15,10 @@ public abstract class EntityFieldDto
     /// <summary>
     /// Тип свойства сущности
     /// </summary>
-    public string? Type { get; set; }
+    public virtual string? Type { get; set; }
 
     /// <summary>
     /// Может ли свойство быть пустым
     /// </summary>
     public bool Nullable { get; set; }
-
-    public abstract string? Summary { get; }
 }

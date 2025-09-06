@@ -8,6 +8,7 @@ using MigrationToDRX.Data.Services;
 using Radzen;
 using MigrationToDRX.Data.Enums;
 using MigrationToDRX.Data;
+using MigrationToDRX.Data.Extensions;
 
 namespace MigrationToDRX.Pages;
 
@@ -124,6 +125,12 @@ public partial class MainPage
     #endregion
 
     /// <summary>
+    /// Словарь "имя колонки → список доступных полей".
+    /// Используется для привязки данных к каждому DropDown в таблице.
+    /// </summary>
+    private Dictionary<string, IEnumerable<EntityFieldDto>> availableFields = new();
+
+    /// <summary>
     /// Инициализация компонента
     /// </summary>
     protected override async Task OnInitializedAsync()
@@ -132,6 +139,8 @@ public partial class MainPage
         {
             EntitySets = OdataClientService.GetEntitySets();
         }
+
+        OnScenarioChanged(CurrentScenario);
 
         await base.OnInitializedAsync();
     }
@@ -147,41 +156,42 @@ public partial class MainPage
         }
 
         if (!string.IsNullOrWhiteSpace(SelectedEntitySetName))
+        {
+            EdmxEntityDto = OdataClientService!.GetEdmxEntityDto(SelectedEntitySetName);
+
+            if (BaseEntityFieldsToMap == null)
             {
-                EdmxEntityDto = OdataClientService!.GetEdmxEntityDto(SelectedEntitySetName);
-
-                if (BaseEntityFieldsToMap == null)
+                NotificationService!.Notify(new NotificationMessage
                 {
-                    NotificationService!.Notify(new NotificationMessage
-                    {
-                        Summary = "Ошибка",
-                        Detail = "Не удалось получить свойства сущности",
-                        Severity = NotificationSeverity.Error,
-                        Duration = 4000
-                    });
+                    Summary = "Ошибка",
+                    Detail = "Не удалось получить свойства сущности",
+                    Severity = NotificationSeverity.Error,
+                    Duration = 4000
+                });
 
-                    return;
-                }
-
-                BaseEntityFieldsToMap = new List<EntityFieldDto>();
-
-                if (EdmxEntityDto.StructuralProperties != null)
-                {
-                    EntityFieldsToMap.AddRange(EdmxEntityDto.StructuralProperties);
-                }
-
-                if (EdmxEntityDto.NavigationProperties != null)
-                {
-                    BaseEntityFieldsToMap.AddRange(EdmxEntityDto.NavigationProperties.Where(prop => prop.IsCollection == false));
-                }
-
+                return;
             }
-            else
+
+            BaseEntityFieldsToMap = new List<EntityFieldDto>();
+
+            if (EdmxEntityDto.StructuralProperties != null)
             {
-                BaseEntityFieldsToMap = new();
+                BaseEntityFieldsToMap.AddRange(EdmxEntityDto.StructuralProperties);
             }
+
+            if (EdmxEntityDto.NavigationProperties != null)
+            {
+                BaseEntityFieldsToMap.AddRange(EdmxEntityDto.NavigationProperties.Where(prop => prop.IsCollection == false));
+            }
+
+        }
+        else
+        {
+            BaseEntityFieldsToMap = new();
+        }
 
         RecalculateEntityFields();
+        RefreshAvailableFields();
         StateHasChanged();
     }
 
@@ -220,6 +230,12 @@ public partial class MainPage
         StateHasChanged();
     }
 
+    /// <summary>
+    /// Пересобирает базовый список доступных полей сущности (EntityFieldsToMap)
+    /// в зависимости от выбранного сценария:
+    /// - начинаем с базовых полей BaseEntityFieldsToMap,
+    /// - добавляем дополнительные поля (MainId, Path и др.) по условиям сценария.
+    /// </summary>
     private void RecalculateEntityFields()
     {
         if (BaseEntityFieldsToMap == null)
@@ -240,24 +256,23 @@ public partial class MainPage
                 break;
 
             case OdataScenario.UpdateEntity:
-                fields.Add(mainIdProp);
+                fields.AddFirst(mainIdProp);
                 break;
 
             case OdataScenario.CreateDocumentWithVersion:
-                fields.Add(pathProp);
+                fields.AddFirst(pathProp);
                 break;
 
             case OdataScenario.AddVersionToExistedDocument:
-                fields.Add(mainIdProp);
-                fields.Add(pathProp);
+                fields.AddFirstRange(new[] { mainIdProp, pathProp });
                 break;
 
             case OdataScenario.AddEntityToCollection:
-                fields.Add(mainIdProp);
+                fields.AddFirst(mainIdProp);
                 break;
 
             case OdataScenario.UpdateEntityInCollection:
-                fields.Add(mainIdProp);
+                fields.AddFirst(mainIdProp);
                 break;
         }
 
@@ -310,21 +325,19 @@ public partial class MainPage
     }
 
     /// <summary>
-    /// Обработчик изменения выбранного сценария
+    /// Обработчик изменения выбранного сценария.
+    /// - Запоминаем новый сценарий.
+    /// - Пересчитываем список всех доступных полей сущности (RecalculateEntityFields).
+    /// - Перестраиваем словарь доступных полей для всех колонок (RefreshAvailableFields).
+    /// - Обновляем UI (StateHasChanged).
     /// </summary>
-    /// <param name="value"></param>
     private void OnScenarioChanged(object value)
     {
-
         CurrentScenario = (OdataScenario)value;
-
         RecalculateEntityFields();
-        StateHasChanged();
-
-
+        RefreshAvailableFields();
         StateHasChanged();
     }
-
     /// <summary>
     /// Загружает данные из Excel в OData
     /// </summary>
@@ -341,7 +354,7 @@ public partial class MainPage
         // если нет, то выводить ошибку
         foreach (var entity in entities)
         {
-            var result = await EntityService!.ProceedEntitiesToOdata( new ProcessedEntityDto
+            var result = await EntityService!.ProceedEntitiesToOdata(new ProcessedEntityDto
             {
                 Entity = entity,
                 EntitySet = SelectedEntitySetName,
@@ -428,7 +441,7 @@ public partial class MainPage
                 yield return rowDict;
         }
     }
-    
+
     /// <summary>
     /// Возвращает список доступных полей для выбора в колонке
     /// </summary>
@@ -446,6 +459,54 @@ public partial class MainPage
             .ToHashSet();
 
         return allFields.Where(f => !selectedFields.Contains(f.Name!));
+    }
+
+    /// <summary>
+    /// Пересчитывает список доступных полей для каждой колонки.
+    /// - Берём все поля сущности (EntityFieldsToMap).
+    /// - Исключаем те, что уже выбраны в других колонках (columnMapping).
+    /// - Даже если для колонки нет доступных полей, создаём пустой список,
+    ///   чтобы избежать KeyNotFoundException при рендере DropDown.
+    /// </summary>
+    private void RefreshAvailableFields()
+    {
+        // Если нет колонок или EntityFieldsToMap — словарь очищаем
+        if (columns == null || EntityFieldsToMap == null)
+        {
+            availableFields.Clear();
+            return;
+        }
+
+        foreach (var col in columns)
+        {
+            var allFields = EntityFieldsToMap;
+
+            // Смотрим, какие значения уже выбраны в других колонках
+            var selectedFields = columnMapping
+                .Where(kv => kv.Key != col && !string.IsNullOrWhiteSpace(kv.Value))
+                .Select(kv => kv.Value)
+                .ToHashSet();
+
+            // Формируем список доступных полей для колонки
+            var filteredFields = allFields
+                .Where(f => !selectedFields.Contains(f.Name!))
+                .ToList();
+
+            // Обязательно кладём ключ в словарь, даже если список пуст
+            availableFields[col] = filteredFields;
+        }
+    }
+    /// <summary>
+    /// Обработчик выбора нового значения в DropDown для конкретной колонки.
+    /// - Запоминаем выбранное значение в columnMapping.
+    /// - Пересчитываем доступные поля (чтобы исключить выбранное из других DropDown).
+    /// - Обновляем UI.
+    /// </summary>
+    private void OnColumnValueChanged(string col, object value)
+    {
+        columnMapping[col] = value?.ToString();
+        RefreshAvailableFields();
+        StateHasChanged();
     }
 
 }
