@@ -6,26 +6,28 @@
 <RadzenTemplateForm TItem="ConnectionViewModel" Data="Model" Submit="@SubmitAsync">
     <div class="row flex-between-center mb-2">
         <div class="col-auto">
-            <h5>Подключение</h5>
+            <h5>Подключение к OData</h5>
         </div>
     </div>
     <div class="mb-3">
+        <div class="text-description">Введите URL сервера для интеграции</div>
         <RadzenTextBox @bind-Value="@Model.Url" class="w-100 form-control"
-                       Placeholder="Введите URL, например http://localhost/Integration/Odata/" Name="Url" />
+                       Placeholder="Например, http://localhost/Integration/Odata/" Name="Url" />
         <RadzenRequiredValidator Component="Url" Text="Введите URL" />
 
     </div>
 
     <div class="mb-3">
-
+        <div class="text-description">Введите логин</div>
         <RadzenTextBox @bind-Value="@Model.UserName" class="w-100 form-control"
-                       Placeholder="Введите логин, например Administrator" Name="UserName" />
+                       Placeholder="Например, Administrator" Name="UserName" />
         <RadzenRequiredValidator Component="UserName" Text="Введите имя пользователя" />
     </div>
 
     <div class="mb-3">
+        <div class="text-description">Введите пароль</div>
         <RadzenPassword @bind-Value="@Model.Password" class="w-100 form-control"
-                        Placeholder="Введите пароль" Name="Password" />
+                        Name="Password" />
         <RadzenRequiredValidator Component="Password" Text="Введите пароль" />
     </div>
 
