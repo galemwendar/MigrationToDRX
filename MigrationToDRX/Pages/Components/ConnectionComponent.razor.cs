@@ -29,15 +29,9 @@ public partial class ConnectionComponent : ComponentBase
 
         if (sucsess)
         {
-            // NotificationService?.Notify(new NotificationMessage
-            // {
-            //     Severity = NotificationSeverity.Success,
-            //     Summary = "Успешно",
-            //     Detail = "Вы успешно подключились к серверу",
-            //     Duration = 20000
-            // });
+            //NavigationManager?.NavigateTo("/mainpage"); import
             
-            NavigationManager?.NavigateTo("/mainpage");
+            NavigationManager?.NavigateTo("/main3"); 
         }
         else
         {

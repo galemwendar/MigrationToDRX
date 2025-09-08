@@ -5,6 +5,9 @@ using ClosedXML.Excel;
 using ExcelDataReader;
 namespace MigrationToDRX.Data.Services;
 
+/// <summary>
+/// Сервис для чтения Excel файлов
+/// </summary>
 public class ExcelService
 {
     /// <summary>

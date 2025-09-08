@@ -1,6 +1,4 @@
-using System;
-using System.Globalization;
-using ClosedXML.Excel;
+using MigrationToDRX.Data.Constants;
 using MigrationToDRX.Data.Enums;
 using MigrationToDRX.Data.Helpers;
 using MigrationToDRX.Data.Models.Dto;
@@ -122,15 +120,21 @@ public class EntityService
     {
         return dto.Scenario switch
         {
-            OdataScenario.CreateEntity => await CreateEntityAsync(dto),
-            OdataScenario.UpdateEntity => await UpdateEntityAsync(dto),
-            OdataScenario.CreateDocumentWithVersion => await CreateDocumentWithVersionAsync(dto),
-            OdataScenario.AddVersionToExistedDocument => await AddVersionToExistedDocumentAsync(dto),
-            OdataScenario.AddEntityToCollection => await AddEntityToCollectionAsync(dto),
-            OdataScenario.UpdateEntityInCollection => await UpdateEntityInCollectionAsync(dto),
+            OdataOperation.CreateEntity => await CreateEntityAsyncWithResult(dto),
+            OdataOperation.UpdateEntity => await UpdateEntityAsyncWithResult(dto),
+            OdataOperation.CreateDocumentWithVersion => await CreateDocumentWithVersionAsync(dto),
+            OdataOperation.AddVersionToExistedDocument => await AddVersionToExistedDocumentAsync(dto),
+            OdataOperation.AddEntityToCollection => await AddEntityToCollectionAsync(dto),
+            OdataOperation.UpdateEntityInCollection => await UpdateEntityInCollectionAsync(dto),
             _ => throw new ArgumentException("Не удалось обработать сценарий")
         };
     }
+
+    private async Task<SaveEntityResult> UpdateEntityAsyncWithResult(ProcessedEntityDto dto)
+    {
+        throw new NotImplementedException();
+    }
+
 
     private async Task<SaveEntityResult> UpdateEntityInCollectionAsync(ProcessedEntityDto dto)
     {
@@ -191,16 +195,12 @@ public class EntityService
     /// <param name="entity"></param>
     /// <param name="entitySet"></param>
     /// <returns>Дто результата создания сущности</returns>
-    public async Task<SaveEntityResult> CreateEntityAsync(ProcessedEntityDto dto)
+    public async Task<SaveEntityResult> CreateEntityAsyncWithResult(ProcessedEntityDto dto)
     {
         var result = new SaveEntityResult();
         try
         {
-            var entityToSave = dto.Entity!
-                .Where(p => p.Key != StringConstants.PathPropertyName && p.Key != StringConstants.MainIdPropertyName)
-                .ToDictionary(p => p.Key, p => p.Value);
-
-            var savedEntity = await _odataClientService.InsertEntityAsync(entityToSave, dto.EntitySet!);
+            IDictionary<string, object>? savedEntity = await InstertEntityAsync(dto);
             result.Entity = savedEntity;
             result.Success = true;
         }
@@ -213,20 +213,19 @@ public class EntityService
         return result;
     }
 
+
+
+
     public async Task<SaveEntityResult> CreateDocumentWithVersionAsync(ProcessedEntityDto dto)
     {
         try
         {
-            var entityToSave = dto.Entity!
-                .Where(p => p.Key != StringConstants.PathPropertyName && p.Key != StringConstants.MainIdPropertyName)
-                .ToDictionary(p => p.Key, p => p.Value);
-
-            var savedEntity = await _odataClientService.InsertEntityAsync(entityToSave, dto.EntitySet!);
+            IDictionary<string, object>? savedEntity = await InstertEntityAsync(dto);
 
             if (savedEntity != null && savedEntity.TryGetValue("Id", out var id))
             {
-                var filePath = dto.Entity!.TryGetValue(StringConstants.PathPropertyName, out var path) 
-                    ? path?.ToString() ?? "" 
+                var filePath = dto.Entity!.TryGetValue(StringConstants.PathPropertyName, out var path)
+                    ? path?.ToString() ?? ""
                     : "";
 
 
@@ -276,7 +275,7 @@ public class EntityService
     /// <param name="filePath"></param>
     /// <param name="ForceUpdateBody"></param>
     /// <returns></returns>
-    public async Task FindEdocAndSetBodyAsync(long eDocId, string filePath, bool ForceUpdateBody = false)
+    private async Task FindEdocAndSetBodyAsync(long eDocId, string filePath, bool ForceUpdateBody = false)
     {
         var eDoc = await _odataClientService.FindEdocAsync(eDocId);
 
@@ -318,7 +317,11 @@ public class EntityService
         await _odataClientService.FillBodyAsync(docId, body, version!);
     }
 
-
+    /// <summary>
+    /// Проверяет необходимость создания новой версии
+    /// </summary>
+    /// <param name="extension">расширение файла</param>
+    /// <param name="version">верия</param>
     private bool NeedNewVersion(string extension, IDictionary<string, object> version)
     {
 
@@ -332,6 +335,12 @@ public class EntityService
 
     }
 
+    /// <summary>
+    /// Получает последнюю версию документа
+    /// </summary>
+    /// <param name="extension">расширение файла</param>
+    /// <param name="eDoc">документ</param>
+    /// <returns>последняя версия</returns>
     private IDictionary<string, object>? GetLastVersion(string extension, IDictionary<string, object> eDoc)
     {
         if (eDoc.TryGetValue("Versions", out var versions))
@@ -360,6 +369,149 @@ public class EntityService
             }
         }
         return null;
+    }
+
+    /// <summary>
+    /// Находит связанные сущности и вставляет их в сущность
+    /// </summary>
+    /// <param name="dto"></param>
+    /// <returns></returns>
+    private async Task<IDictionary<string, object>?> FindRelatedEntitiesAsync(ProcessedEntityDto dto)
+    {
+        var entityToSave = dto.Entity!
+            .Where(p => p.Key != StringConstants.PathPropertyName && p.Key != StringConstants.MainIdPropertyName)
+            .ToDictionary(p => p.Key, p => p.Value);
+
+        var navProps = dto.Edmx!.NavigationProperties.Where(p => p.IsCollection == false).ToList();
+
+        foreach (var prop in entityToSave)
+        {
+            if (navProps.Any(p => p.Name == prop.Key)) // убедились, что свойство является навигационным
+            {
+                var relatedEntity = await GetRelatedEntity(prop, dto); // получили связанную сущность
+                entityToSave[prop.Key] = relatedEntity;
+            }
+        }
+
+        return entityToSave;
+    }
+
+    /// <summary>
+    /// Получает связанную сущность по ключу
+    /// </summary>
+    /// <param name="prop">Имя связанной сущности и его ключ</param>
+    /// <param name="dto">Dto сущности</param>
+    /// <returns>связанная сущность, готовая для вставки в Odata</returns>
+    /// <exception cref="Exception"></exception>
+    private async Task<object> GetRelatedEntity(KeyValuePair<string, object> prop, ProcessedEntityDto dto)
+    {
+        try
+        {
+            var searchCryteriaFound = dto.SearchCriterias!.TryGetValue(prop.Key, out var searchCryteria);
+
+            if (searchCryteriaFound)
+            {
+                var relatedEntity = await _odataClientService.GetEntityAsync(prop.Key, searchCryteria!, prop.Value);
+                if (relatedEntity != null)
+                {
+                    return relatedEntity;
+                }
+                else
+                {
+                    throw new Exception("Не найдена связанная сущность " + prop.Key + " по ключу " + searchCryteria + ": " + prop.Value);
+                }
+            }
+            else
+            {
+                throw new ArgumentException("Не указан ключ поиска для связанной сущности " + prop.Key);
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new Exception("Ошибка при поиске связанной сущности " + prop.Key + ": " + ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Вставляет сущность в OData
+    /// </summary>
+    /// <param name="dto"></param>
+    /// <returns></returns>
+    private async Task<IDictionary<string, object>?> InstertEntityAsync(ProcessedEntityDto dto)
+    {
+        var entityToSave = await FindRelatedEntitiesAsync(dto);
+
+        if (entityToSave != null)
+        {
+            var savedEntity = await _odataClientService.InsertEntityAsync(entityToSave, dto.Edmx!.Name!);
+            return savedEntity;
+
+        }
+        else
+        {
+            throw new ArgumentException("Связанные сущности не найдены");
+        }
+    }
+
+    /// <summary>
+    /// Обновляет сущность в OData
+    /// </summary>
+    /// <param name="dto"></param>
+    /// <returns></returns>
+    private async Task<IDictionary<string, object>?> UpdateEntryAsync(ProcessedEntityDto dto)
+    {
+        var entityToSave = await FindRelatedEntitiesAsync(dto);
+        var key = entityToSave!.TryGetValue(StringConstants.MainIdPropertyName, out var id) ? (long)id : 0;
+
+        if (key == 0)
+        {
+            throw new ArgumentException("Не удалось найти Id сущности");
+        }
+
+        if (entityToSave != null)
+        {
+            var savedEntity = await _odataClientService.UpdateEntityAsync(entityToSave, dto.Edmx!.Name!, key);
+            return savedEntity;
+        }
+        else
+        {
+            throw new ArgumentException("Связанные сущности не найдены");
+        }
+    }
+
+    /// <summary>
+    /// Получает список свойств сущности в зависимости от ее структуры в Odata
+    /// </summary>
+    /// <param name="dto">DTO сущности</param>
+    public List<EntityFieldDto> GetEntityFields(EdmxEntityDto? dto)
+    {
+        if(dto == null)
+        {
+            return new();
+        }
+        
+        var structuralProperties = dto.StructuralProperties
+            .Select(p => new StructuralFieldDto
+            {
+                Name = p.Name?.ToString() ?? "",
+                Type = p.Type?.ToString() ?? "Неизвестно",
+                Nullable = p.Nullable
+            })
+            .ToList();
+
+        var navigationProperties = dto.NavigationProperties
+            .Select(p => new NavigationPropertyDto
+            {
+                Name = p.Name?.ToString() ?? "",
+                Type = p.Type?.ToString() ?? "Неизвестно",
+                Nullable = p.Nullable
+            })
+            .ToList();
+
+        // Заполняем поля сущности
+        return structuralProperties
+            .Concat<EntityFieldDto>(navigationProperties)
+            .ToList();
     }
 
 }

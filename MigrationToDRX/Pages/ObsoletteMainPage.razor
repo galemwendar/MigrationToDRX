@@ -1,0 +1,195 @@
+﻿@page "/obsolettemainpage"
+@using MigrationToDRX.Data.Enums
+@using MigrationToDRX.Data.Models
+@using MigrationToDRX.Data.Models.Dto
+@using Radzen
+@using Radzen.Blazor
+@using System.Data
+@using System.Dynamic
+
+<div class="page-background-main">
+    <RadzenComponents />
+
+    @if (!IsConnected)
+    {
+        <p><b> Подключение не настроено </b><a href="/" style="color: red; font-size: 18px; background-color: lightslategray;"><b>Вернуться на страницу подключения</b></a></p>
+    }
+
+     <div class="card mb-3">
+        <div class="card-body">
+        <RadzenAccordion>
+                <Items>
+                    <RadzenAccordionItem Text="Инструкция" Icon="help" CollapseTitle="Свернуть инструкцию"
+                                        ExpandTitle="Развернуть инструкцию" CollapseAriaLabel="Свернуть инструкцию"
+                                        ExpandAriaLabel="Развернуть инструкцию">
+                        <ol>
+                            <li>Выберите сущность, с которой будете работать.</li>
+                            <li>Загрузите файл с таблицей (формат ODF пока не поддерживается).</li>
+                            <li>Выберите сценарий работы.</li>
+                            <li>Сопоставьте таблицу со свойством выбранной сущности из выпадающего списка в таблице.</li>
+                            <li>С помощью кнопки "Проверить данные" убедитесь, что загрузка возможна (еще не реализовано). </li>
+                            <li>Кнопка "Загрузить" выполняет сценарий на сервере</li>
+                            <li>После выполнения сценария появится кнопка с отчетом в виде таблицы (еще не реализовано).</li>
+                        </ol>
+                    </RadzenAccordionItem>
+                </Items>
+            </RadzenAccordion>
+        </div>
+     </div>
+
+    <div class="card mb-3">
+        <div class="card-header">
+            Необходимо выбрать сущность для миграции данных
+        </div>
+        <div class="card-body">
+
+            <div class="row mb-3">
+                <div class="col-3">
+                    <div class="text-description">Выберите сценарий работы</div>
+                </div>
+                <div class="col-9">
+                    <RadzenDropDown Data="@ScenarioOptions" TextProperty="Description" ValueProperty="Value"
+                        TValue="OdataOperation"
+                        AllowClear="true"  @bind-Value="CurrentScenario" Style="width: 100%"
+                        Change="@(args => OnScenarioChanged(args))" />
+                </div>
+            </div>
+
+
+            <div class="row mb-3">
+                <div class="col-9">
+                    <div class="text-description">Выберите сущность</div>
+
+                    <RadzenDropDown Data="@EntitySets" TValue="string" TextProperty="Name" ValueProperty="Name"
+                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                        AllowFiltering="true" AllowClear="true" @bind-Value="SelectedEntitySetName" Style="width: 100%"
+                        Change="@(() => InvokeAsync(OnEntitySetsSelectChanged))" />
+
+                </div>
+                 <div class="col-3">
+                    <div class="text-description">Поиск ссылочного свойства по</div>
+                    <RadzenRadioButtonList @bind-Value=@SearchInMainEntityBy TValue="SearchEntityBy">
+                        <Items>
+                            <RadzenRadioButtonListItem Text="Идентификатору" Value="SearchEntityBy.Id" />
+                            <RadzenRadioButtonListItem Text="Имени" Value="SearchEntityBy.Name" />
+                        </Items>
+                    </RadzenRadioButtonList>
+                </div>
+            </div>
+
+            @if ((CurrentScenario == OdataOperation.AddEntityToCollection || CurrentScenario == OdataOperation.UpdateEntityInCollection) && CollectionPropeties != null)
+            {
+                <div class="row mb-3">
+                    <div class="col-7">
+                        <div class="text-description">Выберите свойство-коллекцию</div>
+
+                        <div class="col-9">
+                            <RadzenDropDown Data="@CollectionPropeties" TValue="string" TextProperty="Name" ValueProperty="Name"
+                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"  AllowClear="true"
+                                AllowFiltering="true" @bind-Value="SelectedCollectionPropertyName" Style="width: 100%"
+                                Change="@(() => InvokeAsync(OnCollectionPropertyChanged))" />
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="text-description">Выберите файл для загрузки</div>
+                        <div class="text-description">Поддерживаемые форматы: .xlsx, .xls, .odf, .ods, .csv</div>
+                    </div>
+                </div>
+            }
+
+
+            <RadzenCard Style="padding: 1rem;" class="mb-3">
+                <h5>Загрузка файла</h5>
+                <p class="text-muted mb-1">Поддерживаемые форматы: .xlsx, .xls, .odf, .ods, .csv</p>
+
+                <RadzenUpload Accept=".xlsx,.xls,.odf,.ods,.csv"
+                            Multiple="false"
+                            ChooseText="Выберите файл"
+                            Change="@OnFileUpload"
+                            class="upload-custom" />
+            </RadzenCard>
+
+
+            <div class="row mb-3 d-flex" disabled="@columnMapping.Any()">
+                <div class="col-auto"><button class="btn btn-primary" style="width: auto;"
+                        @onclick="@LoadData">Загрузить
+                        данные</button></div>
+                <div class="col-auto"><button class="btn btn-secondary" style="width: auto;"
+                        @onclick="@ValidateData">Проверить данные</button></div>
+            </div>
+
+        </div>
+    </div>
+
+    @if(items.Count > 0)
+    {
+        <div class="card mt-5">
+            <div class="card-header">
+                Необходимо сопоставить столбцы Excel со свойствами сущности
+            </div>
+<div class="card-body">
+    <RadzenDataGrid TItem="ExpandoObject" Data="@items" AllowColumnResize="true" 
+                    AllowPaging="true" AllowColumnReorder="true" PageSize="100" 
+                    AllowVirtualization="true" AllowColumnPicking="true">
+        <Columns>
+            @foreach (var col in columns)
+            {
+                <RadzenDataGridColumn TItem="ExpandoObject" Title="@col">
+                    <HeaderTemplate>
+                        <p>@col</p>
+
+                        @* Безопасный DropDown: проверяем наличие ключей в словарях *@
+                        @{
+                            var dropdownData = availableFields.TryGetValue(col, out var list) 
+                                                ? list 
+                                                : Enumerable.Empty<EntityFieldDto>();
+
+                            if (!columnMapping.ContainsKey(col))
+                            {
+                                columnMapping[col] = null; // инициализируем ключ
+                            }
+                        }
+
+                        <RadzenDropDown TValue="string"
+                                        Data="@dropdownData"
+                                        ValueProperty="Name"
+                                        @bind-Value="columnMapping[col]"
+                                        Change="@(args => OnColumnValueChanged(col, args))"
+                                        AllowClear="true"
+                                        AllowFiltering="true"
+                                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                        Style="width: 200%"
+                                        Placeholder="Выберите свойство">
+
+                            @* Кастомный шаблон для отображения элементов *@
+                            <Template Context="field">
+                                <div style="display:flex; flex-direction:column;">
+                                    <span>@field.Name</span>
+                                    <span style="color:gray; font-size:0.85em;">
+                                        (@field.Type) Nullable:@(field.Nullable ? "Yes" : "No")
+                                    </span>
+                                </div>
+                            </Template>    
+
+                        </RadzenDropDown>
+                    </HeaderTemplate>
+
+                    <Template Context="data">
+                        @{
+                            var dict = (IDictionary<string, object>)data!;
+                            if (dict.ContainsKey(col))
+                            {
+                                <text>@dict[col]</text>
+                            }
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+            }
+        </Columns>
+    </RadzenDataGrid>
+</div>
+
+        </div>
+    }
+
+</div>

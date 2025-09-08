@@ -1,296 +1,210 @@
-using System;
-using System.Data;
-using System.Dynamic;
 using Microsoft.AspNetCore.Components;
 using Microsoft.OData.Edm;
+using MigrationToDRX.Data.Constants;
+using MigrationToDRX.Data.Enums;
+using MigrationToDRX.Data.Helpers;
 using MigrationToDRX.Data.Models.Dto;
 using MigrationToDRX.Data.Services;
 using Radzen;
-using MigrationToDRX.Data.Enums;
-using MigrationToDRX.Data;
-using MigrationToDRX.Data.Extensions;
 
 namespace MigrationToDRX.Pages;
 
 public partial class MainPage
 {
-    #region Сервисы
     /// <summary>
-    /// Сервис для работы с OData клиентом
+    /// Выбранная операция миграции
     /// </summary>
-    [Inject]
-    private OdataClientService? OdataClientService { get; set; }
+    protected OdataOperation SelectedOperation { get; set; }
 
     /// <summary>
-    /// Сервис для работы с уведомлениями
+    /// Список операций для выбора
     /// </summary>
-    [Inject]
-    private NotificationService? NotificationService { get; set; }
+    private List<EnumItem<OdataOperation>> OperationItems { get; set; } = new();
 
     /// <summary>
-    /// Сервис для работы с Excel
+    /// Выбранный поиск навигационных свойств
     /// </summary>
-    [Inject]
-    private ExcelService? ExcelService { get; set; }
-
-    [Inject]
-    private EntityService? EntityService { get; set; }
-
-    #endregion
-
-    #region Работа с Excel
-
+    protected SearchEntityBy SearchEntityBy { get; set; } = SearchEntityBy.Id;
 
     /// <summary>
-    /// Список объектов, загруженных из Excel
+    /// Список полей для поиска навигационных свойств
     /// </summary>
-    private List<ExpandoObject> items = new();
-
-    /// <summary>
-    /// Список колонок, загруженных из Excel
-    /// </summary>
-    private List<string> columns = new();
-
-    /// <summary>
-    /// Сопоставления ExcelКолонка -> EntitySetСвойство
-    /// </summary>
-    private Dictionary<string, string> columnMapping = new();
-
-    #endregion
-
-    #region Работа с OData
-    /// <summary>
-    /// Признак подключения к OData сервису
-    /// </summary>
-    private bool IsConnected => OdataClientService?.IsConnected ?? false;
+    private List<EnumItem<SearchEntityBy>> SearchEntityByList { get; set; } = new();
 
     /// <summary>
     /// Выбранный EntitySet
     /// </summary>
-    private string? SelectedEntitySetName { get; set; }
+    protected IEdmEntitySet? SelectedEntitySet { get; set; }
 
     /// <summary>
-    /// Выбранное навигационное свойство коллекции
-    /// </summary>
-    private string? SelectedCollectionPropertyName { get; set; }
-
-    /// <summary>
-    /// Выбранный EntityType
-    /// </summary>
-    private EdmxEntityDto? EdmxEntityDto { get; set; }
-
-    /// <summary>
-    /// Выбранный EntityType для навигационного свойства коллекции
-    /// </summary>
-    private EdmxEntityDto? ChildEdmxEntityDto { get; set; }
-
-    /// <summary>
-    /// Список сущностей (EntitySets)
+    /// Список всех сущностей в OData
     /// </summary>
     private List<IEdmEntitySet> EntitySets { get; set; } = new();
 
     /// <summary>
-    /// Навигационные свойства коллекции
+    /// Выбранное свойство-коллекция
     /// </summary>
-    private List<NavigationPropertyDto> CollectionPropeties => EdmxEntityDto == null ? new() : EdmxEntityDto.NavigationProperties.Where(p => p.IsCollection).ToList();
+    protected NavigationPropertyDto? SelectedCollectionProperty { get; set; }
 
     /// <summary>
-    /// Признак, по которому будет производится поиск по ссылочному свойству
+    /// Список свойств-коллекций в выбранной сущности
     /// </summary>
-    private SearchEntityBy SearchInMainEntityBy = SearchEntityBy.Id;
+    private List<NavigationPropertyDto> CollectionProperties { get; set; } = new();
 
     /// <summary>
-    /// Признак, по которому будет производится поиск по ссылочному в свойстве-коллекции
+    /// Список полей сущности, полученных из OData
     /// </summary>
-    private SearchEntityBy SearchInChildEntityBy = SearchEntityBy.Id;
+    protected List<EntityFieldDto> EntityFields { get; set; } = new();
 
-    private OdataScenario CurrentScenario = OdataScenario.CreateEntity;
+    /// <summary>
+    /// Список колонок, загруженных из Excel
+    /// </summary>
+    private List<string> ExcelColumns { get; set; } = new();
 
-    private record ScenarioOption(OdataScenario Value, string Description);
-
-    private List<ScenarioOption> ScenarioOptions = new()
-    {
-        new(OdataScenario.CreateEntity, "Создание сущности (документ/справочник/прочее)"),
-        new(OdataScenario.UpdateEntity, "Обновление сущности"),
-        new(OdataScenario.CreateDocumentWithVersion, "Создание документа с версией"),
-        new(OdataScenario.AddVersionToExistedDocument, "Добавление версии в существующий документ"),
-        new(OdataScenario.AddEntityToCollection, "Добавление сущности в свойство-коллекцию (еще не реализовано)"),
-        new(OdataScenario.UpdateEntityInCollection, "Обновление сущности в свойстве-коллекции (еще не реализовано)")
-    };
-
-    private List<EntityFieldDto> BaseEntityFieldsToMap = new();
-
-    private List<EntityFieldDto> EntityFieldsToMap = new();
-
-    #endregion
+    /// <summary>
+    /// Строки Excel, загруженные из файла
+    /// </summary>
+    private List<Dictionary<string, string>> PreviewRows { get; set; } = new();
 
     /// <summary>
     /// Словарь "имя колонки → список доступных полей".
     /// Используется для привязки данных к каждому DropDown в таблице.
     /// </summary>
-    private Dictionary<string, IEnumerable<EntityFieldDto>> availableFields = new();
+    protected Dictionary<string, EntityFieldDto?> ColumnMappings { get; set; } = new();
+    
+    protected bool UploadAllRows { get; set; } = true;
 
     /// <summary>
-    /// Инициализация компонента
+    /// Количество строк для загрузки
     /// </summary>
+    protected int RowsToUpload { get; set; } = 100;
+
+    /// <summary>
+    /// Сервис для работы с OData клиентом
+    /// </summary>
+    [Inject]
+    private OdataClientService OdataClientService { get; set; } = null!;
+
+    /// <summary>
+    /// Сервис для работы с уведомлениями
+    /// </summary>
+    [Inject]
+    private NotificationService NotificationService { get; set; } = null!;
+
+    /// <summary>
+    /// Сервис для работы с Excel
+    /// </summary>
+    [Inject]
+    private ExcelService ExcelService { get; set; } = null!;
+
+    /// <summary>
+    /// Сервис для работы с EdmxEntity
+    /// </summary>
+    [Inject]
+    private EntityService EntityService { get; set; } = null!;
+
+    /// <summary>
+    /// Признак подключения к OData сервису
+    /// </summary>
+    private bool IsConnected => OdataClientService.IsConnected;
+
+    /// <summary>
+    /// Инициализация при старте страницы
+    /// </summary>
+    /// <returns></returns>
     protected override async Task OnInitializedAsync()
     {
-        if (OdataClientService != null && OdataClientService.IsConnected)
+        //TODO: показать модалку о том, что надо бы вернуться на страницу подключения
+        if (IsConnected == false)
         {
-            EntitySets = OdataClientService.GetEntitySets();
+            await base.OnInitializedAsync();
         }
 
-        OnScenarioChanged(CurrentScenario);
+        // получаем список сущностей из OData
+        EntitySets = OdataClientService.GetEntitySets().OrderBy(e => e.Name).ToList();
+
+        // получаем список операций для выбора
+        OperationItems = Data.Helpers.EnumHelper.GetItems<OdataOperation>();
+
+        // получаем список полей для поиска навигационных свойств
+        SearchEntityByList = Data.Helpers.EnumHelper.GetItems<SearchEntityBy>();
 
         await base.OnInitializedAsync();
+
     }
 
     /// <summary>
-    /// Обработчик изменения выбранной сущности
+    /// Обработчик изменения SelectedEntitySet
     /// </summary>
-    private void OnEntitySetsSelectChanged()
+    protected void OnSelectedEntitySetChanged(object value)
     {
-        foreach (var kvp in columnMapping)
+        if (SelectedEntitySet == null)
         {
-            columnMapping[kvp.Key] = string.Empty;
-        }
+            // очищаем список полей
+            EntityFields = new();
 
-        if (!string.IsNullOrWhiteSpace(SelectedEntitySetName))
-        {
-            EdmxEntityDto = OdataClientService!.GetEdmxEntityDto(SelectedEntitySetName);
+            // Сбрасываем маппинг
+            ColumnMappings = ExcelColumns.Any() ? ExcelColumns.ToDictionary(c => c, _ => (EntityFieldDto?)null) : new();
 
-            if (BaseEntityFieldsToMap == null)
-            {
-                NotificationService!.Notify(new NotificationMessage
-                {
-                    Summary = "Ошибка",
-                    Detail = "Не удалось получить свойства сущности",
-                    Severity = NotificationSeverity.Error,
-                    Duration = 4000
-                });
-
-                return;
-            }
-
-            BaseEntityFieldsToMap = new List<EntityFieldDto>();
-
-            if (EdmxEntityDto.StructuralProperties != null)
-            {
-                BaseEntityFieldsToMap.AddRange(EdmxEntityDto.StructuralProperties);
-            }
-
-            if (EdmxEntityDto.NavigationProperties != null)
-            {
-                BaseEntityFieldsToMap.AddRange(EdmxEntityDto.NavigationProperties.Where(prop => prop.IsCollection == false));
-            }
-
-        }
-        else
-        {
-            BaseEntityFieldsToMap = new();
-        }
-
-        RecalculateEntityFields();
-        RefreshAvailableFields();
-        StateHasChanged();
-    }
-
-
-    /// <summary>
-    /// Обработчик изменения выбранного свойства коллекции
-    /// </summary>
-    private void OnCollectionPropertyChanged()
-    {
-        if (!string.IsNullOrWhiteSpace(SelectedCollectionPropertyName))
-        {
-            var prop = CollectionPropeties?.FirstOrDefault(p => p.Name == SelectedCollectionPropertyName);
-            if (prop != null && !string.IsNullOrWhiteSpace(prop.Type))
-            {
-                ChildEdmxEntityDto = OdataClientService?.GetChildEntities(prop);
-
-                BaseEntityFieldsToMap = new List<EntityFieldDto>();
-                if (ChildEdmxEntityDto?.StructuralProperties != null)
-                {
-                    BaseEntityFieldsToMap.AddRange(ChildEdmxEntityDto.StructuralProperties);
-                }
-                if (ChildEdmxEntityDto?.NavigationProperties != null)
-                {
-                    BaseEntityFieldsToMap.AddRange(ChildEdmxEntityDto.NavigationProperties.Where(prop => prop.IsCollection == false));
-                }
-
-
-            }
-        }
-        else
-        {
-            BaseEntityFieldsToMap = new();
-        }
-
-        RecalculateEntityFields();
-        StateHasChanged();
-    }
-
-    /// <summary>
-    /// Пересобирает базовый список доступных полей сущности (EntityFieldsToMap)
-    /// в зависимости от выбранного сценария:
-    /// - начинаем с базовых полей BaseEntityFieldsToMap,
-    /// - добавляем дополнительные поля (MainId, Path и др.) по условиям сценария.
-    /// </summary>
-    private void RecalculateEntityFields()
-    {
-        if (BaseEntityFieldsToMap == null)
-        {
-            EntityFieldsToMap = new();
             return;
         }
 
-        // начинаем с "чистых" свойств сущности
-        var fields = new List<EntityFieldDto>(BaseEntityFieldsToMap);
-
-        var mainIdProp = new StructuralFieldDto { Name = StringConstants.MainIdPropertyName, Type = "Edm.String", Nullable = false };
-        var pathProp = new StructuralFieldDto { Name = StringConstants.PathPropertyName, Type = "Edm.String", Nullable = false };
-
-        switch (CurrentScenario)
+        // получаем метаданные сущности и парсим поля
+        if (OdataClientService.GetEdmxEntityDto(SelectedEntitySet.Name) is { } dto)
         {
-            case OdataScenario.CreateEntity:
-                break;
+            // Заполняем поля сущности
+            EntityFields = EntityService.GetEntityFields(dto);
 
-            case OdataScenario.UpdateEntity:
-                fields.AddFirst(mainIdProp);
-                break;
+            // Добавляем свойства сущности в зависимости от операции
+            EntityFields = OdataOperationHelper.AddPropertiesByOperation(SelectedOperation, EntityFields);
 
-            case OdataScenario.CreateDocumentWithVersion:
-                fields.AddFirst(pathProp);
-                break;
+            // Заполняем список свойств-коллекций
+            CollectionProperties = dto.NavigationProperties.Where(p => p.IsCollection).ToList();
 
-            case OdataScenario.AddVersionToExistedDocument:
-                fields.AddFirstRange(new[] { mainIdProp, pathProp });
-                break;
+            // Сбрасываем маппинг
+            ColumnMappings = ExcelColumns.ToDictionary(c => c, _ => (EntityFieldDto?)null);
 
-            case OdataScenario.AddEntityToCollection:
-                fields.AddFirst(mainIdProp);
-                break;
+        }
+    }
 
-            case OdataScenario.UpdateEntityInCollection:
-                fields.AddFirst(mainIdProp);
-                break;
+    /// <summary>
+    /// Обработчик изменения SelectedCollectionProperty
+    /// </summary>
+    protected void OnSelectedCollectionPropertyChanged(object value)
+    {
+        if (SelectedCollectionProperty == null)
+        {
+            // очищаем список полей
+            EntityFields = new();
+
+            // Сбрасываем маппинг
+            ColumnMappings = ExcelColumns.Any() ? ExcelColumns.ToDictionary(c => c, _ => (EntityFieldDto?)null) : new();
+
+            return;
         }
 
-        EntityFieldsToMap = fields;
+        var dto = OdataClientService.GetChildEntities(SelectedCollectionProperty);
+
+        // Заполняем поля сущности
+        EntityFields = EntityService.GetEntityFields(dto);
+
+        // Добавляем свойства сущности в зависимости от операции
+        EntityFields = OdataOperationHelper.AddPropertiesByOperation(SelectedOperation, EntityFields);
+
+        // Сбрасываем маппинг
+        ClearExcelToFieldsMapping();
     }
 
     /// <summary>
     /// Обработчик загрузки файла
     /// </summary>
-    /// <param name="args"></param>
-    /// <returns></returns>
     private async Task OnFileUpload(UploadChangeEventArgs args)
     {
-        if (args.Files == null || args.Files.Count() == 0)
+        // Если нет файла — очищаем связанные словари и списки
+        if (args.Files == null || !args.Files.Any())
         {
-            columns = new();
-            items = new();
-            columnMapping = new();
+            ColumnMappings = new();
+            PreviewRows = new();
 
             StateHasChanged();
             return;
@@ -300,108 +214,58 @@ public partial class MainPage
         if (file != null)
         {
             using var stream = new MemoryStream();
-            await file.OpenReadStream(100 * 1024 * 1024).CopyToAsync(stream);
+            await file.OpenReadStream(SystemConstants.MaxExcelFileSize).CopyToAsync(stream);
             stream.Position = 0;
 
-            var dictList = ExcelService!.ReadExcel(stream);
+            var rows = ExcelService.ReadExcel(stream);
 
-            columns = dictList.FirstOrDefault()?.Keys.ToList() ?? new();
-            items = dictList.Select(dict =>
+            if (rows.Count == 0)
             {
-                var expando = new ExpandoObject();
-                var expandoDict = (IDictionary<string, object>)expando!;
-                foreach (var kv in dict)
-                    expandoDict[kv.Key] = kv.Value;
-                return expando;
-            }).ToList();
-
-            // Инициализация словаря с пустыми значениями
-            foreach (var col in columns)
-            {
-                if (!columnMapping.ContainsKey(col))
-                    columnMapping[col] = null!;
+                ExcelColumns = new List<string>();
+                PreviewRows = new List<Dictionary<string, string>>();
+                return;
             }
+
+            // Формируем список колонок из заголовков
+            //HACK: Внимание! Если заголовков нет, то будет использоваться первая строка!
+            // Данные этой строки НЕ БУДУТ загружены в OData! 
+            ExcelColumns = rows.First().Keys.ToList();
+
+            // Формируем PreviewRows (берем максимум 5-6 строк)
+            PreviewRows = rows
+            // HACK:    .Take(6) <= Так можно ограничить, сколько строк мы забираем и храним в памяти
+                .Select(row => ExcelColumns.ToDictionary(
+                    col => col,
+                    col => row[col].ToString() ?? string.Empty))
+                .ToList();
+
+            // Сбрасываем маппинг
+            ClearExcelToFieldsMapping();
+
         }
-    }
-
-    /// <summary>
-    /// Обработчик изменения выбранного сценария.
-    /// - Запоминаем новый сценарий.
-    /// - Пересчитываем список всех доступных полей сущности (RecalculateEntityFields).
-    /// - Перестраиваем словарь доступных полей для всех колонок (RefreshAvailableFields).
-    /// - Обновляем UI (StateHasChanged).
-    /// </summary>
-    private void OnScenarioChanged(object value)
-    {
-        CurrentScenario = (OdataScenario)value;
-        RecalculateEntityFields();
-        RefreshAvailableFields();
-        StateHasChanged();
-    }
-    /// <summary>
-    /// Загружает данные из Excel в OData
-    /// </summary>
-    /// <returns></returns>
-    private async Task LoadData()
-    {
-        if (OdataClientService == null || string.IsNullOrEmpty(SelectedEntitySetName))
-            return;
-
-        var entities = BuildEntityDictionaries();
-
-
-        // TODO: сначала нужно проверить, что все обязательные свойства указаны в Excel
-        // если нет, то выводить ошибку
-        foreach (var entity in entities)
+        else
         {
-            var result = await EntityService!.ProceedEntitiesToOdata(new ProcessedEntityDto
+            NotificationService.Notify(new NotificationMessage
             {
-                Entity = entity,
-                EntitySet = SelectedEntitySetName,
-                Scenario = CurrentScenario,
-                IsCollection = false,
-                SearchEntityBy = SearchInMainEntityBy
+                Summary = "Ошибка",
+                Detail = "Не загрузить документ",
+                Severity = NotificationSeverity.Error,
+                Duration = 4000
             });
-
-            if (result == null)
-            {
-                NotificationService!.Notify(new NotificationMessage
-                {
-                    Summary = "Ошибка",
-                    Detail = "Не удалось выполнить сценарий",
-                    Severity = NotificationSeverity.Error,
-                    Duration = 4000
-                });
-
-                continue;
-            }
-
-            if (!result.Success && result.Error != null)
-            {
-                NotificationService!.Notify(new NotificationMessage
-                {
-                    Summary = "Ошибка",
-                    Detail = result.Error,
-                    Severity = NotificationSeverity.Error,
-                    Duration = 4000
-                });
-            }
         }
-
-        NotificationService!.Notify(new NotificationMessage
-        {
-            Summary = "Сообщение",
-            Detail = "Сценарий выполнен",
-            Severity = NotificationSeverity.Info,
-            Duration = 4000
-        });
-
-
     }
 
-    private async Task ValidateData()
+    /// <summary>
+    /// Очищает словарь со свойствами сущности в Excel
+    /// </summary>
+    private void ClearExcelToFieldsMapping()
     {
-        NotificationService!.Notify(new NotificationMessage
+        ColumnMappings = ExcelColumns.Any() ? ExcelColumns.ToDictionary(c => c, _ => (EntityFieldDto?)null) : new();
+    }
+
+    private void Validate()
+    {
+        NotificationService.Notify(new NotificationMessage
         {
             Summary = "Ошибка",
             Detail = "Валидация еще не реализована",
@@ -410,103 +274,8 @@ public partial class MainPage
         });
     }
 
-    /// <summary>
-    /// Собирает данные из Excel в список словарей для отправки в OData.
-    /// </summary>
-    private IEnumerable<IDictionary<string, object>> BuildEntityDictionaries()
+    private Task Upload()
     {
-        foreach (var item in items) // item = ExpandoObject (строка из Excel)
-        {
-            var rowDict = new Dictionary<string, object>();
-            var itemDict = item as IDictionary<string, object>;
-
-            if (itemDict == null)
-            {
-                throw new ArgumentException("");
-            }
-
-            foreach (var col in columns) // колонки Excel
-            {
-                if (!columnMapping.TryGetValue(col, out var entityProperty))
-                    continue; // колонка не сматчена
-
-                if (string.IsNullOrWhiteSpace(entityProperty))
-                    continue; // не указано, куда мапить
-
-                var value = itemDict[col];
-                rowDict[entityProperty] = value ?? string.Empty;
-            }
-
-            if (rowDict.Count > 0)
-                yield return rowDict;
-        }
+        return Task.CompletedTask;
     }
-
-    /// <summary>
-    /// Возвращает список доступных полей для выбора в колонке
-    /// </summary>
-    /// <param name="column">Колонка</param>
-    /// <returns></returns>
-    private IEnumerable<EntityFieldDto> GetAvailableEntityFields(string column)
-    {
-        // Берем все поля
-        var allFields = EntityFieldsToMap ?? new List<EntityFieldDto>();
-
-        // Исключаем те, что уже выбраны в других колонках
-        var selectedFields = columnMapping
-            .Where(kv => kv.Key != column && !string.IsNullOrWhiteSpace(kv.Value))
-            .Select(kv => kv.Value)
-            .ToHashSet();
-
-        return allFields.Where(f => !selectedFields.Contains(f.Name!));
-    }
-
-    /// <summary>
-    /// Пересчитывает список доступных полей для каждой колонки.
-    /// - Берём все поля сущности (EntityFieldsToMap).
-    /// - Исключаем те, что уже выбраны в других колонках (columnMapping).
-    /// - Даже если для колонки нет доступных полей, создаём пустой список,
-    ///   чтобы избежать KeyNotFoundException при рендере DropDown.
-    /// </summary>
-    private void RefreshAvailableFields()
-    {
-        // Если нет колонок или EntityFieldsToMap — словарь очищаем
-        if (columns == null || EntityFieldsToMap == null)
-        {
-            availableFields.Clear();
-            return;
-        }
-
-        foreach (var col in columns)
-        {
-            var allFields = EntityFieldsToMap;
-
-            // Смотрим, какие значения уже выбраны в других колонках
-            var selectedFields = columnMapping
-                .Where(kv => kv.Key != col && !string.IsNullOrWhiteSpace(kv.Value))
-                .Select(kv => kv.Value)
-                .ToHashSet();
-
-            // Формируем список доступных полей для колонки
-            var filteredFields = allFields
-                .Where(f => !selectedFields.Contains(f.Name!))
-                .ToList();
-
-            // Обязательно кладём ключ в словарь, даже если список пуст
-            availableFields[col] = filteredFields;
-        }
-    }
-    /// <summary>
-    /// Обработчик выбора нового значения в DropDown для конкретной колонки.
-    /// - Запоминаем выбранное значение в columnMapping.
-    /// - Пересчитываем доступные поля (чтобы исключить выбранное из других DropDown).
-    /// - Обновляем UI.
-    /// </summary>
-    private void OnColumnValueChanged(string col, object value)
-    {
-        columnMapping[col] = value?.ToString();
-        RefreshAvailableFields();
-        StateHasChanged();
-    }
-
 }

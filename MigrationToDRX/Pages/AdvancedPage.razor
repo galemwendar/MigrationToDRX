@@ -1,0 +1,160 @@
+﻿@page "/advimport"
+@using MigrationToDRX.Data.Models.Dto
+@using Radzen
+@using Radzen.Blazor
+@using AdvancedPage_1 = AdvancedPage
+@inherits ComponentBase
+
+<PageTitle>Импорт сущностей</PageTitle>
+
+<h3>Импорт из Excel</h3>
+
+
+
+<div class="p-3">
+
+    @* Выбор файла *@
+    <label class="file-upload-label">Excel файл</label>
+    <div class="file-upload-container mb-3">
+        
+        <RadzenUpload Accept=".xlsx,.xls,.odf,.ods,.csv"
+                    Multiple="false"
+                    ChooseText="Выбрать..."
+                    Change="@OnFileUpload"
+                    class="file-upload-control" />
+    </div>
+
+    <div class="mb-3">
+
+        @* Выбор операции *@
+            <label class="form-label">Операция</label>
+            <RadzenDropDown Data="@OperationItems"
+                            @bind-Value="SelectedOperation"
+                            Placeholder="Выберите операцию с данными..."
+                            Style="width:100%"
+                            ValueProperty="Value"
+                            TextProperty="DisplayName">
+            </RadzenDropDown>
+
+    </div>
+
+
+    @* Выбор сущности     *@
+    <div class="mb-3">
+        <label class="form-label">Сущность</label>
+        <RadzenDropDown TextProperty="Name"
+                        Data="@Entities"
+                        @bind-Value="SelectedEntity"
+                        Placeholder="Выберите сущность..."
+                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                        AllowClear="true"
+                        AllowFiltering="true"
+                        Style="width:100%"
+                        Change="OnEntityChanged">
+        </RadzenDropDown>
+    </div>
+
+     @if (SelectedEntity != null && EntityFields.Any())
+    {
+        <h5>Маппинг полей</h5>
+        <table class="table table-bordered table-sm">
+            <thead>
+                <tr>
+                    <th>Колонка в файле</th>
+                    <th>Пример значения</th>
+                    <th>Свойство сущности</th>
+                    <th>Тип</th>
+                    <th>Может быть пустым</th>
+                    <th>По какому свойству искать</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (int i = 0; i < ExcelColumns.Count; i++)
+                {
+                    var col = ExcelColumns[i];
+                    var sampleValue = PreviewRows.FirstOrDefault()?.GetValueOrDefault(col);
+
+                    <tr>
+                        <td>@col</td>
+                        <td>@sampleValue</td>
+                        <td>
+                            <RadzenDropDown Data="EntityFields"
+                                            TextProperty="Name" 
+                                            AllowClear="true"
+                                            AllowFiltering="true"
+                                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                            @bind-Value="ColumnMappings[col]" 
+                                            Placeholder="Выберите свойство...">
+
+                                @* Кастомный шаблон для отображения элементов *@
+                                    <Template Context="field">
+                                        <div style="display:flex; flex-direction:column;">
+                                            <span>@field.Name</span>
+                                            <span style="color:gray; font-size:0.85em;">
+                                                (@field.ShortType) Nullable:@(field.Nullable ? "Yes" : "No")
+                                            </span>
+                                        </div>
+                                    </Template>  
+                            </RadzenDropDown>
+                        </td>
+                        <td>@(ColumnMappings[col] is EntityFieldDto f ? EntityFields.FirstOrDefault(x => x == f)?.ShortType : "")</td>
+                        <td>@(ColumnMappings[col] is EntityFieldDto f2 ? (EntityFields.FirstOrDefault(x => x == f2)?.Nullable == true ? "Да" : "Нет") : "")</td>
+                        <td>
+                             @if(ColumnMappings[col] is NavigationPropertyDto f3 && string.IsNullOrWhiteSpace(f3.Name) == false)
+                             {
+                                <RadzenDropDown Data="GetEntityFileds(f3)" 
+                                                @bind-Value="ColumnMappingsNav[f3.Name]" 
+                                                TextProperty="Name"
+                                                AllowClear="true"
+                                                AllowFiltering="true"
+                                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                                Placeholder="Выберите свойство связанной сущности...">
+
+                                        @* Кастомный шаблон для отображения элементов *@
+                                            <Template Context="innerNavField">
+                                                <div style="display:flex; flex-direction:column;">
+                                                    <span>@innerNavField.Name</span>
+                                                    <span style="color:gray; font-size:0.85em;">
+                                                        (@innerNavField.ShortType) Nullable:@(innerNavField.Nullable ? "Yes" : "No")
+                                                    </span>
+                                                </div>
+                                            </Template>    
+                                </RadzenDropDown>
+                             }
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-secondary" @onclick="() => RemoveRow(col)">Скрыть</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <h5>Предпросмотр</h5>
+        <table class="table table-striped table-sm">
+            <thead>
+                <tr>
+                    @foreach (var col in ExcelColumns)
+                    {
+                        <th>@col</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in PreviewRows)
+                {
+                    <tr>
+                        @foreach (var col in ExcelColumns)
+                        {
+                            <td>@(row.ContainsKey(col) ? row[col] : "")</td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+
+        <button class="btn btn-primary" @onclick="StartImport">Импорт</button>
+    }
+</div>

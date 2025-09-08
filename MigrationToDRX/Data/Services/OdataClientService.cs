@@ -102,16 +102,16 @@ public class OdataClientService
     }
 
     /// <summary>
-    /// Получить схему выбранного типа сущности
+    /// Получить схему выбранного типа сущности по EntitySet
     /// </summary>
-    /// <param name="typeOrEntitySetName">выбранная коллекция сущностей</param>
+    /// <param name="entitySetName">выбранная коллекция сущностей</param>
     /// <returns>dto с описанием структуры сущности</returns>
-    public EdmxEntityDto GetEdmxEntityDto(string typeOrEntitySetName)
+    public EdmxEntityDto GetEdmxEntityDto(string entitySetName)
     {
-        var entitySet = _container!.FindEntitySet(typeOrEntitySetName);
+        var entitySet = _container!.FindEntitySet(entitySetName);
 
         var entityType = entitySet?.EntityType()
-            ?? _metadata!.FindDeclaredType(typeOrEntitySetName) as IEdmEntityType;
+            ?? _metadata!.FindDeclaredType(entitySetName) as IEdmEntityType;
 
         if (entityType == null)
             return new EdmxEntityDto();
@@ -124,7 +124,7 @@ public class OdataClientService
             Name = entityType.Name,
             FullName = entityType.FullName(),
             BaseType = entityType.BaseType?.FullTypeName(),
-            EntitySetName = typeOrEntitySetName,
+            EntitySetName = entitySetName,
             IsAbstract = entityType.IsAbstract,
             IsOpen = entityType.IsOpen,
             Keys = keys,
@@ -144,6 +144,61 @@ public class OdataClientService
                 Nullable = p.Type.IsNullable
             }).ToList(),
         };
+    }
+    
+    /// <summary>
+    /// Получить схему сущности по ее полному типу
+    /// </summary>
+    /// <param name="fullTypeName"></param>
+    /// <returns></returns>
+    public EdmxEntityDto GetEdmxEntityDtoByType(string fullTypeName)
+    {
+        var entityType = _metadata!.FindDeclaredType(fullTypeName) as IEdmEntityType;
+        if (entityType == null)
+            return new EdmxEntityDto();
+
+        var keys = entityType.Key().Select(k => k.Name).ToList();
+
+        return new EdmxEntityDto
+        {
+            Name = entityType.Name,
+            FullName = entityType.FullName(),
+            BaseType = entityType.BaseType?.FullTypeName(),
+            EntitySetName = null, // неизвестно, если ищем только по типу
+            IsAbstract = entityType.IsAbstract,
+            IsOpen = entityType.IsOpen,
+            Keys = keys,
+            StructuralProperties = entityType.StructuralProperties().Select(p => new StructuralFieldDto
+            {
+                Name = p.Name,
+                Type = p.Type.FullName(),
+                Nullable = p.Type.IsNullable
+            }).ToList(),
+            NavigationProperties = entityType.NavigationProperties().Select(p => new NavigationPropertyDto
+            {
+                Name = p.Name,
+                Type = p.Type.FullName(),
+                IsCollection = p.Type.IsCollection(),
+                Nullable = p.Type.IsNullable
+            }).ToList()
+        };
+    }
+
+
+    /// <summary>
+    /// Получить схему выбранного типа сущности
+    /// </summary>
+    /// <param name="typeOrEntitySetName">выбранная коллекция сущностей</param>
+    /// <returns>dto с описанием структуры сущности</returns>
+    public IEdmEntityType? GetEdmxEntityType(string typeOrEntitySetName)
+    {
+        var entitySet = _container!.FindEntitySet(typeOrEntitySetName);
+
+
+        var entityType = entitySet?.EntityType()
+            ?? _metadata!.FindDeclaredType(typeOrEntitySetName) as IEdmEntityType;
+
+        return entityType;
     }
 
     /// <summary>
@@ -462,6 +517,33 @@ public class OdataClientService
             logger.Error(ex);
             return new Dictionary<string, object>();
         }
+    }
+
+    /// <summary>
+    /// Получить список сущностей
+    /// </summary>
+    /// <returns>Список сущностей</returns>
+    public async Task<List<string>> GetEntitiesV2Async()
+    {
+        var metadata = await _client!.GetMetadataAsync<Microsoft.OData.Edm.IEdmModel>();
+        return metadata.SchemaElements
+            .OfType<Microsoft.OData.Edm.IEdmEntityType>()
+            .Select(e => e.Name)
+            .OrderBy(x => x)
+            .ToList();
+    }
+
+    public async Task<IEdmEntityType?> GetEntityType(string? entityName)
+    {
+        if (string.IsNullOrWhiteSpace(entityName))
+        {
+            return null;
+        }
+
+        var metadata = await _client!.GetMetadataAsync<Microsoft.OData.Edm.IEdmModel>();
+        return metadata.SchemaElements
+            .OfType<Microsoft.OData.Edm.IEdmEntityType>()
+            .FirstOrDefault(t => t.Name == entityName);
     }
 
 }

@@ -10,11 +10,11 @@ public class ProcessedEntityDto
 {
     public IDictionary<string, object>? Entity { get; set; }
 
-    public string? EntitySet { get; set; }
+    public EdmxEntityDto? Edmx { get; set; }
 
-    public OdataScenario Scenario { get; set; }
+    public OdataOperation Scenario { get; set; }
 
     public bool IsCollection { get; set; }
 
-    public SearchEntityBy SearchEntityBy { get; set; }
+    public IDictionary<string, string>? SearchCriterias { get; set; }
 }

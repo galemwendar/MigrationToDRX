@@ -18,6 +18,11 @@ public abstract class EntityFieldDto
     public virtual string? Type { get; set; }
 
     /// <summary>
+    /// Краткое имя типа свойства сущности
+    /// </summary>
+    public virtual string? ShortType => Type;
+
+    /// <summary>
     /// Может ли свойство быть пустым
     /// </summary>
     public bool Nullable { get; set; }

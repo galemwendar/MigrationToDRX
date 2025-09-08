@@ -1,6 +1,6 @@
 using System;
 
-namespace MigrationToDRX.Data;
+namespace MigrationToDRX.Data.Constants;
 
 /// <summary>
 /// Строковые константы

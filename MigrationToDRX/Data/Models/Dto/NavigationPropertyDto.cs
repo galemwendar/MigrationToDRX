@@ -13,12 +13,9 @@ public class NavigationPropertyDto : EntityFieldDto
     public bool IsCollection { get; set; }
 
     /// <summary>
-    /// Тип свойства сущности
+    /// Краткое наименование типа свойства сущности
     /// </summary>
-    /// <summary>
-    /// Тип свойства сущности с кастомной логикой
-    /// </summary>
-    public override string? Type
+    public override string? ShortType
     {
         get
         {
@@ -27,6 +24,5 @@ public class NavigationPropertyDto : EntityFieldDto
                 ? baseType.Split('.').Last()
                 : baseType;
         }
-        set => base.Type = value;
     }
 }
