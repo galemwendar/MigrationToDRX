@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+using System.Reflection;
 using MigrationToDRX.Data.Constants;
 using MigrationToDRX.Data.Enums;
 using MigrationToDRX.Data.Extensions;
@@ -16,7 +18,7 @@ public static class OdataOperationHelper
     /// <remarks>Является ключом для поиска сущности при обновлении 
     /// или поиска свойства - коллекции
     /// </remarks>
-    private static readonly StructuralFieldDto MainIdProperty = new()
+    public static readonly StructuralFieldDto MainIdProperty = new()
     {
         Name = StringConstants.MainIdPropertyName,
         Type = "Edm.String",
@@ -29,7 +31,7 @@ public static class OdataOperationHelper
     /// <remarks>Является ключом для поиска файла на машине клиента
     ///  при добавлении или обновлении версии документа
     /// </remarks>
-    private static readonly StructuralFieldDto PathProperty = new()
+    public static readonly StructuralFieldDto PathProperty = new()
     {
         Name = StringConstants.PathPropertyName,
         Type = "Edm.String",
@@ -61,11 +63,11 @@ public static class OdataOperationHelper
                 // Удаляем их
                 foreach (var key in keysToRemove)
                 {
-                    columnMappings[key] = null; 
-                } 
+                    columnMappings[key] = null;
+                }
             }
         }
-        
+
         properties.RemoveAll(p => p == MainIdProperty || p == PathProperty);
 
         switch (operation)
@@ -102,14 +104,44 @@ public static class OdataOperationHelper
     /// <param name="entityId">Идентификатор сущности, над которой проводилась операция</param>
     /// <param name="timestamp">Время выполнения операции</param>
     /// <returns>Метка, которая указывает, что операция выполнялась данной программой.</returns>
-    public static string ComputeStamp(bool result, int entityId, DateTime timestamp)
+    public static string ComputeStamp(bool result, long entityId, DateTime timestamp)
     {
         var data = $"{result}|{entityId}|{timestamp:O}";
-        
+
         using var sha256 = System.Security.Cryptography.SHA256.Create();
         var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(data));
 
         // Короткая и читаемая метка для Excel
         return BitConverter.ToString(hashBytes, 0, 8).Replace("-", "");
+    }
+
+    /// <summary>
+    /// Получает список свойств объекта и возвращает список их названий
+    /// на основе атрибута DisplayName
+    /// </summary>
+    public static List<string> GetDisplayNames<T>()
+    {
+        return typeof(T)
+            .GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+            .Select(p => p.GetCustomAttribute<DisplayAttribute>())
+            .Where(attr => attr != null)
+            .Select(attr => attr!.Name ?? string.Empty)
+            .ToList();
+    }
+    
+    /// <summary>
+    /// Получает Display(Name) поля или свойства типа T по его имени.
+    /// Если атрибута Display нет — возвращает имя поля.
+    /// </summary>
+    public static string GetDisplayName<T>(string propertyName)
+    {
+        if (string.IsNullOrEmpty(propertyName))
+            throw new ArgumentNullException(nameof(propertyName));
+
+        var prop = typeof(T).GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+        if (prop == null) return propertyName;
+
+        var displayAttr = prop.GetCustomAttribute<DisplayAttribute>();
+        return displayAttr?.Name ?? propertyName;
     }
 }

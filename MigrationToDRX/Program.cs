@@ -13,12 +13,19 @@ builder.Services.Configure<FormOptions>(options =>
     options.MultipartBodyLengthLimit = 100 * 1024 * 1024; // 100 МБ
 });
 
+// Чтение настроек Kestrel из конфигурации
+var kestrelConfig = builder.Configuration.GetSection("Kestrel:Endpoints");
+var httpUrl = kestrelConfig["Http:Url"];
+var httpsUrl = kestrelConfig["Https:Url"];
+
+
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddScoped<OdataClientService>();
 builder.Services.AddScoped<ODataEDocService>();
 builder.Services.AddScoped<EntityService>();
+builder.Services.AddScoped<EntityBuilderService>();
 builder.Services.AddScoped<ExcelService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<DialogService>();
@@ -32,8 +39,6 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
- //   app.UseHsts();
 }
 
 //app.UseHttpsRedirection();
@@ -44,5 +49,6 @@ app.UseRouting();
 
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
+
 
 app.Run();

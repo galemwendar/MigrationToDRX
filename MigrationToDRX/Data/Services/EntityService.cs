@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using MigrationToDRX.Data.Constants;
 using MigrationToDRX.Data.Enums;
 using MigrationToDRX.Data.Helpers;
@@ -20,11 +21,17 @@ public class EntityService
     /// </summary>
     private readonly FileService _fileService;
 
+    /// <summary>
+    /// Сервис для создания сущностей
+    /// </summary>
+    private readonly EntityBuilderService _entityBuilderService;
 
-    public EntityService(OdataClientService odataClientService, FileService fileService)
+
+    public EntityService(OdataClientService odataClientService, FileService fileService, EntityBuilderService entityBuilderService)
     {
         _odataClientService = odataClientService;
         _fileService = fileService;
+        _entityBuilderService = entityBuilderService;
     }
 
     // public async Task<Dictionary<string, object>> CreateEntityAsync(IDictionary<string, object> excelRow, Dictionary<string, string> columnMapping, EdmxEntityDto entitydto)
@@ -83,29 +90,6 @@ public class EntityService
     //     return result;
     // }
 
-    /// <summary>
-    /// Конвертация типа в тип, понятный odata
-    /// </summary>
-    /// <param name="value"></param>
-    /// <param name="edmType"></param>
-    /// <returns></returns>
-    private static object? ConvertToODataType(object? value, string? edmType)
-    {
-        if (value == null || edmType == null)
-            return null;
-
-        return edmType switch
-        {
-            "Edm.Int32" => int.TryParse(value.ToString(), out var i) ? i : null,
-            "Edm.Int64" => long.TryParse(value.ToString(), out var l) ? l : null,
-            "Edm.String" => value.ToString(),
-            "Edm.Boolean" => bool.TryParse(value.ToString(), out var b) ? b : null,
-            "Edm.DateTimeOffset" => DateTimeOffset.Parse(value.ToString() ?? string.Empty),
-            "Edm.Double" => double.TryParse(value.ToString(), out var d) ? d : null,
-            "Edm.Guid" => Guid.TryParse(value.ToString(), out var g) ? g : null,
-            _ => value // по умолчанию
-        };
-    }
 
 
     /// <summary>
@@ -116,12 +100,12 @@ public class EntityService
     /// <param name="scenario">Сценарий работы</param>
     /// <returns>Результат выполнения</returns>
     /// <exception cref="ArgumentException"></exception>
-    public async Task<SaveEntityResult> ProceedEntitiesToOdata(ProcessedEntityDto dto)
+    public async Task<OperationResult> ProceedEntitiesToOdata(ProcessedEntityDto dto)
     {
-        return dto.Scenario switch
+        return dto.Operation switch
         {
-            OdataOperation.CreateEntity => await CreateEntityAsyncWithResult(dto),
-            OdataOperation.UpdateEntity => await UpdateEntityAsyncWithResult(dto),
+            OdataOperation.CreateEntity => await CreateEntityAsync(dto),
+            OdataOperation.UpdateEntity => await UpdateEntityAsync(dto),
             OdataOperation.CreateDocumentWithVersion => await CreateDocumentWithVersionAsync(dto),
             OdataOperation.AddVersionToExistedDocument => await AddVersionToExistedDocumentAsync(dto),
             OdataOperation.AddEntityToCollection => await AddEntityToCollectionAsync(dto),
@@ -130,143 +114,344 @@ public class EntityService
         };
     }
 
-    private async Task<SaveEntityResult> UpdateEntityAsyncWithResult(ProcessedEntityDto dto)
-    {
-        throw new NotImplementedException();
-    }
-
-
-    private async Task<SaveEntityResult> UpdateEntityInCollectionAsync(ProcessedEntityDto dto)
-    {
-        throw new NotImplementedException();
-    }
-
-
-    private async Task<SaveEntityResult> AddEntityToCollectionAsync(ProcessedEntityDto dto)
-    {
-        throw new NotImplementedException();
-    }
-
-
-    private async Task<SaveEntityResult> AddVersionToExistedDocumentAsync(ProcessedEntityDto dto)
-    {
-        throw new NotImplementedException();
-    }
-
-
-    private async Task<SaveEntityResult> UpdateEntityAsync(ProcessedEntityDto dto)
-    {
-        var eDocId = dto.Entity!.TryGetValue(StringConstants.MainIdPropertyName, out var id) ? (long)id : 0;
-
-        if (eDocId == 0)
-        {
-            return new SaveEntityResult()
-            {
-                Success = false,
-                Error = "Не удалось найти Id документа"
-            };
-        }
-
-        var filePath = dto.Entity!.TryGetValue(StringConstants.PathPropertyName, out var path) ? (string)path : "";
-
-        if (filePath != null && _fileService.IsFileExists(filePath) && _fileService.IsLessThenTwoGb(filePath))
-        {
-            await FindEdocAndSetBodyAsync(eDocId, filePath);
-            return new SaveEntityResult()
-            {
-                Success = true,
-            };
-        }
-        else
-        {
-            return new SaveEntityResult()
-            {
-                Success = false,
-                Error = "Файл не найден или слишком большой"
-            };
-        }
-
-    }
-
-
     /// <summary>
-    /// Создание сущностей
+    /// Проверяет сущность на основе Excel файла
     /// </summary>
-    /// <param name="entity"></param>
-    /// <param name="entitySet"></param>
-    /// <returns>Дто результата создания сущности</returns>
-    public async Task<SaveEntityResult> CreateEntityAsyncWithResult(ProcessedEntityDto dto)
-    {
-        var result = new SaveEntityResult();
-        try
-        {
-            IDictionary<string, object>? savedEntity = await InstertEntityAsync(dto);
-            result.Entity = savedEntity;
-            result.Success = true;
-        }
-        catch (Exception ex)
-        {
-            result.Success = false;
-            result.Error = ex.Message;
-        }
-
-        return result;
-    }
-
-
-
-
-    public async Task<SaveEntityResult> CreateDocumentWithVersionAsync(ProcessedEntityDto dto)
+    public async Task<ValidationResult> ValidateEntity(ProcessedEntityDto dto)
     {
         try
         {
-            IDictionary<string, object>? savedEntity = await InstertEntityAsync(dto);
+            var entity = await BuildEntityFromRow(dto);
 
-            if (savedEntity != null && savedEntity.TryGetValue("Id", out var id))
+            if (entity != null)
             {
-                var filePath = dto.Entity!.TryGetValue(StringConstants.PathPropertyName, out var path)
-                    ? path?.ToString() ?? ""
-                    : "";
-
-
-                if (string.IsNullOrWhiteSpace(filePath) == false && _fileService.IsFileExists(filePath) && _fileService.IsLessThenTwoGb(filePath))
-                {
-                    var eDocId = Convert.ToInt64(id);
-                    await FindEdocAndSetBodyAsync(eDocId, filePath);
-                    return new SaveEntityResult()
-                    {
-                        Entity = savedEntity,
-                        Success = true,
-                    };
-                }
-                else
-                {
-                    return new SaveEntityResult()
-                    {
-                        Success = false,
-                        Error = "Файл не найден или слишком большой"
-                    };
-                }
+                return new ValidationResult(true, null);
             }
             else
             {
-                return new SaveEntityResult()
-                {
-                    Success = false,
-                    Error = "Не удалось создать документ"
-                };
+                return new ValidationResult(false, "Не удалось проверить сущность");
             }
         }
         catch (Exception ex)
         {
-            return new SaveEntityResult()
+            return new ValidationResult(false, ex.Message + " :" + ex.InnerException?.Message);
+        }
+    }
+
+    /// <summary>
+    /// Строит сущность из строки Excel на основе маппинга и данных строки
+    /// </summary>
+    public async Task<IDictionary<string, object>> BuildEntityFromRow(ProcessedEntityDto dto)
+    {
+        return await _entityBuilderService.BuildEntityFromRow(dto);
+    }
+
+    /// <summary>
+    /// Создает сущность в OData и возвращает результат выполнения операции
+    /// </summary>
+    private async Task<OperationResult> CreateEntityAsync(ProcessedEntityDto dto)
+    {
+        try
+        {
+            var entity = await BuildEntityFromRow(dto);
+
+            var entityToSave = entity
+                .Where(p => p.Key != StringConstants.PathPropertyName
+                    && p.Key != StringConstants.MainIdPropertyName
+                    && p.Key != StringConstants.IdPropertyName)
+                .ToDictionary(p => p.Key, p => p.Value);
+
+            var savedEntity = await _odataClientService.InsertEntityAsync(entityToSave, dto.EntitySetName);
+
+            if (savedEntity != null)
             {
-                Success = false,
-                Error = ex.Message
-            };
+                var newId = savedEntity.TryGetValue(StringConstants.IdPropertyName, out var id) ? (long)id : 0;
+
+                if (newId == 0)
+                {
+                    return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось создать сущность");
+                }
+                else
+                {
+                    return new OperationResult(sucsess: true, operationName: dto.Operation.GetDisplayName(), entityId: newId, entity: savedEntity);
+                }
+            }
+
+            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось создать сущность");
+        }
+        catch (Exception ex)
+        {
+            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Обновляет сущность в OData и возвращает результат выполнения операции
+    /// </summary>
+    private async Task<OperationResult> UpdateEntityAsync(ProcessedEntityDto dto)
+    {
+        try
+        {
+            var entity = await BuildEntityFromRow(dto);
+
+            var entityToSave = entity
+                    .Where(p => p.Key != StringConstants.PathPropertyName
+                        && p.Key != StringConstants.MainIdPropertyName && p.Key != StringConstants.IdPropertyName)
+                    .ToDictionary(p => p.Key, p => p.Value);
+
+            var entityId = entity.TryGetValue(StringConstants.IdPropertyName, out var id) ? (long)id : 0;
+
+            if (entityId == 0)
+            {
+                throw new Exception($"Не удалось найти Id сущности {dto.EntitySetName}");
+            }
+
+            var mainEntity = _odataClientService.GetEntityAsync(dto.EntitySetName, entityId);
+
+            if (mainEntity == null)
+            {
+                throw new Exception($"Не удалось найти сущность {dto.EntitySetName} по Id {entityId}");
+            }
+
+            var updatedEntity = await _odataClientService.UpdateEntityAsync(entityToSave, dto.EntitySetName, entityId);
+
+            if (updatedEntity != null)
+            {
+                return new OperationResult(sucsess: true, operationName: dto.Operation.GetDisplayName(), entityId: entityId, entity: updatedEntity);
+            }
+            else
+            {
+                return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось обновить сущность");
+            }
+        }
+        catch (Exception ex)
+        {
+            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
         }
 
     }
+
+    /// <summary>
+    /// Создает документ c телом в OData и возвращает результат выполнения операции
+    /// </summary>
+    private async Task<OperationResult> CreateDocumentWithVersionAsync(ProcessedEntityDto dto)
+    {
+        try
+        {
+            // перед созданем документа убедимся, что файл найден и не слишком большой
+            var filePath = dto.Row!.TryGetValue(StringConstants.PathPropertyName, out var path)
+                ? path?.ToString() ?? ""
+                : "";
+
+            bool fileIsFound = string.IsNullOrWhiteSpace(filePath) == false && _fileService.IsFileExists(filePath) && _fileService.IsLessThenTwoGb(filePath);
+
+            if (fileIsFound == false)
+            {
+                return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Файл не найден или слишком большой");
+            }
+
+            // создаем сущность
+            var createResult = await CreateEntityAsync(dto);
+
+            if (createResult.Success == false)
+            {
+                return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось создать документ");
+            }
+
+            var savedEntity = createResult.Entity;
+
+            if (createResult.Success && savedEntity != null && savedEntity.TryGetValue(StringConstants.IdPropertyName, out var id))
+            {
+                var eDocId = Convert.ToInt64(id);
+
+                // находим созданную сущность и заполняем тело документа
+                await FindEdocAndSetBodyAsync(eDocId, filePath);
+                return new OperationResult(sucsess: true, operationName: dto.Operation.GetDisplayName());
+            }
+            else
+            {
+                return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось создать документ");
+            }
+        }
+        catch (Exception ex)
+        {
+            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
+        }
+
+    }
+
+    /// <summary>
+    /// Добавляет версию документа в OData и возвращает результат выполнения операции
+    /// </summary>
+    private async Task<OperationResult> AddVersionToExistedDocumentAsync(ProcessedEntityDto dto)
+    {
+        // перед созданем документа убедимся, что файл найден и не слишком большой
+        var filePath = dto.Row.TryGetValue(StringConstants.PathPropertyName, out var path)
+            ? path?.ToString() ?? ""
+            : "";
+
+        bool fileIsFound = string.IsNullOrWhiteSpace(filePath) == false && _fileService.IsFileExists(filePath) && _fileService.IsLessThenTwoGb(filePath);
+
+        if (fileIsFound == false)
+        {
+            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Файл не найден или слишком большой");
+        }
+
+        if (dto.Row.TryGetValue(StringConstants.IdPropertyName, out var id))
+        {
+            // находим сущность и заполняем тело документа
+            var eDocId = Convert.ToInt64(id);
+            await FindEdocAndSetBodyAsync(eDocId, filePath);
+            return new OperationResult(sucsess: true, operationName: dto.Operation.GetDisplayName());
+        }
+        else
+        {
+            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось создать документ");
+        }
+    }
+
+    /// <summary>
+    /// Создает свойство - коллекцию в Odata
+    /// </summary>
+    /// <param name="dto"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentException"></exception>
+    private async Task<OperationResult> AddEntityToCollectionAsync(ProcessedEntityDto dto)
+    {
+        try
+        {
+            if (dto.ChildEntitySetName == null)
+            {
+                throw new ArgumentException("Не указан тип свойства - коллекции");
+            }
+
+            var entity = await BuildEntityFromRow(dto);
+
+            var entityToSave = entity
+                .Where(p => p.Key != StringConstants.PathPropertyName
+                    && p.Key != StringConstants.MainIdPropertyName
+                    && p.Key != StringConstants.IdPropertyName)
+                .ToDictionary(p => p.Key, p => p.Value);
+
+            var mainId = entity.TryGetValue(StringConstants.MainIdPropertyName, out var id) ? (long)id : 0;
+
+            if (mainId == 0)
+            {
+                throw new Exception($"Не удалось найти Id главной сущности {dto.EntitySetName}");
+            }
+
+            var savedEntity = await _odataClientService.InsertChildEntityAsync(entityToSave, mainId, dto.EntitySetName, dto.ChildEntitySetName!);
+
+            if (savedEntity != null)
+            {
+                var newId = savedEntity.TryGetValue(StringConstants.IdPropertyName, out var childId) ? (long)childId : 0;
+
+                if (newId == 0)
+                {
+                    return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось создать сущность");
+                }
+                else
+                {
+                    return new OperationResult(sucsess: true, operationName: dto.Operation.GetDisplayName(), entityId: newId, entity: savedEntity);
+                }
+            }
+
+            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось создать сущность");
+        }
+        catch (Exception ex)
+        {
+            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Обновляет свойство - коллекцию в Odata
+    /// </summary>
+
+    private async Task<OperationResult> UpdateEntityInCollectionAsync(ProcessedEntityDto dto)
+    {
+        try
+        {
+            var entity = await BuildEntityFromRow(dto);
+
+            var entityToSave = entity
+                    .Where(p => p.Key != StringConstants.PathPropertyName
+                        && p.Key != StringConstants.MainIdPropertyName && p.Key != StringConstants.IdPropertyName)
+                    .ToDictionary(p => p.Key, p => p.Value);
+
+            var mainEntityId = entity.TryGetValue(StringConstants.MainIdPropertyName, out var id) ? (long)id : 0;
+
+            if (mainEntityId == 0)
+            {
+                throw new Exception($"Не удалось найти Id сущности {dto.EntitySetName}");
+            }
+
+            var childEntityId = entity.TryGetValue(StringConstants.IdPropertyName, out var id2) ? (int)id2 : 0;
+
+            if (childEntityId == 0)
+            {
+                throw new Exception($"Не удалось найти Id свойства-коллекции {dto.EntitySetName}");
+            }
+
+            var entityToUpdate = await _odataClientService.GetChildEntityAsync(dto.EntitySetName, mainEntityId, dto.ChildEntitySetName!, childEntityId);
+
+            if (entityToUpdate == null)
+            {
+                throw new Exception($"Не удалось найти свойство-коллекцию {dto.EntitySetName} по Id {childEntityId}");
+            }
+
+            var updatedEntity = await _odataClientService.UpdateChildEntityAsync(entityToSave, dto.EntitySetName, mainEntityId, dto.ChildEntitySetName!);
+
+            if (updatedEntity != null)
+            {
+                return new OperationResult(sucsess: true, operationName: dto.Operation.GetDisplayName(), entityId: childEntityId, entity: updatedEntity);
+            }
+
+            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось обновить свойство-коллекцию");
+
+        }
+        catch (Exception ex)
+        {
+            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Получает список свойств сущности в зависимости от ее структуры в Odata
+    /// </summary>
+    /// <param name="dto">DTO сущности</param>
+    public List<EntityFieldDto> GetEntityFields(EdmxEntityDto? dto)
+    {
+        if (dto == null)
+        {
+            return new();
+        }
+
+        var structuralProperties = dto.StructuralProperties
+            .Select(p => new StructuralFieldDto
+            {
+                Name = p.Name?.ToString() ?? "",
+                Type = p.Type?.ToString() ?? "??????????",
+                Nullable = p.Nullable
+            })
+            .ToList();
+
+        var navigationProperties = dto.NavigationProperties
+            .Select(p => new NavigationPropertyDto
+            {
+                Name = p.Name?.ToString() ?? "",
+                Type = p.Type?.ToString() ?? "??????????",
+                Nullable = p.Nullable
+            })
+            .ToList();
+
+        // Заполняем поля сущности
+        return structuralProperties
+            .Concat<EntityFieldDto>(navigationProperties)
+            .ToList();
+    }
+
+    #region Служебные приватные методы
 
     /// <summary>
     /// Создать тело документа
@@ -313,7 +498,23 @@ public class EntityService
             version = await _odataClientService.CreateNewVersion(docId, Path.GetFileName(filePath), targetApp);
         }
 
-        var body = await File.ReadAllBytesAsync(filePath);
+        byte[] body;
+        try
+        {
+            body = await ReadFileEvenIfOpenAsync(filePath);
+
+            if (body.Length == 0)
+            {
+                body = await File.ReadAllBytesAsync(filePath);
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Не удалось прочитать файл: {ex.Message}");
+        }
+
+
+
         await _odataClientService.FillBodyAsync(docId, body, version!);
     }
 
@@ -372,214 +573,42 @@ public class EntityService
     }
 
     /// <summary>
-    /// Находит связанные сущности и вставляет их в сущность
+    /// Читает файл даже если он открыт
     /// </summary>
-    /// <param name="dto"></param>
-    /// <returns></returns>
-    private async Task<IDictionary<string, object>?> FindRelatedEntitiesAsync(ProcessedEntityDto dto)
+    private byte[] ReadFileEvenIfOpen(string path)
     {
-        var entityToSave = dto.Entity!
-            .Where(p => p.Key != StringConstants.PathPropertyName && p.Key != StringConstants.MainIdPropertyName)
-            .ToDictionary(p => p.Key, p => p.Value);
-
-        var navProps = dto.Edmx!.NavigationProperties.Where(p => p.IsCollection == false).ToList();
-
-        foreach (var prop in entityToSave)
-        {
-            if (navProps.Any(p => p.Name == prop.Key)) // убедились, что свойство является навигационным
-            {
-                var relatedEntity = await GetRelatedEntity(prop, dto); // получили связанную сущность
-                entityToSave[prop.Key] = relatedEntity;
-            }
-        }
-
-        return entityToSave;
-    }
-
-    /// <summary>
-    /// Получает связанную сущность по ключу
-    /// </summary>
-    /// <param name="prop">Имя связанной сущности и его ключ</param>
-    /// <param name="dto">Dto сущности</param>
-    /// <returns>связанная сущность, готовая для вставки в Odata</returns>
-    /// <exception cref="Exception"></exception>
-    private async Task<object> GetRelatedEntity(KeyValuePair<string, object> prop, ProcessedEntityDto dto)
-    {
-        try
-        {
-            var searchCryteriaFound = dto.SearchCriterias!.TryGetValue(prop.Key, out var searchCryteria);
-
-            if (searchCryteriaFound)
-            {
-                var relatedEntity = await _odataClientService.GetEntityAsync(prop.Key, searchCryteria!, prop.Value);
-                if (relatedEntity != null)
-                {
-                    return relatedEntity;
-                }
-                else
-                {
-                    throw new Exception("Не найдена связанная сущность " + prop.Key + " по ключу " + searchCryteria + ": " + prop.Value);
-                }
-            }
-            else
-            {
-                throw new ArgumentException("Не указан ключ поиска для связанной сущности " + prop.Key);
-            }
-        }
-        catch (Exception ex)
-        {
-            throw new Exception("Ошибка при поиске связанной сущности " + prop.Key + ": " + ex.Message);
-        }
-    }
-
-    /// <summary>
-    /// Вставляет сущность в OData
-    /// </summary>
-    /// <param name="dto"></param>
-    /// <returns></returns>
-    private async Task<IDictionary<string, object>?> InstertEntityAsync(ProcessedEntityDto dto)
-    {
-        var entityToSave = await FindRelatedEntitiesAsync(dto);
-
-        if (entityToSave != null)
-        {
-            var savedEntity = await _odataClientService.InsertEntityAsync(entityToSave, dto.Edmx!.Name!);
-            return savedEntity;
-
-        }
-        else
-        {
-            throw new ArgumentException("Связанные сущности не найдены");
-        }
-    }
-
-    /// <summary>
-    /// Обновляет сущность в OData
-    /// </summary>
-    /// <param name="dto"></param>
-    /// <returns></returns>
-    private async Task<IDictionary<string, object>?> UpdateEntryAsync(ProcessedEntityDto dto)
-    {
-        var entityToSave = await FindRelatedEntitiesAsync(dto);
-        var key = entityToSave!.TryGetValue(StringConstants.MainIdPropertyName, out var id) ? (long)id : 0;
-
-        if (key == 0)
-        {
-            throw new ArgumentException("Не удалось найти Id сущности");
-        }
-
-        if (entityToSave != null)
-        {
-            var savedEntity = await _odataClientService.UpdateEntityAsync(entityToSave, dto.Edmx!.Name!, key);
-            return savedEntity;
-        }
-        else
-        {
-            throw new ArgumentException("Связанные сущности не найдены");
-        }
-    }
-
-    /// <summary>
-    /// Получает список свойств сущности в зависимости от ее структуры в Odata
-    /// </summary>
-    /// <param name="dto">DTO сущности</param>
-    public List<EntityFieldDto> GetEntityFields(EdmxEntityDto? dto)
-    {
-        if(dto == null)
-        {
-            return new();
-        }
-        
-        var structuralProperties = dto.StructuralProperties
-            .Select(p => new StructuralFieldDto
-            {
-                Name = p.Name?.ToString() ?? "",
-                Type = p.Type?.ToString() ?? "Неизвестно",
-                Nullable = p.Nullable
-            })
-            .ToList();
-
-        var navigationProperties = dto.NavigationProperties
-            .Select(p => new NavigationPropertyDto
-            {
-                Name = p.Name?.ToString() ?? "",
-                Type = p.Type?.ToString() ?? "Неизвестно",
-                Nullable = p.Nullable
-            })
-            .ToList();
-
-        // Заполняем поля сущности
-        return structuralProperties
-            .Concat<EntityFieldDto>(navigationProperties)
-            .ToList();
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        byte[] buffer = new byte[stream.Length];
+        stream.Read(buffer, 0, buffer.Length);
+        return buffer;
     }
     
     /// <summary>
-    /// Строит сущность из строки Excel на основе маппинга и данных строки
+    /// Читает файл даже если он открыт
     /// </summary>
-    /// <param name="mapping">Маппинг столбцов Excel на свойства сущности</param>
-    /// <param name="row">Данные строки Excel</param>
-    /// <param name="searchBy">Критерий поиска для навигационных свойств</param>
-    /// <returns>Построенная сущность в виде словаря</returns>
-    /// <exception cref="Exception">Выбрасывается, если не удалось конвертировать значение или найти связанную сущность</exception>
-    public async Task<IDictionary<string, object?>> BuildEntityFromRow(Dictionary<string, EntityFieldDto?> mapping, IDictionary<string, string> row, SearchEntityBy searchBy)
+    public async Task<byte[]> ReadFileEvenIfOpenAsync(string path, CancellationToken cancellationToken = default)
     {
-        var buildedEntity = new Dictionary<string, object?>();
-        
-        foreach (var kvp in mapping)
+        using var stream = new FileStream(
+            path,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite,
+            bufferSize: 81920,  // стандартный буфер .NET
+            useAsync: true       // важно для асинхронного чтения
+        );
+
+        var buffer = new byte[stream.Length];
+        int offset = 0;
+
+        while (offset < buffer.Length)
         {
-            var excelColumn = kvp.Key;
-            var entityField = kvp.Value;
-            
-            if (entityField == null)
-            {
-                continue;
-            }
-
-            if (!row.TryGetValue(excelColumn, out var cellValue))
-            {
-                continue;
-            }
-
-            if (string.IsNullOrWhiteSpace(cellValue))
-            {
-                continue;
-            }
-
-            if (entityField is StructuralFieldDto structural)
-            {
-                if (structural.Type == null || structural.Name == null)
-                {
-                    continue;
-                }
-                
-                var convertedValue = EdmTypeHelper.ConvertEdmValue(cellValue, structural.Type);
-
-                buildedEntity[structural.Name] = convertedValue ?? throw new Exception($"Не удалось конвертировать значение {cellValue} в тип {structural.Type} для свойства {structural.Name}");
-            }
-            else if (entityField is NavigationPropertyDto navigation)
-            {
-                if(navigation.IsCollection || navigation.Type == null || navigation.Name == null)
-                {
-                    continue;
-                }
-                
-                var relatedEntity = await _odataClientService.GetEntityAsync(navigation.Type, searchBy.ToString(), cellValue);
-                
-                if (relatedEntity.Any())
-                {
-                    buildedEntity[navigation.Name] = relatedEntity;
-                }
-                else
-                {
-                    throw new Exception($"Не найдена связанная сущность {navigation.Name} по ключу {searchBy}: {cellValue}");
-                }
-            }
+            int bytesRead = await stream.ReadAsync(buffer.AsMemory(offset, buffer.Length - offset), cancellationToken);
+            if (bytesRead == 0) break; // конец файла
+            offset += bytesRead;
         }
-        
 
-        return buildedEntity;
+        return buffer;
     }
-    
 
+    #endregion
 }

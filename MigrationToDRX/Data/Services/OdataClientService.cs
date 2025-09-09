@@ -145,7 +145,7 @@ public class OdataClientService
             }).ToList(),
         };
     }
-    
+
     /// <summary>
     /// Получить схему сущности по ее полному типу
     /// </summary>
@@ -228,22 +228,7 @@ public class OdataClientService
             propertyDeclaredType = prop.Type.Substring(prefix.Length, prop.Type.Length - prefix.Length - suffix.Length);
         }
 
-        var edmType = _metadata!.FindDeclaredType(propertyDeclaredType);
-
-        var structuredType = edmType as IEdmStructuredType;
-
-        return new EdmxEntityDto()
-        {
-            Name = structuredType?.FullTypeName(),
-            StructuralProperties = structuredType?
-            .DeclaredProperties?
-            .Select(p => new StructuralFieldDto
-            {
-                Name = p.Name,
-                Type = p.Type.FullName(),
-                Nullable = p.Type.IsNullable
-            }).ToList() ?? new()
-        };
+        return GetEdmxEntityDtoByType(propertyDeclaredType);
     }
 
     /// <summary>
@@ -253,7 +238,40 @@ public class OdataClientService
     /// <param name="propertyName">имя свойства, по которому осуществляется фильтр</param>
     /// <param name="filter">критерий фильтрации</param>
     /// <returns>сущность</returns>
-    public async Task<IDictionary<string, object>> GetEntityAsync(string entitySetName, string propertyName, object filter)
+    public async Task<IDictionary<string, object>> GetEntityAsync(string entitySetName, string propertyName, Type filterType, object filter)
+    {
+        if (_client == null)
+        {
+            throw new InvalidOperationException("Odata клиент не инициализирован. Вызовите метод SetConnection");
+
+        }
+        try
+        {
+            if (filterType == typeof(string))
+            {
+                filter = $"\'{filter}\'";
+            }
+            
+            return await _client!
+                    .For(entitySetName)
+                    .Filter($"{propertyName} eq {filter}")
+                    .FindEntryAsync();
+        }
+        catch (WebRequestException ex)
+        {
+            throw new ArgumentException(ex.Message + ex.Response);
+        }
+    }
+
+    /// <summary>
+    /// Получить сущность из свойства-коллекции по фильтру.
+    /// </summary>
+    /// <param name="entitySetName">Главная сущность</param>
+    /// <param name="mainKey">Идентификатор главной сущности</param>
+    /// <param name="propertyName">Свойство-коллекция</param>
+    /// <param name="key">Идентификатор свойства-коллекции</param>
+    /// <returns></returns>
+    public async Task<IDictionary<string, object>> GetChildEntityAsync(string entitySetName, long mainKey, string propertyName, int key)
     {
         if (_client == null)
         {
@@ -263,9 +281,10 @@ public class OdataClientService
         try
         {
             return await _client!
-            .For(entitySetName)
-            .Filter($"{propertyName} eq '{filter}'")
-            .FindEntryAsync();
+                    .For(entitySetName)
+                    .Key(mainKey)
+                    .Key(key)
+                    .FindEntryAsync();
         }
         catch (WebRequestException ex)
         {
@@ -544,6 +563,27 @@ public class OdataClientService
         return metadata.SchemaElements
             .OfType<Microsoft.OData.Edm.IEdmEntityType>()
             .FirstOrDefault(t => t.Name == entityName);
+    }
+
+    /// <summary>
+    /// Получить сущность по ее полному типу
+    /// </summary>
+    /// <param name="entityType"></param>
+    /// <returns>Имя сущности</returns>
+    /// <exception cref="InvalidOperationException">Клиент не инициализирован</exception>
+    public async Task<string?> GetEntitySetNameByType(string entityType)
+    {
+        if (_client == null)
+        {
+            throw new InvalidOperationException("Odata клиент не инициализирован. Вызовите метод SetConnection");
+        }
+
+        var metadata = await _client.GetMetadataAsync<IEdmModel>();
+        var entityContainer = metadata.EntityContainer;
+
+        var entitySets = entityContainer.EntitySets();
+
+        return entitySets.FirstOrDefault(s => s.EntityType().FullTypeName() == entityType)?.Name ?? null;
     }
 
 }

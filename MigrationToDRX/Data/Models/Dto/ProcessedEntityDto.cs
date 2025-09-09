@@ -8,13 +8,38 @@ namespace MigrationToDRX.Data.Models.Dto;
 /// </summary>
 public class ProcessedEntityDto
 {
-    public IDictionary<string, object>? Entity { get; set; }
+    /// <summary>
+    ///  Маппинг столбцов Excel на свойства сущности
+    /// </summary>
+    public Dictionary<string, EntityFieldDto?> ColumnMapping { get; set; } = new();
 
-    public EdmxEntityDto? Edmx { get; set; }
+    /// <summary>
+    /// Строка Excel
+    /// </summary>
+    public Dictionary<string, string> Row { get; set; } = new();
 
-    public OdataOperation Scenario { get; set; }
+    /// <summary>
+    /// Операция миграции
+    /// </summary>
+    public OdataOperation Operation { get; set; }
 
+    /// <summary>
+    /// Сущность
+    /// </summary>
+    public string EntitySetName { get; set; } = "";
+
+    /// <summary>
+    /// Свойство-коллекция
+    /// </summary>
+    public string? ChildEntitySetName { get; set; }
+
+    /// <summary>
+    /// Флаг, указывающий, что работаем со свойством-коллекцией
+    /// </summary>
     public bool IsCollection { get; set; }
 
-    public IDictionary<string, string>? SearchCriterias { get; set; }
+    /// <summary>
+    /// Критерий поиска для навигационных свойств
+    /// </summary>
+    public SearchEntityBy SearchCriteria { get; set; }
 }

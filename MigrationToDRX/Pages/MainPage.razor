@@ -128,20 +128,27 @@
     </div>
     
     @* Кнопки валидации и отправки на сервер    *@
-    <div class="mb-3">
-        <button class="btn btn-primary mx-1"
-                @onclick="Upload"
+    <div class="mb-3 d-flex justify-content-between w-60">
+        <div>
+            <button class="btn btn-primary mx-1"
+                    @onclick="Upload"
+                    disabled="@(ColumnMappings.Any() == false)">
+                Отправить
+            </button>
+
+            <button class="btn btn-outline-secondary mx-1"
+                @onclick="Validate"
                 disabled="@(ColumnMappings.Any() == false)">
-            <i class="fas fa-check"></i>
-            Отправить
-        </button>
+                Проверить
+            </button>
+        </div>
 
         <button class="btn btn-outline-secondary mx-1"
-            @onclick="Validate"
-            disabled="@(ColumnMappings.Any() == false)">
-            <i class="fas fa-check"></i>
-            Проверить
+                @onclick="DownloadExcel"
+                disabled="@(ColumnMappings.Any() == false)">
+            Скачать отчет
         </button>
+
     </div>
 
 
@@ -152,10 +159,8 @@
         <RadzenDataGrid Data="@PreviewRows" 
                         TItem="Dictionary<string, string>" 
                         AllowColumnResize="true" 
-                        AllowSorting="true" 
                         AllowFiltering="true" 
                         AllowColumnReorder="true" 
-                        AllowVirtualization="true" 
                         AllowColumnPicking="true"
                         AllowPaging="true"
                         PageSize="100" >
@@ -164,7 +169,8 @@
                 {
                     <RadzenDataGridColumn TItem="Dictionary<string,string>" Title="@col" Property="@col">
                         <HeaderTemplate>
-                            <RadzenDropDown Data="GetAvailableEntityFields(col)"
+                            <p>@col</p>
+                            <RadzenDropDown Data="AvailableEntityFields"
                                             TextProperty="Name" 
                                             AllowClear="true"
                                             AllowFiltering="true"

@@ -31,7 +31,7 @@ public partial class ConnectionComponent : ComponentBase
         {
             //NavigationManager?.NavigateTo("/mainpage"); import
             
-            NavigationManager?.NavigateTo("/obsolettemainpage"); 
+            NavigationManager?.NavigateTo("/main"); 
         }
         else
         {

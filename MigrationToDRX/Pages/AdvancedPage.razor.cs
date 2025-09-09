@@ -202,7 +202,7 @@ public partial class AdvancedPage : ComponentBase
         await Task.CompletedTask;
     }
 
-    public async Task RemoveRow(string col)
+    public void RemoveRow(string col)
     {
 
     }

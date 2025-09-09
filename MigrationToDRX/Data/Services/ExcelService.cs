@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using ClosedXML.Excel;
 using ExcelDataReader;
+using OfficeOpenXml;
 namespace MigrationToDRX.Data.Services;
 
 /// <summary>
@@ -36,23 +37,34 @@ public class ExcelService
 
         using var workbook = new XLWorkbook(stream);
         var worksheet = workbook.Worksheets.First();
+
+        // Берем все строки с данными
         var rows = worksheet.RowsUsed();
 
-        var headers = rows.First().Cells().Select(c => c.Value.ToString()).ToList();
+        if (!rows.Any())
+            return result;
 
+        // Заголовки — из первой строки
+        var headers = rows.First().Cells().Select(c => c.GetValue<string>() ?? string.Empty).ToList();
+
+        // Обрабатываем все строки после заголовков
         foreach (var row in rows.Skip(1))
         {
             var dict = new Dictionary<string, object>();
-            var cells = row.Cells().ToList();
-            for (int i = 0; i < headers.Count && i < cells.Count; i++)
+
+            // Берем ячейки строго по индексам, чтобы не было смещения
+            for (int i = 1; i <= headers.Count; i++) // 1-based индекс в XLWorkbook
             {
-                dict[headers[i]] = cells[i].Value;
+                var cell = row.Cell(i);
+                dict[headers[i - 1]] = cell.IsEmpty() ? string.Empty : cell.GetValue<string>();
             }
+
             result.Add(dict);
         }
 
         return result;
     }
+
 
     /// <summary>
     /// Чтение Excel файла с помощью ExcelDataReader и преобразование в список словарей
@@ -92,22 +104,37 @@ public class ExcelService
         return result;
     }
 
-    // public void WriteExcrlFile(DataTable dataTable, string entitySetName)
-    // {
-    //     // Создайте новый Excel-файл и сохраните в него данные с помощью EPPlus
-    //     using (ExcelPackage excelPackage = new ExcelPackage())
-    //     {
-    //         // Добавьте рабочую книгу
-    //         var worksheet = excelPackage.Workbook.Worksheets.Add(entitySetName);
+    /// <summary>
+    /// Создает Excel-файл из списка словарей с данными
+    /// </summary>
+    /// <param name="rows"></param>
+    /// <param name="columns"></param>
+    /// <param name="sheetName"></param>
+    /// <returns></returns>
+    public byte[] GetExcelBytes(List<Dictionary<string, string>> rows, List<string> columns, string sheetName)
+    {
+        ExcelPackage.License.SetNonCommercialOrganization("ООО ЦВД"); //This will also set the Company property to the organization name provided in the argument.
+        using var excelPackage = new ExcelPackage();
+        var worksheet = excelPackage.Workbook.Worksheets.Add(sheetName);
 
-    //         // Запишите данные из dataTable в Excel-файл
-    //         worksheet.Cells["A1"].LoadFromDataTable(dataTable, true);
+        // Записываем заголовки
+        for (int c = 0; c < columns.Count; c++)
+        {
+            worksheet.Cells[1, c + 1].Value = columns[c];
+        }
 
-    //         // Укажите путь для сохранения нового файла
-    //         string newFilePath = $"{entitySetName}_{DateTime.Now.ToShortDateString}.xlsx";
+        // Записываем данные
+        for (int r = 0; r < rows.Count; r++)
+        {
+            for (int c = 0; c < columns.Count; c++)
+            {
+                rows[r].TryGetValue(columns[c], out var val);
+                worksheet.Cells[r + 2, c + 1].Value = val;
+            }
+        }
 
-    //         // Сохраните новый Excel-файл
-    //         File.WriteAllBytes(newFilePath, excelPackage.GetAsByteArray());
-    //     }
-    // }
+        worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+
+        return excelPackage.GetAsByteArray(); // Возвращаем массив байт вместо записи на диск
+    }
 }

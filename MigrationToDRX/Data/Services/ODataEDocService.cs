@@ -13,7 +13,6 @@ public class ODataEDocService
     private readonly ODataClient _client;
     private readonly OdataClientService _service;
     private readonly Logger logger = LogManager.GetCurrentClassLogger();
-    HttpResponseMessage response = null;
 
     /// <summary>
     /// Конструктор
