@@ -8,34 +8,42 @@ namespace MigrationToDRX.Data.Helpers;
 public static class EdmTypeHelper
 {
     /// <summary>
-    /// Простые типы данных Odata
+    /// Конвертация строки в значение соответствующего Edm типа
     /// </summary>
-    public static Dictionary<string, Type> StructuralTypes = new Dictionary<string, Type>()
+    /// <param name="value">Строковое значение</param>
+    /// <param name="edmType">Тип Edm</param>
+    /// <returns>Конвертированное значение или null, если конвертация не удалась</returns>
+    public static object? ConvertEdmValue(string? value, string edmType)
     {
-        ["Int64"] = typeof(long),
-        ["String"] = typeof(string),
-        ["Int32"] = typeof(int),
-        ["Boolean"] = typeof(bool),
-        ["DateTimeOffset"] = typeof(DateTimeOffset),
-        ["Guid"] = typeof(Guid),
-        ["Double"] = typeof(double),
-        ["Binary"] = typeof(byte[])
-    };
+        if (string.IsNullOrEmpty(value))
+            return null;
 
+        return edmType switch
+        {
+            "Edm.String" => value,
+            "Edm.Int32" => int.TryParse(value, out var i) ? i : null,
+            "Edm.Int64" => long.TryParse(value, out var l) ? l : null,
+            "Edm.Decimal" => decimal.TryParse(value, out var d) ? d : null,
+            "Edm.Double" => double.TryParse(value, out var dbl) ? dbl : null,
+            "Edm.Boolean" => bool.TryParse(value, out var b) ? b : null,
+            "Edm.DateTimeOffset" => DateTimeOffset.TryParse(value, out var dt) ? dt : null,
+            "Edm.Guid" => Guid.TryParse(value, out var g) ? g : null,
+            _ => value // fallback для неизвестного типа
+        };
+    }
+    
     /// <summary>
-    /// Значения статусов в DirectumRX
+    /// Конвертация статуса из строки в значение, используемое в Edm
     /// </summary>
-    public static Dictionary<string, string> StatusValues = new Dictionary<string, string>()
+    /// <param name="status">Строковое значение статуса</param>
+    /// <returns>Конвертированное значение или null, если конвертация не удалась</returns>
+    public static string? ConvertStatusToEdm(string status)
     {
-        ["Действующая"] = "Active",
-        ["Закрытая"] = "Close"
-    };
-
-    public static string SearchCryteria = "Name";
-
-    public static string MainEntityId = "MainId";
-
-    public static bool SearchByName = true;
-
-    public static string UpdateEntityId = "UpdateEntityId";
+        return status switch
+        {
+            "Действующая" => "Active",
+            "Закрытая" => "Close",
+            _ => null // fallback для неизвестного статуса
+        };
+    }
 }

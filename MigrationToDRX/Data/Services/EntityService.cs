@@ -27,61 +27,61 @@ public class EntityService
         _fileService = fileService;
     }
 
-    public async Task<Dictionary<string, object>> CreateEntityAsync(IDictionary<string, object> excelRow, Dictionary<string, string> columnMapping, EdmxEntityDto entitydto)
-    {
-        var structuralMap = entitydto.StructuralProperties
-        .ToDictionary(p => p.Name!, p => p);
-
-        var navigationMap = entitydto.NavigationProperties
-            .ToDictionary(p => p.Name!, p => p);
-
-        var result = new Dictionary<string, object>();
-
-        foreach (var excelCol in columnMapping.Keys)
-        {
-            var value = excelRow.TryGetValue(excelCol, out var val) ? val : null;
-            var entityProp = columnMapping[excelCol];
-
-            if (string.IsNullOrWhiteSpace(entityProp))
-                continue;
-
-            if (structuralMap.TryGetValue(entityProp, out var structProp))
-            {
-                if (structProp.Name == "Status" && EdmTypeHelper.StatusValues.TryGetValue(value?.ToString()!, out var status))
-                {
-                    result[structProp.Name!] = status;
-                }
-                else
-                {
-                    result[structProp.Name!] = ConvertToODataType(value, structProp.Type)!;
-                }
-            }
-            else if (navigationMap.TryGetValue(entityProp, out var navProp) && !navProp.IsCollection)
-            {
-                if (entityProp == "MainId")
-                {
-                    result["MainId"] = value!;
-                    continue;
-                }
-
-                if (EdmTypeHelper.SearchByName)
-                {
-                    var relatedEntity = await _odataClientService.GetEntityAsync(navProp.Type!, EdmTypeHelper.SearchCryteria, value!);
-                    result[navProp.Name!] = relatedEntity;
-                }
-                else
-                {
-                    if (int.TryParse(value?.ToString(), out int id))
-                    {
-                        var relatedEntity = await _odataClientService.GetEntityAsync(navProp.Type!, id);
-                        result[navProp.Name!] = relatedEntity;
-                    }
-                }
-            }
-        }
-
-        return result;
-    }
+    // public async Task<Dictionary<string, object>> CreateEntityAsync(IDictionary<string, object> excelRow, Dictionary<string, string> columnMapping, EdmxEntityDto entitydto)
+    // {
+    //     var structuralMap = entitydto.StructuralProperties
+    //     .ToDictionary(p => p.Name!, p => p);
+    //
+    //     var navigationMap = entitydto.NavigationProperties
+    //         .ToDictionary(p => p.Name!, p => p);
+    //
+    //     var result = new Dictionary<string, object>();
+    //
+    //     foreach (var excelCol in columnMapping.Keys)
+    //     {
+    //         var value = excelRow.TryGetValue(excelCol, out var val) ? val : null;
+    //         var entityProp = columnMapping[excelCol];
+    //
+    //         if (string.IsNullOrWhiteSpace(entityProp))
+    //             continue;
+    //
+    //         if (structuralMap.TryGetValue(entityProp, out var structProp))
+    //         {
+    //             if (structProp.Name == "Status" && EdmTypeHelper.StatusValues.TryGetValue(value?.ToString()!, out var status))
+    //             {
+    //                 result[structProp.Name!] = status;
+    //             }
+    //             else
+    //             {
+    //                 result[structProp.Name!] = ConvertToODataType(value, structProp.Type)!;
+    //             }
+    //         }
+    //         else if (navigationMap.TryGetValue(entityProp, out var navProp) && !navProp.IsCollection)
+    //         {
+    //             if (entityProp == "MainId")
+    //             {
+    //                 result["MainId"] = value!;
+    //                 continue;
+    //             }
+    //
+    //             if (EdmTypeHelper.SearchByName)
+    //             {
+    //                 var relatedEntity = await _odataClientService.GetEntityAsync(navProp.Type!, EdmTypeHelper.SearchCryteria, value!);
+    //                 result[navProp.Name!] = relatedEntity;
+    //             }
+    //             else
+    //             {
+    //                 if (int.TryParse(value?.ToString(), out int id))
+    //                 {
+    //                     var relatedEntity = await _odataClientService.GetEntityAsync(navProp.Type!, id);
+    //                     result[navProp.Name!] = relatedEntity;
+    //                 }
+    //             }
+    //         }
+    //     }
+    //
+    //     return result;
+    // }
 
     /// <summary>
     /// Конвертация типа в тип, понятный odata
@@ -513,5 +513,73 @@ public class EntityService
             .Concat<EntityFieldDto>(navigationProperties)
             .ToList();
     }
+    
+    /// <summary>
+    /// Строит сущность из строки Excel на основе маппинга и данных строки
+    /// </summary>
+    /// <param name="mapping">Маппинг столбцов Excel на свойства сущности</param>
+    /// <param name="row">Данные строки Excel</param>
+    /// <param name="searchBy">Критерий поиска для навигационных свойств</param>
+    /// <returns>Построенная сущность в виде словаря</returns>
+    /// <exception cref="Exception">Выбрасывается, если не удалось конвертировать значение или найти связанную сущность</exception>
+    public async Task<IDictionary<string, object?>> BuildEntityFromRow(Dictionary<string, EntityFieldDto?> mapping, IDictionary<string, string> row, SearchEntityBy searchBy)
+    {
+        var buildedEntity = new Dictionary<string, object?>();
+        
+        foreach (var kvp in mapping)
+        {
+            var excelColumn = kvp.Key;
+            var entityField = kvp.Value;
+            
+            if (entityField == null)
+            {
+                continue;
+            }
+
+            if (!row.TryGetValue(excelColumn, out var cellValue))
+            {
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(cellValue))
+            {
+                continue;
+            }
+
+            if (entityField is StructuralFieldDto structural)
+            {
+                if (structural.Type == null || structural.Name == null)
+                {
+                    continue;
+                }
+                
+                var convertedValue = EdmTypeHelper.ConvertEdmValue(cellValue, structural.Type);
+
+                buildedEntity[structural.Name] = convertedValue ?? throw new Exception($"Не удалось конвертировать значение {cellValue} в тип {structural.Type} для свойства {structural.Name}");
+            }
+            else if (entityField is NavigationPropertyDto navigation)
+            {
+                if(navigation.IsCollection || navigation.Type == null || navigation.Name == null)
+                {
+                    continue;
+                }
+                
+                var relatedEntity = await _odataClientService.GetEntityAsync(navigation.Type, searchBy.ToString(), cellValue);
+                
+                if (relatedEntity.Any())
+                {
+                    buildedEntity[navigation.Name] = relatedEntity;
+                }
+                else
+                {
+                    throw new Exception($"Не найдена связанная сущность {navigation.Name} по ключу {searchBy}: {cellValue}");
+                }
+            }
+        }
+        
+
+        return buildedEntity;
+    }
+    
 
 }

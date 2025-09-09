@@ -24,7 +24,7 @@ public partial class MainPage
     /// <summary>
     /// Выбранный поиск навигационных свойств
     /// </summary>
-    protected SearchEntityBy SearchEntityBy { get; set; } = SearchEntityBy.Id;
+    protected SearchEntityBy SearchCriteria { get; set; } = SearchEntityBy.Id;
 
     /// <summary>
     /// Список полей для поиска навигационных свойств
@@ -40,7 +40,7 @@ public partial class MainPage
     /// Список всех сущностей в OData
     /// </summary>
     private List<IEdmEntitySet> EntitySets { get; set; } = new();
-
+    
     /// <summary>
     /// Выбранное свойство-коллекция
     /// </summary>
@@ -55,7 +55,7 @@ public partial class MainPage
     /// Список полей сущности, полученных из OData
     /// </summary>
     protected List<EntityFieldDto> EntityFields { get; set; } = new();
-
+    
     /// <summary>
     /// Список колонок, загруженных из Excel
     /// </summary>
@@ -72,12 +72,21 @@ public partial class MainPage
     /// </summary>
     protected Dictionary<string, EntityFieldDto?> ColumnMappings { get; set; } = new();
     
+    /// <summary>
+    /// Загружать все строки из Excel
+    /// </summary>
     protected bool UploadAllRows { get; set; } = true;
+    
+    /// <summary>
+    /// Повторно загружать обработанные строки
+    /// </summary>
+    protected bool ForceUploadProcessedRows { get; set; } = false;
 
     /// <summary>
     /// Количество строк для загрузки
     /// </summary>
     protected int RowsToUpload { get; set; } = 100;
+    
 
     /// <summary>
     /// Сервис для работы с OData клиентом
@@ -132,6 +141,16 @@ public partial class MainPage
         await base.OnInitializedAsync();
 
     }
+    
+    /// <summary>
+    /// Обработчик изменения выбранной операции
+    /// </summary>
+    private void OnSelectedOperationChanged()
+    {
+        OdataOperationHelper.AddPropertiesByOperation(SelectedOperation, EntityFields, ColumnMappings);
+        
+        StateHasChanged();
+    }
 
     /// <summary>
     /// Обработчик изменения SelectedEntitySet
@@ -156,7 +175,7 @@ public partial class MainPage
             EntityFields = EntityService.GetEntityFields(dto);
 
             // Добавляем свойства сущности в зависимости от операции
-            EntityFields = OdataOperationHelper.AddPropertiesByOperation(SelectedOperation, EntityFields);
+           OdataOperationHelper.AddPropertiesByOperation(SelectedOperation, EntityFields, ColumnMappings);
 
             // Заполняем список свойств-коллекций
             CollectionProperties = dto.NavigationProperties.Where(p => p.IsCollection).ToList();
@@ -165,6 +184,8 @@ public partial class MainPage
             ColumnMappings = ExcelColumns.ToDictionary(c => c, _ => (EntityFieldDto?)null);
 
         }
+        
+        StateHasChanged();
     }
 
     /// <summary>
@@ -189,10 +210,12 @@ public partial class MainPage
         EntityFields = EntityService.GetEntityFields(dto);
 
         // Добавляем свойства сущности в зависимости от операции
-        EntityFields = OdataOperationHelper.AddPropertiesByOperation(SelectedOperation, EntityFields);
+        OdataOperationHelper.AddPropertiesByOperation(SelectedOperation, EntityFields, ColumnMappings);
 
         // Сбрасываем маппинг
         ClearExcelToFieldsMapping();
+        
+        StateHasChanged();
     }
 
     /// <summary>
@@ -253,6 +276,27 @@ public partial class MainPage
                 Duration = 4000
             });
         }
+        
+        StateHasChanged();
+    }
+    
+    /// <summary>
+    /// Возвращает список доступных полей для выбора в колонке
+    /// </summary>
+    /// <param name="column">Колонка</param>
+    /// <returns></returns>
+    private IEnumerable<EntityFieldDto> GetAvailableEntityFields(string column)
+    {
+        // Берем все поля
+        var allFields = EntityFields;
+
+        // Исключаем те, что уже выбраны в других колонках
+        var selectedFields = ColumnMappings
+            .Where(kv => kv.Key != column && kv.Value != null)
+            .Select(kv => kv.Value)
+            .ToHashSet();
+
+        return allFields.Where(f => !selectedFields.Contains(f));
     }
 
     /// <summary>
@@ -263,8 +307,36 @@ public partial class MainPage
         ColumnMappings = ExcelColumns.Any() ? ExcelColumns.ToDictionary(c => c, _ => (EntityFieldDto?)null) : new();
     }
 
-    private void Validate()
+    private async Task Validate()
     {
+        ExcelColumns.Add("Test");
+        
+        if (ColumnMappings.Any() == false)
+        {
+            return;
+        }
+
+        if (PreviewRows.Any() == false)
+        {
+            
+        }
+        
+        foreach (var row in PreviewRows)
+        {
+            try
+            {
+                var entity = await EntityService.BuildEntityFromRow(ColumnMappings, row, SearchCriteria );
+                row["Test"] = "OK";
+            }
+            catch (Exception e)
+            {
+                row["Test"] = e.Message;
+                continue;
+            }
+
+            return;
+        }
+        
         NotificationService.Notify(new NotificationMessage
         {
             Summary = "Ошибка",
@@ -278,4 +350,6 @@ public partial class MainPage
     {
         return Task.CompletedTask;
     }
+    
+
 }

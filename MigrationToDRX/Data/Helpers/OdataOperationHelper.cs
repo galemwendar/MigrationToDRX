@@ -41,12 +41,32 @@ public static class OdataOperationHelper
     /// </summary>
     /// <param name="operation"> Выбранная операция</param>
     /// <param name="properties">Список сущностей</param>
-    public static List<EntityFieldDto> AddPropertiesByOperation(OdataOperation? operation, List<EntityFieldDto> properties)
+    /// <param name="columnMappings">Маппинг сущностей</param>
+    public static void AddPropertiesByOperation(OdataOperation? operation, List<EntityFieldDto> properties, IDictionary<string, EntityFieldDto?> columnMappings)
     {
         if (operation == null)
         {
-            return properties;
+            return;
         }
+
+        if (columnMappings.Any())
+        {
+            // Находим все ключи, значения которых равны MainIdProperty
+            var keysToRemove = columnMappings
+                .Where(kvp => kvp.Value == MainIdProperty || kvp.Value == PathProperty)
+                .Select(kvp => kvp.Key)
+                .ToList();
+            if (keysToRemove.Any())
+            {
+                // Удаляем их
+                foreach (var key in keysToRemove)
+                {
+                    columnMappings[key] = null; 
+                } 
+            }
+        }
+        
+        properties.RemoveAll(p => p == MainIdProperty || p == PathProperty);
 
         switch (operation)
         {
@@ -73,8 +93,23 @@ public static class OdataOperationHelper
                 properties.AddFirst(MainIdProperty);
                 break;
         }
-
-        return properties;
     }
 
+    /// <summary>
+    /// Поставить метку на результат операции
+    /// </summary>
+    /// <param name="result">Результат операции</param>
+    /// <param name="entityId">Идентификатор сущности, над которой проводилась операция</param>
+    /// <param name="timestamp">Время выполнения операции</param>
+    /// <returns>Метка, которая указывает, что операция выполнялась данной программой.</returns>
+    public static string ComputeStamp(bool result, int entityId, DateTime timestamp)
+    {
+        var data = $"{result}|{entityId}|{timestamp:O}";
+        
+        using var sha256 = System.Security.Cryptography.SHA256.Create();
+        var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(data));
+
+        // Короткая и читаемая метка для Excel
+        return BitConverter.ToString(hashBytes, 0, 8).Replace("-", "");
+    }
 }

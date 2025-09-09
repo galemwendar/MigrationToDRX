@@ -1,4 +1,4 @@
-﻿@page "/main3"
+﻿@page "/main"
 @using Radzen
 @using Radzen.Blazor
 
@@ -21,93 +21,112 @@
         </RadzenCard>
         
     }
-
-    @* Выбор файла *@
-    <label class="file-upload-label">Excel файл</label>
-    <div class="file-upload-container mb-3">
+    
+    <div class="row">
+        <div class="col col-md-7">
+            @* Выбор файла *@
+            <label class="file-upload-label">Excel файл</label>
+            <div class="file-upload-container mb-3">
         
-        <RadzenUpload Accept=".xlsx,.xls,.odf,.ods,.csv"
-                    Multiple="false"
-                    ChooseText="Выбрать..."
-                    Change="@OnFileUpload"
-                    class="file-upload-control" />
-    </div>
-
-    @* Выбор операции *@
-    <div class="mb-3">
-        <label class="form-label">Операция</label>
-        <RadzenDropDown Data="@OperationItems"
-                        @bind-Value="SelectedOperation"
-                        Placeholder="Выберите операцию с данными..."
-                        Style="width:100%"
-                        ValueProperty="Value"
-                        TextProperty="DisplayName">
-        </RadzenDropDown>
-    </div>
-
-    @* Выбор сущности     *@
-    <div class="mb-3">
-        <label class="form-label">Сущность в Odata</label>
-        <RadzenDropDown TextProperty="Name"
-                        Data="@EntitySets"
-                        @bind-Value="SelectedEntitySet"
-                        Placeholder="Выберите сущность..."
-                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                        AllowClear="true"
-                        AllowFiltering="true"
-                        Style="width:100%"
-                        Change="OnSelectedEntitySetChanged">
-        </RadzenDropDown>
-    </div>
-
-    @* Контрол появляется только в том случае, если у выбранной сущности есть свойства-коллекции 
-    и выбрана одна из операций работы со свойствами-коллекциями *@
-    @if(CollectionProperties.Any() && (SelectedOperation == Data.Enums.OdataOperation.AddEntityToCollection || SelectedOperation == Data.Enums.OdataOperation.UpdateEntityInCollection))
-    {
-        @* Выбор свойства - коллекции     *@
-        <div class="mb-3">
-            <label class="form-label">Свойство - коллекция</label>
-            <RadzenDropDown TextProperty="Name"
-                            Data="@CollectionProperties"
-                            @bind-Value="SelectedCollectionProperty"
-                            Placeholder="Выберите сущность..."
-                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                            AllowClear="true"
-                            AllowFiltering="true"
-                            Style="width:100%"
-                            Change="OnSelectedCollectionPropertyChanged">
-            </RadzenDropDown>
+                <RadzenUpload Accept=".xlsx,.xls,.odf,.ods,.csv"
+                              Multiple="false"
+                              ChooseText="Выбрать..."
+                              Change="@OnFileUpload"
+                              class="file-upload-control" />
+            </div>
         </div>
-    }
-
-    @* Выбор ключа для всех связанных сущностей *@
-    <div class="mb-3">
-        <label class="form-label">Поиск связанных сущностей по:</label>
-        <RadzenDropDown Data="@SearchEntityByList"
-                        @bind-Value="SearchEntityBy"
-                        Placeholder="Выберите из списка..."
-                        Style="width:100%"
-                        ValueProperty="Value"
-                        TextProperty="DisplayName">
-        </RadzenDropDown>
-    </div>
-
-
-    <!-- 📊 Количество строк -->
-    <div class="mb-3">
-        <h5> Количество строк, которые будут обработаны за одну операцию</h5>
-        <div class="d-flex align-items-center mb-2" style="gap:10px;">
-            <RadzenCheckBox @bind-Value="UploadAllRows" TValue="bool" />
-            <label>Обработать все строки</label>
+        <div class="col col-md-5">
+            @* Выбор операции *@
+            <div class="mb-3">
+                <label class="form-label">Операция</label>
+                <RadzenDropDown Data="@OperationItems"
+                                @bind-Value="SelectedOperation"
+                                Change="OnSelectedOperationChanged"
+                                Placeholder="Выберите операцию с данными..."
+                                Style="width:100%"
+                                ValueProperty="Value"
+                                TextProperty="DisplayName">
+                </RadzenDropDown>
+            </div>
         </div>
-        <RadzenNumeric @bind-Value="RowsToUpload"
-                       Min="1"
-                       Max="@PreviewRows.Count"
-                       Disabled="@UploadAllRows"
-                       Style="width:120px;" 
-                       Placeholder="Количество" />
     </div>
+    
+    <div class="row">
+        <div class="col col-md-7">
+            @* Выбор сущности     *@
+            <div class="mb-3">
+                <label class="form-label">Сущность в Odata</label>
+                <RadzenDropDown TextProperty="Name"
+                                Data="@EntitySets"
+                                @bind-Value="SelectedEntitySet"
+                                Placeholder="Выберите сущность..."
+                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                AllowClear="true"
+                                AllowFiltering="true"
+                                Style="width:100%"
+                                Change="OnSelectedEntitySetChanged">
+                </RadzenDropDown>
+            </div>
+        </div>
+        <div class="col col-md-5">
+            @* Выбор ключа для всех связанных сущностей *@
+            <div class="mb-3">
+                <label class="form-label">Поиск связанных сущностей по:</label>
+                <RadzenDropDown Data="@SearchEntityByList"
+                                @bind-Value="SearchCriteria"
+                                Placeholder="Выберите из списка..."
+                                Style="width:100%"
+                                ValueProperty="Value"
+                                TextProperty="DisplayName">
+                </RadzenDropDown>
+            </div>
 
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col col-md-7">
+            @* Контрол появляется только в том случае, если у выбранной сущности есть свойства-коллекции 
+            и выбрана одна из операций работы со свойствами-коллекциями *@
+            @if(CollectionProperties.Any() && (SelectedOperation == Data.Enums.OdataOperation.AddEntityToCollection || SelectedOperation == Data.Enums.OdataOperation.UpdateEntityInCollection))
+            {
+                @* Выбор свойства - коллекции     *@
+                <div class="mb-3">
+                    <label class="form-label">Свойство - коллекция</label>
+                    <RadzenDropDown TextProperty="Name"
+                                    Data="@CollectionProperties"
+                                    @bind-Value="SelectedCollectionProperty"
+                                    Placeholder="Выберите сущность..."
+                                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                    AllowClear="true"
+                                    AllowFiltering="true"
+                                    Style="width:100%"
+                                    Change="OnSelectedCollectionPropertyChanged">
+                    </RadzenDropDown>
+                </div>
+            }
+
+        </div>
+        <div class="col col-md-5">
+            <!-- 📊 Количество строк -->
+            <div class="mb-3">
+                <h5> Количество строк, которые будут обработаны за одну операцию</h5>
+                <div class="d-flex align-items-center mb-2" style="gap:10px;">
+                    <RadzenCheckBox @bind-Value="UploadAllRows" TValue="bool" />
+                    <label>Обработать все строки</label>
+                    <RadzenCheckBox @bind-Value="ForceUploadProcessedRows" TValue="bool" />
+                    <label>В том числе уже обработанные</label>
+                </div>
+                <RadzenNumeric @bind-Value="RowsToUpload"
+                               Min="1"
+                               Max="@PreviewRows.Count"
+                               Disabled="@UploadAllRows"
+                               Style="width:120px;" 
+                               Placeholder="Количество" />
+            </div>
+        </div>
+    </div>
+    
     @* Кнопки валидации и отправки на сервер    *@
     <div class="mb-3">
         <button class="btn btn-primary mx-1"
@@ -126,7 +145,7 @@
     </div>
 
 
-    @if (SelectedEntitySet != null && EntityFields.Any())
+    @if (PreviewRows.Any())
     {
          @* Предпросмотр таблицы     *@
 
@@ -145,12 +164,12 @@
                 {
                     <RadzenDataGridColumn TItem="Dictionary<string,string>" Title="@col" Property="@col">
                         <HeaderTemplate>
-                            <RadzenDropDown Data="EntityFields"
+                            <RadzenDropDown Data="GetAvailableEntityFields(col)"
                                             TextProperty="Name" 
                                             AllowClear="true"
                                             AllowFiltering="true"
                                             FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                                            @bind-Value="ColumnMappings[col]" 
+                                            @bind-Value="ColumnMappings[col]"
                                             Placeholder="Выберите свойство...">
 
                                 @* Кастомный шаблон для отображения элементов *@
