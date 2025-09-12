@@ -33,6 +33,7 @@
                               ChooseText="Выбрать..."
                               Change="@OnFileUpload"
                               class="file-upload-control" />
+                              
             </div>
         </div>
         <div class="col col-md-5">
@@ -47,6 +48,8 @@
                                 ValueProperty="Value"
                                 TextProperty="DisplayName">
                 </RadzenDropDown>
+
+                <RadzenRequiredValidator TValue="string" Required="true" Text="Операция должна быть выбрана" />
             </div>
         </div>
     </div>
@@ -66,6 +69,8 @@
                                 Style="width:100%"
                                 Change="OnSelectedEntitySetChanged">
                 </RadzenDropDown>
+
+                <RadzenRequiredValidator TValue="string" Required="true" Text="Сущность должна быть выбрана" />
             </div>
         </div>
         <div class="col col-md-5">
@@ -79,6 +84,8 @@
                                 ValueProperty="Value"
                                 TextProperty="DisplayName">
                 </RadzenDropDown>
+
+                <RadzenRequiredValidator TValue="string" Required="true" Text="Критерий поиска должен быть выбран" />
             </div>
 
         </div>
@@ -130,22 +137,25 @@
     @* Кнопки валидации и отправки на сервер    *@
     <div class="mb-3 d-flex justify-content-between w-60">
         <div>
-            <button class="btn btn-primary mx-1"
-                    @onclick="Upload"
-                    disabled="@(ColumnMappings.Any() == false)">
-                Отправить
-            </button>
 
             <button class="btn btn-outline-secondary mx-1"
                 @onclick="Validate"
-                disabled="@(ColumnMappings.Any() == false)">
+                disabled="@(ColumnMappings.Any(m => m.Value != null) == false)">
                 Проверить
             </button>
+
+            <button class="btn btn-primary mx-1"
+                    @onclick="Upload"
+                    disabled="@(ColumnMappings.Any(m => m.Value != null) == false)">
+                Отправить
+            </button>
+
+
         </div>
 
         <button class="btn btn-outline-secondary mx-1"
                 @onclick="DownloadExcel"
-                disabled="@(ColumnMappings.Any() == false)">
+                disabled="@(ColumnMappings.Any(m => m.Value != null) == false)">
             Скачать отчет
         </button>
 
@@ -159,10 +169,14 @@
         <RadzenDataGrid Data="@PreviewRows" 
                         TItem="Dictionary<string, string>" 
                         AllowColumnResize="true" 
-                        AllowFiltering="true" 
                         AllowColumnReorder="true" 
                         AllowColumnPicking="true"
+                        ColumnsText="колонок выбрано"
                         AllowPaging="true"
+                        AllColumnsText="Все колонки"
+                        ColumnsPickerAllowFiltering="true"
+                        ColumnsShowingText="колонки показаны"
+
                         PageSize="100" >
             <Columns>
                 @foreach (var col in ExcelColumns)

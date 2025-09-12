@@ -98,7 +98,7 @@ public class OdataClientService
     /// <returns>Коллекция сущностей</returns>
     public List<IEdmEntitySet> GetEntitySets()
     {
-        return _container.EntitySets().ToList();
+        return _container.EntitySets().Where(s => s.Name.StartsWith("I")).ToList();
     }
 
     /// <summary>

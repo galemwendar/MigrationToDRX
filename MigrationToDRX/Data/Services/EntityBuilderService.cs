@@ -95,6 +95,16 @@ public class EntityBuilderService
         var entitySet = await _odataClientService.GetEntitySetNameByType(navigation.Type)
                     ?? throw new Exception($"Не удалось найти сущность по типу {navigation.Type}");
 
+        if (entitySet == null)
+        {
+            throw new Exception($"Не удалось найти сущность по типу {navigation.Type}");
+        }
+            
+        if (entitySet == "IUsers" && cellValue == "Система")
+        {
+            cellValue = "Integration Service";
+        }
+
         var relatedEntity = await FindRelatedEntity(dto.SearchCriteria, cellValue, entitySet);
 
         if (relatedEntity != null && relatedEntity.Any())

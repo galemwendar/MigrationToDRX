@@ -8,6 +8,7 @@ using MigrationToDRX.Data.Models.Dto;
 using MigrationToDRX.Data.Services;
 using Radzen;
 using Microsoft.JSInterop;
+using Radzen.Blazor;
 
 namespace MigrationToDRX.Pages;
 
@@ -26,7 +27,7 @@ public partial class MainPage
     /// <summary>
     /// Выбранный поиск навигационных свойств
     /// </summary>
-    protected SearchEntityBy SearchCriteria { get; set; } = SearchEntityBy.Id;
+    protected SearchEntityBy SearchCriteria { get; set; }
 
     /// <summary>
     /// Список полей для поиска навигационных свойств
@@ -91,6 +92,30 @@ public partial class MainPage
     /// </summary>
     protected int RowsToUpload { get; set; } = 100;
 
+    /// <summary>
+    /// Признак того, что пользователь отменил операцию
+    /// </summary>
+    protected bool cancelRequested = false;
+
+    /// <summary>
+    /// Признак того, что операция выполняется
+    /// </summary>
+    protected bool isProceed = false;
+
+    /// <summary>
+    /// Максимальное количество строк для обработки
+    /// </summary>
+    protected int maxRowsCount = 0;
+
+    /// <summary>
+    /// Прогресс выполнения операции, передаваемый диалогу
+    /// </summary>
+    private Action<int>? progressUpdater;
+
+    /// <summary>
+    /// Имя файла для выгрузки
+    /// </summary>
+    protected string FileName { get; set; }
 
     /// <summary>
     /// Сервис для работы с OData клиентом
@@ -118,6 +143,12 @@ public partial class MainPage
 
     [Inject]
     private IJSRuntime JS { get; set; } = null!;
+
+    /// <summary>
+    /// Cервис для работы с диалогами
+    /// </summary>
+    [Inject]
+    private DialogService DialogService { get; set; } = null!;
 
     /// <summary>
     /// Признак подключения к OData сервису
@@ -263,12 +294,13 @@ public partial class MainPage
     /// </summary>
     private async Task OnFileUpload(UploadChangeEventArgs args)
     {
+        ColumnMappings = new();
+        PreviewRows = new();
+        ExcelColumns = new();
+
         // Если нет файла — очищаем связанные словари и списки
         if (args.Files == null || !args.Files.Any())
         {
-            ColumnMappings = new();
-            PreviewRows = new();
-
             StateHasChanged();
             return;
         }
@@ -276,6 +308,8 @@ public partial class MainPage
         var file = args.Files.FirstOrDefault();
         if (file != null)
         {
+            FileName = file.Name;
+
             using var stream = new MemoryStream();
             await file.OpenReadStream(SystemConstants.MaxExcelFileSize).CopyToAsync(stream);
             stream.Position = 0;
@@ -349,59 +383,76 @@ public partial class MainPage
 
     private async Task Validate()
     {
-        if (ColumnMappings.Any() == false)
+        if (ColumnMappings.Any() == false || PreviewRows.Any() == false)
         {
             return;
         }
 
-        if (PreviewRows.Any() == false)
-        {
-            return;
-        }
+        cancelRequested = false;
+        isProceed = true;
 
         var validationColumns = OdataOperationHelper.GetDisplayNames<Data.Models.Dto.ValidationResult>();
-
         CreateResultColumns(validationColumns);
         var resultColumnName = OdataOperationHelper.GetDisplayName<Data.Models.Dto.ValidationResult>(nameof(Data.Models.Dto.ValidationResult.Success));
 
-        var maxRowsCount = UploadAllRows ? PreviewRows.Count : RowsToUpload;
+        maxRowsCount = UploadAllRows ? PreviewRows.Count : RowsToUpload;
 
-        for (int i = 0; i < maxRowsCount; i++)
+
+        // Процесс валидации начинается в фоновом потоке
+        _ = InvokeAsync(async () =>
         {
-            var row = PreviewRows[i];
-            var dto = new ProcessedEntityDto()
+            for (int i = 0; i < maxRowsCount; i++)
             {
-                ColumnMapping = ColumnMappings,
-                Row = row,
-                SearchCriteria = SearchCriteria,
-                EntitySetName = SelectedEntitySet!.Name,
-                ChildEntitySetName = SelectedCollectionProperty?.Name,
-                IsCollection = SelectedCollectionProperty != null,
-                Operation = SelectedOperation,
-            };
+                if (cancelRequested)
+                {
+                    break; // досрочный выход
+                }
 
-            try
-            {
-                var result = await EntityService.ValidateEntity(dto);
-                row[resultColumnName] = result.Success ?? string.Empty;
-                continue;
+                var row = PreviewRows[i];
+                var dto = new ProcessedEntityDto()
+                {
+                    ColumnMapping = ColumnMappings,
+                    Row = row,
+                    SearchCriteria = SearchCriteria,
+                    EntitySetName = SelectedEntitySet!.Name,
+                    ChildEntitySetName = SelectedCollectionProperty?.Name,
+                    IsCollection = SelectedCollectionProperty != null,
+                    Operation = SelectedOperation,
+                };
+
+                try
+                {
+                    var result = await EntityService.ValidateEntity(dto);
+                    row[resultColumnName] = result.Success ?? string.Empty;
+                    continue;
+                }
+                catch (Exception e)
+                {
+                    row[resultColumnName] = e.Message;
+                    continue;
+                }
+                finally
+                {
+                    var processedRows = i + 1;
+                    // дергаем диалог через делегат
+                    progressUpdater?.Invoke(processedRows);
+                }
+
+
             }
-            catch (Exception e)
-            {
-                row[resultColumnName] = e.Message;
-                continue;
-            }
-        }
+
+            // Close the dialog
+            DialogService.Close();
+        });
+
+        await ShowBusyDialog();
+
+        isProceed = false;
     }
 
     private async Task Upload()
     {
-        if (ColumnMappings.Any() == false)
-        {
-            return;
-        }
-
-        if (PreviewRows.Any() == false)
+        if (ColumnMappings.Any() == false || PreviewRows.Any() == false)
         {
             return;
         }
@@ -413,69 +464,93 @@ public partial class MainPage
         var resultColumnName = OdataOperationHelper.GetDisplayName<Data.Models.Dto.OperationResult>(nameof(Data.Models.Dto.OperationResult.Success));
         var timeStampColumnName = OdataOperationHelper.GetDisplayName<Data.Models.Dto.OperationResult>(nameof(Data.Models.Dto.OperationResult.Timestamp));
         var signColumnName = OdataOperationHelper.GetDisplayName<Data.Models.Dto.OperationResult>(nameof(Data.Models.Dto.OperationResult.Stamp));
-        var operationNameColumnName = OdataOperationHelper.GetDisplayName<Data.Models.Dto.OperationResult>(nameof(Data.Models.Dto.OperationResult));
+        var operationNameColumnName = OdataOperationHelper.GetDisplayName<Data.Models.Dto.OperationResult>(nameof(Data.Models.Dto.OperationResult.OperationName));
         var errorsColumnName = OdataOperationHelper.GetDisplayName<Data.Models.Dto.OperationResult>(nameof(Data.Models.Dto.OperationResult.ErrorMessage));
+        var idColumnName = OdataOperationHelper.GetDisplayName<Data.Models.Dto.OperationResult>(nameof(Data.Models.Dto.OperationResult.EntityId));
 
-        var maxRowsCount = UploadAllRows ? PreviewRows.Count : RowsToUpload;
+        maxRowsCount = UploadAllRows ? PreviewRows.Count : RowsToUpload;
 
-        for (int i = 0; i < maxRowsCount; i++)
+        // Процесс валидации начинается в фоновом потоке
+        _ = InvokeAsync(async () =>
         {
-            var row = PreviewRows[i];
 
-            if (row[resultColumnName] != null && row[resultColumnName].ToString() != "Да")
+            for (int i = 0; i < maxRowsCount; i++)
             {
-                // валидация не удалась, пропускаем
-                continue;
+                var row = PreviewRows[i];
+
+                if (row[resultColumnName] != null && row[resultColumnName]?.ToString() != "Да")
+                {
+                    // валидация не удалась, пропускаем
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(row[signColumnName]) == false && ForceUploadProcessedRows == false)
+                {
+                    // TODO: Вычислять, что подпись проставлена именно этой программой.
+
+                    // Если подпись стоит, значит уже была обработана в прошлом запросе
+                    continue;
+                }
+
+                var dto = new ProcessedEntityDto()
+                {
+                    ColumnMapping = ColumnMappings,
+                    Row = row,
+                    SearchCriteria = SearchCriteria,
+                    EntitySetName = SelectedEntitySet!.Name,
+                    ChildEntitySetName = SelectedCollectionProperty?.Name,
+                    IsCollection = SelectedCollectionProperty != null,
+                    Operation = SelectedOperation,
+                };
+
+                try
+                {
+                    var result = await EntityService.ProceedEntitiesToOdata(dto);
+
+                    row[resultColumnName] = result.Success ? "Да" : "Нет";
+                    row[timeStampColumnName] = result.Timestamp.ToLongTimeString();
+                    row[signColumnName] = result.Stamp;
+                    row[operationNameColumnName] = SelectedOperation.GetDisplayName() ?? string.Empty;
+                    row[idColumnName] = result.EntityId.ToString() ?? string.Empty;
+
+                    continue;
+                }
+                catch (Exception ex)
+                {
+                    row[resultColumnName] = "Нет";
+                    row[operationNameColumnName] = SelectedOperation.GetDisplayName() ?? string.Empty;
+                    row[errorsColumnName] = ex.Message + " : " + ex.InnerException?.Message;
+
+                    continue;
+                }
+                finally
+                {
+                    var processedRows = i + 1;
+                    // дергаем диалог через делегат
+                    progressUpdater?.Invoke(processedRows);
+                }
             }
 
-            if (row[signColumnName] != null && ForceUploadProcessedRows == false)
-            {
-                // TODO: Вычислять, что подпись проставлена именно этой программой.
+            DialogService.Close();
+        });
 
-                // Если подпись стоит, значит уже была обработана в прошлом запросе
-                continue;
-            }
-
-            var dto = new ProcessedEntityDto()
-            {
-                ColumnMapping = ColumnMappings,
-                Row = row,
-                SearchCriteria = SearchCriteria,
-                EntitySetName = SelectedEntitySet!.Name,
-                ChildEntitySetName = SelectedCollectionProperty?.Name,
-                IsCollection = SelectedCollectionProperty != null,
-                Operation = SelectedOperation,
-            };
-
-            try
-            {
-                var result = await EntityService.ProceedEntitiesToOdata(dto);
-
-                row[resultColumnName] = result.Success ? "Да" : "Нет";
-                row[timeStampColumnName] = result.Timestamp.ToLongTimeString();
-                row[signColumnName] = result.Stamp;
-                row[operationNameColumnName] = result.OperationName;
-
-                continue;
-            }
-            catch (Exception ex)
-            {
-                row[resultColumnName] = "Нет";
-                row[operationNameColumnName] = SelectedOperation.GetDisplayName();
-                row[errorsColumnName] = ex.Message + " : " + ex.InnerException?.Message;
-
-                 continue;
-            }
-        }
+        await ShowBusyDialog();
+        isProceed = false;
     }
 
+    /// <summary>
+    /// Скачивает файл Excel с отчетом
+    /// </summary>
     private async Task DownloadExcel()
     {
-        var fileBytes = ExcelService.GetExcelBytes(PreviewRows, ExcelColumns, "Preview");
+        var fileBytes = ExcelService.GetExcelBytes(PreviewRows, ExcelColumns, "Отчет");
         var base64 = Convert.ToBase64String(fileBytes);
-        await JS.InvokeVoidAsync("downloadFileFromBase64", "Preview.xlsx", base64);
+        await JS.InvokeVoidAsync("downloadFileFromBase64", $"Отчет_по_{FileName}_{SelectedOperation.GetDisplayName()}_за_{DateTime.Now.ToShortDateString()}.xlsx", base64);
     }
-        
+
+    /// <summary>
+    /// Создает список колонок в таблицу
+    /// </summary>
     private void CreateResultColumns(List<string>? resultColumns)
     {
         if (resultColumns == null)
@@ -483,7 +558,6 @@ public partial class MainPage
             return;
         }
         // Определяем, какие новые колонки реально нужно добавить
-
         var newColumns = resultColumns.Except(ExcelColumns).ToList();
 
         // Добавляем их в ExcelColumns и ColumnMappings
@@ -506,5 +580,34 @@ public partial class MainPage
             .ToList();
 
         StateHasChanged();
+    }
+    
+
+    private async Task ShowBusyDialog()
+    {
+        await DialogService.OpenAsync<MigrationToDRX.Pages.Components.OperationProgressDialog>(
+            "Прогресс выполнения операции",
+            new Dictionary<string, object>()
+            {
+                { nameof(Components.OperationProgressDialog.RegisterProgressHandler), new Action<Action<int>>(handler => progressUpdater = handler) },
+                {"Cancel", EventCallback.Factory.Create(this, CancelOperation)},
+                {"Total", maxRowsCount},
+            },
+            new DialogOptions
+            {
+                ShowTitle = true,
+                Style = "width:800;height:auto",
+                CloseDialogOnOverlayClick = false,
+            });
+    }
+
+    /// <summary>
+    /// Обработка нажатия на кнопку отмены операции
+    /// в диалоговом окне
+    /// </summary>
+    private void CancelOperation()
+    {
+        DialogService.Close();
+        cancelRequested = true;
     }
 }
