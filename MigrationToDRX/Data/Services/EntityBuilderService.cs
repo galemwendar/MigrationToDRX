@@ -30,7 +30,12 @@ public class EntityBuilderService
     {
         var buildedEntity = new Dictionary<string, object>();
 
-        foreach (var (excelColumn, entityField) in dto.ColumnMapping.Where(p => p.Key != "Test"))
+        var generatedColumns = new List<string>();
+
+        generatedColumns.AddRange(OdataOperationHelper.GetDisplayNames<Data.Models.Dto.OperationResult>());
+        generatedColumns.AddRange(OdataOperationHelper.GetDisplayNames<Data.Models.Dto.ValidationResult>());
+
+        foreach (var (excelColumn, entityField) in dto.ColumnMapping.Where(p => !generatedColumns.Contains(p.Key)))
         {
             if (entityField == null || !dto.Row.TryGetValue(excelColumn, out var cellValue) || string.IsNullOrWhiteSpace(cellValue))
                 continue;

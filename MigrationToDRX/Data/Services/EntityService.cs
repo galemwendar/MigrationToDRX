@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Text.RegularExpressions;
 using MigrationToDRX.Data.Constants;
 using MigrationToDRX.Data.Enums;
@@ -33,64 +34,6 @@ public class EntityService
         _fileService = fileService;
         _entityBuilderService = entityBuilderService;
     }
-
-    // public async Task<Dictionary<string, object>> CreateEntityAsync(IDictionary<string, object> excelRow, Dictionary<string, string> columnMapping, EdmxEntityDto entitydto)
-    // {
-    //     var structuralMap = entitydto.StructuralProperties
-    //     .ToDictionary(p => p.Name!, p => p);
-    //
-    //     var navigationMap = entitydto.NavigationProperties
-    //         .ToDictionary(p => p.Name!, p => p);
-    //
-    //     var result = new Dictionary<string, object>();
-    //
-    //     foreach (var excelCol in columnMapping.Keys)
-    //     {
-    //         var value = excelRow.TryGetValue(excelCol, out var val) ? val : null;
-    //         var entityProp = columnMapping[excelCol];
-    //
-    //         if (string.IsNullOrWhiteSpace(entityProp))
-    //             continue;
-    //
-    //         if (structuralMap.TryGetValue(entityProp, out var structProp))
-    //         {
-    //             if (structProp.Name == "Status" && EdmTypeHelper.StatusValues.TryGetValue(value?.ToString()!, out var status))
-    //             {
-    //                 result[structProp.Name!] = status;
-    //             }
-    //             else
-    //             {
-    //                 result[structProp.Name!] = ConvertToODataType(value, structProp.Type)!;
-    //             }
-    //         }
-    //         else if (navigationMap.TryGetValue(entityProp, out var navProp) && !navProp.IsCollection)
-    //         {
-    //             if (entityProp == "MainId")
-    //             {
-    //                 result["MainId"] = value!;
-    //                 continue;
-    //             }
-    //
-    //             if (EdmTypeHelper.SearchByName)
-    //             {
-    //                 var relatedEntity = await _odataClientService.GetEntityAsync(navProp.Type!, EdmTypeHelper.SearchCryteria, value!);
-    //                 result[navProp.Name!] = relatedEntity;
-    //             }
-    //             else
-    //             {
-    //                 if (int.TryParse(value?.ToString(), out int id))
-    //                 {
-    //                     var relatedEntity = await _odataClientService.GetEntityAsync(navProp.Type!, id);
-    //                     result[navProp.Name!] = relatedEntity;
-    //                 }
-    //             }
-    //         }
-    //     }
-    //
-    //     return result;
-    // }
-
-
 
     /// <summary>
     /// Обработка сценария работы с сущностями
@@ -238,10 +181,8 @@ public class EntityService
     {
         try
         {
-            // перед созданем документа убедимся, что файл найден и не слишком большой
-            var filePath = dto.Row!.TryGetValue(StringConstants.PathPropertyName, out var path)
-                ? path?.ToString() ?? ""
-                : "";
+            // ищем excel-ключ для PathPropertyName
+            string filePath = GetFilePathFromEntityDto(dto);
 
             bool fileIsFound = string.IsNullOrWhiteSpace(filePath) == false && _fileService.IsFileExists(filePath) && _fileService.IsLessThenTwoGb(filePath);
 
@@ -265,8 +206,8 @@ public class EntityService
                 var eDocId = Convert.ToInt64(id);
 
                 // находим созданную сущность и заполняем тело документа
-                await FindEdocAndSetBodyAsync(eDocId, filePath);
-                return new OperationResult(sucsess: true, operationName: dto.Operation.GetDisplayName());
+                var updatedEntity = await FindEdocAndSetBodyAsync(eDocId, filePath);
+                return new OperationResult(sucsess: true, operationName: dto.Operation.GetDisplayName(), entityId: eDocId, entity: updatedEntity);
             }
             else
             {
@@ -286,9 +227,7 @@ public class EntityService
     private async Task<OperationResult> AddVersionToExistedDocumentAsync(ProcessedEntityDto dto)
     {
         // перед созданем документа убедимся, что файл найден и не слишком большой
-        var filePath = dto.Row.TryGetValue(StringConstants.PathPropertyName, out var path)
-            ? path?.ToString() ?? ""
-            : "";
+        var filePath = GetFilePathFromEntityDto(dto);
 
         bool fileIsFound = string.IsNullOrWhiteSpace(filePath) == false && _fileService.IsFileExists(filePath) && _fileService.IsLessThenTwoGb(filePath);
 
@@ -296,18 +235,17 @@ public class EntityService
         {
             return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Файл не найден или слишком большой");
         }
+        // находим сущность и заполняем тело документа
+        var eDocId = GetIdFromEntityDto(dto);
 
-        if (dto.Row.TryGetValue(StringConstants.IdPropertyName, out var id))
+        if(eDocId == 0)
         {
-            // находим сущность и заполняем тело документа
-            var eDocId = Convert.ToInt64(id);
-            await FindEdocAndSetBodyAsync(eDocId, filePath);
-            return new OperationResult(sucsess: true, operationName: dto.Operation.GetDisplayName());
+            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось найти Id сущности");
         }
-        else
-        {
-            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось создать документ");
-        }
+        
+        var updatedEntity = await FindEdocAndSetBodyAsync(eDocId, filePath);
+
+        return new OperationResult(sucsess: true, operationName: dto.Operation.GetDisplayName(), entityId: eDocId, entity: updatedEntity);
     }
 
     /// <summary>
@@ -367,7 +305,6 @@ public class EntityService
     /// <summary>
     /// Обновляет свойство - коллекцию в Odata
     /// </summary>
-
     private async Task<OperationResult> UpdateEntityInCollectionAsync(ProcessedEntityDto dto)
     {
         try
@@ -460,7 +397,7 @@ public class EntityService
     /// <param name="filePath"></param>
     /// <param name="ForceUpdateBody"></param>
     /// <returns></returns>
-    private async Task FindEdocAndSetBodyAsync(long eDocId, string filePath, bool ForceUpdateBody = false)
+    private async Task<IDictionary<string, object>> FindEdocAndSetBodyAsync(long eDocId, string filePath, bool ForceUpdateBody = false)
     {
         var eDoc = await _odataClientService.FindEdocAsync(eDocId);
 
@@ -485,7 +422,7 @@ public class EntityService
 
         if (targetApp == null)
         {
-            return;
+            return null;
         }
 
         if (version == null)
@@ -513,9 +450,9 @@ public class EntityService
             throw new Exception($"Не удалось прочитать файл: {ex.Message}");
         }
 
-
-
         await _odataClientService.FillBodyAsync(docId, body, version!);
+
+        return eDoc;
     }
 
     /// <summary>
@@ -582,11 +519,11 @@ public class EntityService
         stream.Read(buffer, 0, buffer.Length);
         return buffer;
     }
-    
+
     /// <summary>
     /// Читает файл даже если он открыт
     /// </summary>
-    public async Task<byte[]> ReadFileEvenIfOpenAsync(string path, CancellationToken cancellationToken = default)
+    private async Task<byte[]> ReadFileEvenIfOpenAsync(string path, CancellationToken cancellationToken = default)
     {
         using var stream = new FileStream(
             path,
@@ -608,6 +545,96 @@ public class EntityService
         }
 
         return buffer;
+    }
+
+    /// <summary>
+    /// Получает путь к файлу из EntityDto
+    /// </summary>
+    /// <param name="dto">Построенная сущность</param>
+    /// <returns>строка с путем для файла</returns>
+    private static string GetFilePathFromEntityDto(ProcessedEntityDto dto)
+    {
+        var filePathKey = dto.ColumnMapping
+            .Where(kvp => kvp.Value is StructuralFieldDto sf && sf.Name == StringConstants.PathPropertyName)
+            .Select(kvp => kvp.Key)
+            .SingleOrDefault();
+
+        string filePath = "";
+
+        if (filePathKey != null && dto.Row.TryGetValue(filePathKey, out var raw) && !string.IsNullOrWhiteSpace(raw))
+        {
+            filePath = raw!.ToString()!.Trim();
+        }
+
+        return filePath;
+    }
+
+    /// <summary>
+    /// Получает id главной сущности из EntityDto
+    /// </summary>
+    /// <param name="dto">Построенная сущность</param>
+    /// <returns>идентификатор главной сущности</returns>
+    private static long GetMainIdFromEntityDto(ProcessedEntityDto dto)
+    {
+        var mainIdKey = dto.ColumnMapping
+            .Where(kvp => kvp.Value is StructuralFieldDto sf && sf.Name == StringConstants.MainIdPropertyName)
+            .Select(kvp => kvp.Key)
+            .SingleOrDefault();
+
+        long mainId = 0;
+
+        if (mainIdKey != null && dto.Row.TryGetValue(mainIdKey, out var raw) && !string.IsNullOrWhiteSpace(raw))
+        {
+            mainId = Convert.ToInt64(raw!.ToString()!.Trim());
+        }
+
+        return mainId;
+    }
+
+    /// <summary>
+    /// Получает id сущности из EntityDto
+    /// </summary>
+    /// <param name="dto">Построенная сущность</param>
+    /// <returns>идентификатор сущности</returns>
+    private static long GetIdFromEntityDto(ProcessedEntityDto dto)
+    {
+        var idKey = dto.ColumnMapping
+            .Where(kvp => kvp.Value is StructuralFieldDto sf && sf.Name == StringConstants.MainIdPropertyName)
+            .Select(kvp => kvp.Key)
+            .SingleOrDefault();
+
+        long id = 0;
+
+        if (idKey != null && dto.Row.TryGetValue(idKey, out var raw) && !string.IsNullOrWhiteSpace(raw))
+        {
+            id = Convert.ToInt64(raw!.ToString()!.Trim());
+        }
+
+        return id;
+    }
+    
+    /// <summary>
+    /// Получает статус сущности из EntityDto
+    /// </summary>
+    /// <param name="dto">Построенная сущность</param>
+    /// <returns>строка со статусом</returns>
+    private static string? GetStatusFromEntityDto(ProcessedEntityDto dto)
+    {
+        var statusKey = dto.ColumnMapping
+            .Where(kvp => kvp.Value is StructuralFieldDto sf && sf.Name == StringConstants.StatusPropertyName)
+            .Select(kvp => kvp.Key)
+            .SingleOrDefault();
+
+        string status = "";
+
+        if (statusKey != null && dto.Row.TryGetValue(statusKey, out var raw) && !string.IsNullOrWhiteSpace(raw))
+        {
+            status = raw!.ToString()!.Trim();
+        }
+
+        var convertedValue = EdmTypeHelper.ConvertStatusToEdm(status);
+
+        return convertedValue;
     }
 
     #endregion

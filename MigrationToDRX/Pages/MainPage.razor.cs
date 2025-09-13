@@ -59,7 +59,7 @@ public partial class MainPage
     /// </summary>
     protected List<EntityFieldDto> EntityFields { get; set; } = new();
 
-    protected List<EntityFieldDto> AvailableEntityFields => EntityFields.Where(f => !ColumnMappings.Any(c => c.Key == f.Name)).ToList();
+    protected HashSet<EntityFieldDto> AvailableEntityFields => EntityFields.Where(f => !ColumnMappings.Any(c => c.Value == f)).ToHashSet();
 
     /// <summary>
     /// Список колонок, загруженных из Excel
@@ -397,6 +397,7 @@ public partial class MainPage
 
         maxRowsCount = UploadAllRows ? PreviewRows.Count : RowsToUpload;
 
+        var dialogTask = ShowBusyDialog();
 
         // Процесс валидации начинается в фоновом потоке
         _ = InvokeAsync(async () =>
@@ -445,7 +446,7 @@ public partial class MainPage
             DialogService.Close();
         });
 
-        await ShowBusyDialog();
+        await dialogTask;
 
         isProceed = false;
     }
@@ -469,7 +470,7 @@ public partial class MainPage
         var idColumnName = OdataOperationHelper.GetDisplayName<Data.Models.Dto.OperationResult>(nameof(Data.Models.Dto.OperationResult.EntityId));
 
         maxRowsCount = UploadAllRows ? PreviewRows.Count : RowsToUpload;
-
+        var dialogTask = ShowBusyDialog();
         // Процесс валидации начинается в фоновом потоке
         _ = InvokeAsync(async () =>
         {
@@ -478,15 +479,17 @@ public partial class MainPage
             {
                 var row = PreviewRows[i];
 
-                if (row[resultColumnName] != null && row[resultColumnName]?.ToString() != "Да")
+                if (string.IsNullOrWhiteSpace(row[resultColumnName]) == false && row[resultColumnName]?.ToString() != "Да")
                 {
                     // валидация не удалась, пропускаем
+                    row[errorsColumnName] = "Валидация не удалась";
                     continue;
                 }
 
                 if (string.IsNullOrWhiteSpace(row[signColumnName]) == false && ForceUploadProcessedRows == false)
                 {
                     // TODO: Вычислять, что подпись проставлена именно этой программой.
+                      row[errorsColumnName] = "Строка уже была обработана в прошлом запросе.\n Чтобы повторно обработать строку, поставьте галочку \"в том числе уже обработанные\"";
 
                     // Если подпись стоит, значит уже была обработана в прошлом запросе
                     continue;
@@ -507,6 +510,16 @@ public partial class MainPage
                 {
                     var result = await EntityService.ProceedEntitiesToOdata(dto);
 
+                    if (result == null)
+                    {
+                        throw new Exception("Не удалось провести операцию");
+                    }
+
+                    if (result.Success == false)
+                    {
+                        throw new Exception($"Операция не удалась: {result.ErrorMessage}");
+                    }
+
                     row[resultColumnName] = result.Success ? "Да" : "Нет";
                     row[timeStampColumnName] = result.Timestamp.ToLongTimeString();
                     row[signColumnName] = result.Stamp;
@@ -519,7 +532,7 @@ public partial class MainPage
                 {
                     row[resultColumnName] = "Нет";
                     row[operationNameColumnName] = SelectedOperation.GetDisplayName() ?? string.Empty;
-                    row[errorsColumnName] = ex.Message + " : " + ex.InnerException?.Message;
+                    row[errorsColumnName] = ex.Message + (string.IsNullOrWhiteSpace(ex.InnerException?.Message) ? string.Empty : " : " + ex.InnerException?.Message);
 
                     continue;
                 }
@@ -534,7 +547,7 @@ public partial class MainPage
             DialogService.Close();
         });
 
-        await ShowBusyDialog();
+        await dialogTask;
         isProceed = false;
     }
 
