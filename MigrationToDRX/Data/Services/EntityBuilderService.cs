@@ -104,11 +104,6 @@ public class EntityBuilderService
         {
             throw new Exception($"Не удалось найти сущность по типу {navigation.Type}");
         }
-            
-        if (entitySet == "IUsers" && cellValue == "Система")
-        {
-            cellValue = "Integration Service";
-        }
 
         var relatedEntity = await FindRelatedEntity(dto.SearchCriteria, cellValue, entitySet);
 
