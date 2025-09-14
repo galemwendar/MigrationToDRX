@@ -462,14 +462,18 @@ public class EntityService
     /// <param name="version">верия</param>
     private bool NeedNewVersion(string extension, IDictionary<string, object> version)
     {
-
-        if (!version.TryGetValue(StringConstants.AssociatedApplication, out var application))
-        { return true; }
-
-        if (application is IDictionary<string, object> currentApp && currentApp.TryGetValue(StringConstants.Extension, out var currentExtension))
-        { return currentExtension.ToString() != extension; }
-
         return true;
+
+        // Не удалять!
+        //TODO: Добавить логический оператор для выбра, нужно ли перезатирать текущую версию
+
+        // if (!version.TryGetValue(StringConstants.AssociatedApplication, out var application))
+        // { return true; }
+
+        // if (application is IDictionary<string, object> currentApp && currentApp.TryGetValue(StringConstants.Extension, out var currentExtension))
+        // { return currentExtension.ToString() != extension; }
+
+        // return true;
 
     }
 
