@@ -26,4 +26,24 @@ public class StringConstants
     /// Строка для поиска свойства "Статус"
     /// </summary>
     public const string StatusPropertyName = "Status";
+
+    /// <summary>
+    /// Строка для поиска свойства "приложение"
+    /// </summary>
+    public const string AssociatedApplication = "AssociatedApplication";
+
+    /// <summary>
+    /// Строка для поиска свойства "расширение"
+    /// </summary>
+    public const string Extension = "Extension";
+
+    /// <summary>
+    /// Строка для поиска свойства "версии"
+    /// </summary>
+    public const string Versions = "Versions";
+
+    /// <summary>
+    /// Строка для поиска свойства "номер версии"
+    /// </summary>
+    public const string Number = "Number";
 }
