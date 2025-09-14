@@ -27,7 +27,7 @@ try
     builder.Logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace);
     builder.Host.UseNLog();
     var httpUrl = kestrelConfig["Http:Url"];
-    var httpsUrl = kestrelConfig["Https:Url"];
+    //var httpsUrl = kestrelConfig["Https:Url"];
 
 
     // Add services to the container.
