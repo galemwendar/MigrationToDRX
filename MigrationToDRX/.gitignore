@@ -1,6 +1,7 @@
 .vs
 /bin/
 /obj/
+/publish/
 /Properties/launchSettings.json
 *.csproj.user
 *.sln.user

@@ -142,7 +142,7 @@ public class EntityService
                         && p.Key != StringConstants.MainIdPropertyName && p.Key != StringConstants.IdPropertyName)
                     .ToDictionary(p => p.Key, p => p.Value);
 
-            var entityId = entity.TryGetValue(StringConstants.IdPropertyName, out var id) ? (long)id : 0;
+            var entityId = GetMainIdFromEntityDto(dto);
 
             if (entityId == 0)
             {
@@ -271,7 +271,7 @@ public class EntityService
                     && p.Key != StringConstants.IdPropertyName)
                 .ToDictionary(p => p.Key, p => p.Value);
 
-            var mainId = entity.TryGetValue(StringConstants.MainIdPropertyName, out var id) ? (long)id : 0;
+            var mainId = GetMainIdFromEntityDto(dto);
 
             if (mainId == 0)
             {
@@ -316,7 +316,7 @@ public class EntityService
                         && p.Key != StringConstants.MainIdPropertyName && p.Key != StringConstants.IdPropertyName)
                     .ToDictionary(p => p.Key, p => p.Value);
 
-            var mainEntityId = entity.TryGetValue(StringConstants.MainIdPropertyName, out var id) ? (long)id : 0;
+            var mainEntityId = GetMainIdFromEntityDto(dto);
 
             if (mainEntityId == 0)
             {
@@ -408,7 +408,7 @@ public class EntityService
 
         var extension = Path.GetExtension(filePath).Replace(".", "");
 
-        eDoc.TryGetValue("Id", out var docIdObj);
+        eDoc.TryGetValue(StringConstants.IdPropertyName, out var docIdObj);
 
         if (docIdObj == null)
         {
@@ -463,10 +463,10 @@ public class EntityService
     private bool NeedNewVersion(string extension, IDictionary<string, object> version)
     {
 
-        if (!version.TryGetValue("AssociatedApplication", out var application))
+        if (!version.TryGetValue(StringConstants.AssociatedApplication, out var application))
         { return true; }
 
-        if (application is IDictionary<string, object> currentApp && currentApp.TryGetValue("Extension", out var currentExtension))
+        if (application is IDictionary<string, object> currentApp && currentApp.TryGetValue(StringConstants.Extension, out var currentExtension))
         { return currentExtension.ToString() != extension; }
 
         return true;
@@ -481,7 +481,7 @@ public class EntityService
     /// <returns>последняя версия</returns>
     private IDictionary<string, object>? GetLastVersion(string extension, IDictionary<string, object> eDoc)
     {
-        if (eDoc.TryGetValue("Versions", out var versions))
+        if (eDoc.TryGetValue(StringConstants.Versions, out var versions))
         {
             if (versions == null)
             {
@@ -494,7 +494,7 @@ public class EntityService
                     .Select(version => new
                     {
                         Version = version,
-                        Number = version["Number"] as int? ?? 0 // Преобразование "Number" в int
+                        Number = version[StringConstants.Number] as int? ?? 0 // Преобразование "Number" в int
                     })
                     .OrderByDescending(version => version.Number)
                     .FirstOrDefault();
@@ -507,17 +507,6 @@ public class EntityService
             }
         }
         return null;
-    }
-
-    /// <summary>
-    /// Читает файл даже если он открыт
-    /// </summary>
-    private byte[] ReadFileEvenIfOpen(string path)
-    {
-        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        byte[] buffer = new byte[stream.Length];
-        stream.Read(buffer, 0, buffer.Length);
-        return buffer;
     }
 
     /// <summary>
