@@ -2,6 +2,8 @@
 @using Radzen
 @using Radzen.Blazor
 
+<RadzenDialog />
+
 <PageTitle>Миграция данных в DirectumRX</PageTitle>
 
 <div class="page-background-main">
@@ -9,18 +11,6 @@
     <div class="card">
     <div class="card-header"><h3>Импорт из Excel</h3></div>
     <div class="card-body">
-
-
-    @if (!IsConnected)
-    {
-        <RadzenCard class="card card-body">
-            <p>
-                <b> Подключение не настроено </b>
-                <a href="/" style="color: red; font-size: 18px; background-color: lightslategray;"><b>Вернуться на страницу подключения</b></a>
-            </p>
-        </RadzenCard>
-        
-    }
     
     <div class="row">
         <div class="col col-md-7">

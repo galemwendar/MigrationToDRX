@@ -151,33 +151,50 @@ public partial class MainPage
     private DialogService DialogService { get; set; } = null!;
 
     /// <summary>
+    /// Сервис для работы с навигацией
+    /// </summary>
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = null!;
+
+    /// <summary>
     /// Признак подключения к OData сервису
     /// </summary>
     private bool IsConnected => OdataClientService.IsConnected;
 
-    /// <summary>
-    /// Инициализация при старте страницы
-    /// </summary>
-    /// <returns></returns>
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        //TODO: показать модалку о том, что надо бы вернуться на страницу подключения
-        if (IsConnected == false)
+        await base.OnAfterRenderAsync(firstRender);
+        if (firstRender)
         {
-            await base.OnInitializedAsync();
+            if (IsConnected == false)
+            {
+                await InvokeAsync(async () =>
+                {
+                    await DialogService.Alert(
+                        "Потеряно соединение с сервисом интеграции DirectumRX.\n" +
+                        "Вы будете перенаправлены на страницу авторизации",  
+                        "Ошибка",                    
+                        new AlertOptions
+                        {
+                            OkButtonText = "Ок",
+                            CloseDialogOnEsc = false,
+                            CloseDialogOnOverlayClick = false,
+                            ShowClose = false
+                        });
+                });  
+                NavigationManager.NavigateTo("/");
+                return;
+            }
+
+            // получаем список сущностей из OData
+            EntitySets = OdataClientService.GetEntitySets().OrderBy(e => e.Name).ToList();
+
+            // получаем список операций для выбора
+            OperationItems = Data.Helpers.EnumHelper.GetItems<OdataOperation>();
+
+            // получаем список полей для поиска навигационных свойств
+            SearchEntityByList = Data.Helpers.EnumHelper.GetItems<SearchEntityBy>();
         }
-
-        // получаем список сущностей из OData
-        EntitySets = OdataClientService.GetEntitySets().OrderBy(e => e.Name).ToList();
-
-        // получаем список операций для выбора
-        OperationItems = Data.Helpers.EnumHelper.GetItems<OdataOperation>();
-
-        // получаем список полей для поиска навигационных свойств
-        SearchEntityByList = Data.Helpers.EnumHelper.GetItems<SearchEntityBy>();
-
-        await base.OnInitializedAsync();
-
     }
 
     /// <summary>
