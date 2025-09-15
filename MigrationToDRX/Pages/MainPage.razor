@@ -178,6 +178,13 @@
                         ColumnsShowingText="колонки показаны"
 
                         PageSize="100" >
+
+                <HeaderTemplate>
+                    <button class="btn btn-outline-secondary" @onclick="RemoveMapping"> 
+                        Очистить выбранные свойства
+                    </button>
+                </HeaderTemplate>
+
             <Columns>
                 @foreach (var col in ExcelColumns)
                 {

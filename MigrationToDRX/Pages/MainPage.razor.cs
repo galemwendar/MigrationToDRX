@@ -489,7 +489,7 @@ public partial class MainPage
                 if (string.IsNullOrWhiteSpace(row[signColumnName]) == false && ForceUploadProcessedRows == false)
                 {
                     // TODO: Вычислять, что подпись проставлена именно этой программой.
-                      row[errorsColumnName] = "Строка уже была обработана в прошлом запросе.\n Чтобы повторно обработать строку, поставьте галочку \"в том числе уже обработанные\"";
+                    row[errorsColumnName] = "Строка уже была обработана в прошлом запросе.\n Чтобы повторно обработать строку, поставьте галочку \"в том числе уже обработанные\"";
 
                     // Если подпись стоит, значит уже была обработана в прошлом запросе
                     continue;
@@ -594,7 +594,7 @@ public partial class MainPage
 
         StateHasChanged();
     }
-    
+
 
     private async Task ShowBusyDialog()
     {
@@ -622,5 +622,13 @@ public partial class MainPage
     {
         DialogService.Close();
         cancelRequested = true;
+    }
+
+    /// <summary>
+    /// Очищает словарь со свойствами сущности в Excel
+    /// </summary>
+    private void RemoveMapping()
+    {
+        ColumnMappings = ExcelColumns.Any() ? ExcelColumns.ToDictionary(c => c, _ => (EntityFieldDto?)null) : new();
     }
 }
