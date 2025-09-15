@@ -107,38 +107,47 @@
         <div class="col col-md-5">
             <!-- 📊 Количество строк -->
             <div class="mb-3">
-                <h5> Количество строк, которые будут обработаны за одну операцию</h5>
-                <div class="d-flex align-items-center mb-2" style="gap:10px;">
-                    <RadzenCheckBox @bind-Value="UploadAllRows" TValue="bool" />
-                    <label>Обработать все строки</label>
-                    <RadzenCheckBox @bind-Value="ForceUploadProcessedRows" TValue="bool" />
-                    <label>В том числе уже обработанные</label>
+                <h5>Настройка обработки строк</h5>
+
+                <div class="mb-2">
+                    <label class="d-flex align-items-center mb-1" style="gap:5px;">
+                        <RadzenCheckBox @bind-Value="UploadAllRows" TValue="bool" />
+                        Обработать все строки
+                    </label>
+                    <label class="d-flex align-items-center" style="gap:5px;">
+                        <RadzenCheckBox @bind-Value="ForceUploadProcessedRows" TValue="bool" Disabled="!UploadAllRows" />
+                            В том числе уже обработанные
+                    </label>
                 </div>
-                <RadzenNumeric @bind-Value="RowsToUpload"
-                               Min="1"
-                               Max="@PreviewRows.Count"
-                               Disabled="@UploadAllRows"
-                               Style="width:120px;" 
-                               Placeholder="Количество" />
+
+                <div class="d-flex gap-4 mb-1">
+                    <div class="d-flex flex-column">
+                        <label>Начать с строки:</label>
+                        <RadzenNumeric @bind-Value="StartFrom"
+                                    Min="1"
+                                    Max="@PreviewRows.Count"
+                                    Disabled="@UploadAllRows"
+                                    Style="width:120px;" />
+                    </div>
+
+                    <div class="d-flex flex-column">
+                        <label>Количество строк:</label>
+                        <RadzenNumeric @bind-Value="RowsToUpload"
+                                    Min="1"
+                                    Max="@PreviewRows.Count"
+                                    Disabled="@UploadAllRows"
+                                    Style="width:120px;" />
+                    </div>
+
+
+                </div>
+                <small class="text-muted d-block mt-1">
+                    Эти настройки применяются только если "Обработать все строки" выключено.
+                </small>
             </div>
         </div>
     </div>
     
-    @if(isProceed)
-    {
-        <div class="row d-flex justify-content-between">
-            <div class="d-flex align-items-center progress-row">
-                <p>
-                    Прогресс выполнения операции
-                </p>
-                <RadzenProgressBar Value="@progress" Max="@maxRowsCount" Unit="@Unit" style="flex-grow: 1; min-width: 0;" />
-                <button class="btn btn-danger ms-2" style="height: 2.5rem; flex-shrink: 0; width: auto;" @onclick="@CancelOperation">
-                    Прервать
-                </button>
-            </div>
-        </div>
-    }
-
     @* Кнопки валидации и отправки на сервер    *@
     <div class="mb-3 d-flex justify-content-between w-60">
         <div>
@@ -166,16 +175,19 @@
 
     </div>
 
+
     @if (PreviewRows.Any())
     {
          @* Предпросмотр таблицы     *@
 
         <RadzenDataGrid Data="@PreviewRows" 
+                        @ref="@dataGrid"
                         TItem="Dictionary<string, string>" 
                         AllowColumnResize="true" 
                         AllowColumnReorder="true" 
                         AllowColumnPicking="true"
                         ColumnsText="колонок выбрано"
+                        ShowR
                         AllowPaging="true"
                         AllColumnsText="Все колонки"
                         ColumnsPickerAllowFiltering="true"
@@ -190,6 +202,12 @@
                 </HeaderTemplate>
 
             <Columns>
+                <RadzenDataGridColumn Width="50px" Title="#" Filterable="false" Sortable="false" TextAlign="TextAlign.Center">
+                    <Template Context="data">
+                        @(dataGrid.View.ToList().IndexOf(data) + 1)
+                    </Template>
+                </RadzenDataGridColumn>
+
                 @foreach (var col in ExcelColumns)
                 {
                     <RadzenDataGridColumn TItem="Dictionary<string,string>" Title="@col" Property="@col">

@@ -93,6 +93,11 @@ public partial class MainPage
     protected int RowsToUpload { get; set; } = 100;
 
     /// <summary>
+    /// Начальная строка для загрузки
+    /// </summary>
+    protected int StartFrom { get; set; } = 1;
+
+    /// <summary>
     /// Признак того, что пользователь отменил операцию
     /// </summary>
     protected bool cancelRequested = false;
@@ -159,6 +164,8 @@ public partial class MainPage
     /// Признак подключения к OData сервису
     /// </summary>
     private bool IsConnected => OdataClientService.IsConnected;
+
+    private RadzenDataGrid<Dictionary<string, string>> dataGrid;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -417,7 +424,7 @@ public partial class MainPage
         StateHasChanged();
         await Task.Delay(10);
 
-        for (int i = 0; i < maxRowsCount; i++)
+        for (int i = StartFrom - 1; i < maxRowsCount; i++)
         {
             if (cancelRequested)
             {
@@ -482,7 +489,7 @@ public partial class MainPage
         StateHasChanged();
         await Task.Delay(10);
 
-        for (int i = 0; i < maxRowsCount; i++)
+        for (int i = StartFrom - 1; i < maxRowsCount; i++)
         {
             var row = PreviewRows[i];
 
