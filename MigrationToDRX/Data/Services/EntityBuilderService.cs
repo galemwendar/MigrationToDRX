@@ -69,19 +69,50 @@ public class EntityBuilderService
         if (structural.Name == StringConstants.IdPropertyName)
         {
             await EnsureEntityExists(SearchEntityBy.Id, cellValue, dto.EntitySetName, $"Не найдена сущность для обновления {dto.EntitySetName} Id {cellValue}");
+
             return;
         }
 
         if (structural.Name == StringConstants.PathPropertyName)
         {
             HandleFilePath(cellValue, structural.Name, buildedEntity);
+
             return;
         }
 
         if (structural.Name == StringConstants.StatusPropertyName)
         {
             var status = EdmTypeHelper.ConvertStatusToEdm(cellValue);
-            buildedEntity[structural.Name] = status ?? throw new Exception($"Не удалось конвертировать {cellValue} в статус");
+            if (status == null)
+            {
+                throw new Exception($"Не удалось конвертировать {cellValue} в статус");
+            }
+            buildedEntity[structural.Name] = status;
+
+            return;
+        }
+
+        if (structural.Name == StringConstants.NumberingTypePropertyName)
+        {
+            var numberingType = EdmTypeHelper.ConvertNumberingTypeToEdm(cellValue);
+            if (numberingType == null)
+            {
+                throw new Exception($"Не удалось конвертировать {cellValue} в статус");
+            }
+            buildedEntity[structural.Name] = numberingType;
+
+            return;
+        }
+
+        if (structural.Name == StringConstants.DocumentFlowPropertyName)
+        {
+            var documentFlow = EdmTypeHelper.ConvertDocumentFlowToEdm(cellValue);
+            if (documentFlow == null)
+            {
+                throw new Exception($"Не удалось конвертировать {cellValue} в статус");
+            }
+            buildedEntity[structural.Name] = documentFlow;
+            
             return;
         }
 

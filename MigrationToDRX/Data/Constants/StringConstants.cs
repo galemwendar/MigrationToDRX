@@ -28,6 +28,16 @@ public class StringConstants
     public const string StatusPropertyName = "Status";
 
     /// <summary>
+    /// Строка для поиска свойства "Тип нумерации"
+    /// </summary>
+    public const string NumberingTypePropertyName = "NumberingType";
+
+    /// <summary>
+    /// Строка для поиска свойства "Документопоток"
+    /// </summary>
+    public const string DocumentFlowPropertyName = "DocumentFlow";
+
+    /// <summary>
     /// Строка для поиска свойства "приложение"
     /// </summary>
     public const string AssociatedApplication = "AssociatedApplication";
