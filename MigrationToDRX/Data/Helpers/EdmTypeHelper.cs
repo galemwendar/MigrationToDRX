@@ -42,7 +42,9 @@ public static class EdmTypeHelper
         return status switch
         {
             "Действующая" => "Active",
+            "Действующий" => "Active",
             "Закрытая" => "Close",
+            "Закрытый" => "Close",
             _ => null
         };
     }
