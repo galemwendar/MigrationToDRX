@@ -42,4 +42,16 @@ public enum OdataOperation
     /// </summary>
     [Display(Name = "Обновление сущности в свойстве-коллекции")]
     UpdateEntityInCollection = 6,
+
+    /// <summary>
+    /// Предоставление доступа к документу
+    /// </summary>
+    [Display(Name = "Предоставление доступа к документу")]
+    GrantAccessRightsToDocument = 7,
+
+    /// <summary>
+    /// Отмена доступа к папке
+    /// </summary>
+    [Display(Name = "Предоставление доступа к папке")]
+    GrantAccessRightsToFolder = 8,
 }

@@ -44,42 +44,45 @@
         </div>
     </div>
     
-    <div class="row">
-        <div class="col col-md-7">
-            @* Выбор сущности     *@
-            <div class="mb-3">
-                <label class="form-label">Сущность в Odata</label>
-                <RadzenDropDown TextProperty="Name"
-                                Data="@EntitySets"
-                                @bind-Value="SelectedEntitySet"
-                                Placeholder="Выберите сущность..."
-                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                                AllowClear="true"
-                                AllowFiltering="true"
-                                Style="width:100%"
-                                Change="OnSelectedEntitySetChanged">
-                </RadzenDropDown>
+    @if(SelectedOperation != Data.Enums.OdataOperation.GrantAccessRightsToDocument && SelectedOperation != Data.Enums.OdataOperation.GrantAccessRightsToFolder)
+    {
+        <div class="row">
+            <div class="col col-md-7">
+                @* Выбор сущности     *@
+                <div class="mb-3">
+                    <label class="form-label">Сущность в Odata</label>
+                    <RadzenDropDown TextProperty="Name"
+                                    Data="@EntitySets"
+                                    @bind-Value="SelectedEntitySet"
+                                    Placeholder="Выберите сущность..."
+                                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                    AllowClear="true"
+                                    AllowFiltering="true"
+                                    Style="width:100%"
+                                    Change="OnSelectedEntitySetChanged">
+                    </RadzenDropDown>
 
-                <RadzenRequiredValidator TValue="string" Required="true" Text="Сущность должна быть выбрана" />
+                    <RadzenRequiredValidator TValue="string" Required="true" Text="Сущность должна быть выбрана" />
+                </div>
+            </div>
+            <div class="col col-md-5">
+                @* Выбор ключа для всех связанных сущностей *@
+                <div class="mb-3">
+                    <label class="form-label">Поиск связанных сущностей по:</label>
+                    <RadzenDropDown Data="@SearchEntityByList"
+                                    @bind-Value="SearchCriteria"
+                                    Placeholder="Выберите из списка..."
+                                    Style="width:100%"
+                                    ValueProperty="Value"
+                                    TextProperty="DisplayName">
+                    </RadzenDropDown>
+
+                    <RadzenRequiredValidator TValue="string" Required="true" Text="Критерий поиска должен быть выбран" />
+                </div>
+
             </div>
         </div>
-        <div class="col col-md-5">
-            @* Выбор ключа для всех связанных сущностей *@
-            <div class="mb-3">
-                <label class="form-label">Поиск связанных сущностей по:</label>
-                <RadzenDropDown Data="@SearchEntityByList"
-                                @bind-Value="SearchCriteria"
-                                Placeholder="Выберите из списка..."
-                                Style="width:100%"
-                                ValueProperty="Value"
-                                TextProperty="DisplayName">
-                </RadzenDropDown>
-
-                <RadzenRequiredValidator TValue="string" Required="true" Text="Критерий поиска должен быть выбран" />
-            </div>
-
-        </div>
-    </div>
+    }
     
     <div class="row">
         <div class="col col-md-7">

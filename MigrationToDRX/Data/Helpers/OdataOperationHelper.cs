@@ -38,6 +38,34 @@ public static class OdataOperationHelper
         Nullable = false
     };
 
+    public static readonly StructuralFieldDto AccessRightTypeGuidProperty = new()
+    {
+        Name = StringConstants.AccessRightTypeGuidPropertyName,
+        Type = "Edm.String",
+        Nullable = false
+    };
+
+    public static readonly StructuralFieldDto DocumentIdProperty = new()
+    {
+        Name = StringConstants.DocumentIdPropertyName,
+        Type = "Edm.Int64",
+        Nullable = false
+    };
+
+    public static readonly StructuralFieldDto FolderIdProperty = new()
+    {
+        Name = StringConstants.FolderIdPropertyName,
+        Type = "Edm.Int64",
+        Nullable = false
+    };
+
+    public static readonly StructuralFieldDto RecipientIdProperty = new()
+    {
+        Name = StringConstants.RecipientIdPropertyName,
+        Type = "Edm.Int64",
+        Nullable = false
+    };
+
     /// <summary>
     /// Добавляет свойства сущности в зависимости от операции
     /// </summary>
@@ -55,7 +83,12 @@ public static class OdataOperationHelper
         {
             // Находим все ключи, значения которых равны MainIdProperty
             var keysToRemove = columnMappings
-                .Where(kvp => kvp.Value == MainIdProperty || kvp.Value == PathProperty)
+                .Where(kvp => kvp.Value == MainIdProperty
+                    || kvp.Value == PathProperty
+                    || kvp.Value == FolderIdProperty
+                    || kvp.Value == DocumentIdProperty
+                    || kvp.Value == AccessRightTypeGuidProperty
+                    || kvp.Value == RecipientIdProperty)
                 .Select(kvp => kvp.Key)
                 .ToList();
             if (keysToRemove.Any())
@@ -93,6 +126,18 @@ public static class OdataOperationHelper
 
             case OdataOperation.UpdateEntityInCollection:
                 properties.AddFirst(MainIdProperty);
+                break;
+
+            case OdataOperation.GrantAccessRightsToDocument:
+                properties.AddFirst(AccessRightTypeGuidProperty);
+                properties.AddFirst(DocumentIdProperty);
+                properties.AddFirst(RecipientIdProperty);
+                break;
+
+            case OdataOperation.GrantAccessRightsToFolder:
+                properties.AddFirst(AccessRightTypeGuidProperty);
+                properties.AddFirst(FolderIdProperty);
+                properties.AddFirst(RecipientIdProperty);
                 break;
         }
     }

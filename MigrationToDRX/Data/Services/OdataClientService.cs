@@ -9,15 +9,9 @@ namespace MigrationToDRX.Data.Services;
 public class OdataClientService
 {
     private ODataClient? _client;
-    //private HttpResponseMessage? _response = null;
-    //private ODataClientSettings? _settings = null;
     private IEdmModel? _metadata = null;
 
     private IEdmEntityContainer? _container = null;
-
-    // private string? _url;
-    // private string? _username;
-    // private string? _password;
 
     private readonly Logger logger;
 
@@ -251,7 +245,7 @@ public class OdataClientService
             {
                 filter = $"\'{filter}\'";
             }
-            
+
             return await _client!
                     .For(entitySetName)
                     .Filter($"{propertyName} eq {filter}")
@@ -584,6 +578,21 @@ public class OdataClientService
         var entitySets = entityContainer.EntitySets();
 
         return entitySets.FirstOrDefault(s => s.EntityType().FullTypeName() == entityType)?.Name ?? null;
+    }
+
+    /// <summary>
+    /// Выполнить действие на сервере, если действие существует (IsBound = true)
+    /// </summary>
+    /// <param name="actionName">Имя действия</param>
+    /// <param name="parameters">Параметры действия</param>
+    public async Task ExecuteActionAsync(string actionName, IDictionary<string, object> parameters)
+    {
+        if (_client == null)
+        {
+            throw new InvalidOperationException("Odata клиент не инициализирован. Вызовите метод SetConnection");
+        }
+
+        await _client.ExecuteActionAsync(actionName, parameters);
     }
 
 }
