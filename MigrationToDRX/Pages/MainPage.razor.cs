@@ -107,10 +107,9 @@ public partial class MainPage
     /// </summary>
     protected int maxRowsCount = 0;
 
-    /// <summary>
-    /// Прогресс выполнения операции, передаваемый диалогу
-    /// </summary>
-    private Action<int>? progressUpdater;
+    protected string Unit => $" / {maxRowsCount}";
+
+    private int progress { get; set; }
 
     /// <summary>
     /// Имя файла для выгрузки
@@ -172,8 +171,8 @@ public partial class MainPage
                 {
                     await DialogService.Alert(
                         "Потеряно соединение с сервисом интеграции DirectumRX.\n" +
-                        "Вы будете перенаправлены на страницу авторизации",  
-                        "Ошибка",                    
+                        "Вы будете перенаправлены на страницу авторизации",
+                        "Ошибка",
                         new AlertOptions
                         {
                             OkButtonText = "Ок",
@@ -181,7 +180,7 @@ public partial class MainPage
                             CloseDialogOnOverlayClick = false,
                             ShowClose = false
                         });
-                });  
+                });
                 NavigationManager.NavigateTo("/");
                 return;
             }
@@ -413,18 +412,17 @@ public partial class MainPage
         var resultColumnName = OdataOperationHelper.GetDisplayName<Data.Models.Dto.ValidationResult>(nameof(Data.Models.Dto.ValidationResult.Success));
 
         maxRowsCount = UploadAllRows ? PreviewRows.Count : RowsToUpload;
+        progress = 0;
 
-        var dialogTask = ShowBusyDialog();
+        StateHasChanged();
+        await Task.Delay(10);
 
-        // Процесс валидации начинается в фоновом потоке
-        _ = InvokeAsync(async () =>
+        for (int i = 0; i < maxRowsCount; i++)
         {
-            for (int i = 0; i < maxRowsCount; i++)
+            if (cancelRequested)
             {
-                if (cancelRequested)
-                {
-                    break; // досрочный выход
-                }
+                break; // досрочный выход
+            }
 
                 var row = PreviewRows[i];
                 var dto = new ProcessedEntityDto()
@@ -438,33 +436,25 @@ public partial class MainPage
                     Operation = SelectedOperation,
                 };
 
-                try
-                {
-                    var result = await EntityService.ValidateEntity(dto);
-                    row[resultColumnName] = result.Success ?? string.Empty;
-                    continue;
-                }
-                catch (Exception e)
-                {
-                    row[resultColumnName] = e.Message;
-                    continue;
-                }
-                finally
-                {
-                    var processedRows = i + 1;
-                    // дергаем диалог через делегат
-                    progressUpdater?.Invoke(processedRows);
-                }
-
-
+            try
+            {
+                var result = await EntityService.ValidateEntity(dto);
+                row[resultColumnName] = result.Success ?? string.Empty;
+                continue;
+            }
+            catch (Exception e)
+            {
+                row[resultColumnName] = e.Message;
+                continue;
+            }
+            finally
+            {
+                progress = i + 1;
+                StateHasChanged();
             }
 
-            // Close the dialog
-            DialogService.Close();
-        });
 
-        await dialogTask;
-
+        }
         isProceed = false;
     }
 
@@ -487,84 +477,79 @@ public partial class MainPage
         var idColumnName = OdataOperationHelper.GetDisplayName<Data.Models.Dto.OperationResult>(nameof(Data.Models.Dto.OperationResult.EntityId));
 
         maxRowsCount = UploadAllRows ? PreviewRows.Count : RowsToUpload;
-        var dialogTask = ShowBusyDialog();
-        // Процесс валидации начинается в фоновом потоке
-        _ = InvokeAsync(async () =>
+        progress = 0;
+        
+        StateHasChanged();
+        await Task.Delay(10);
+
+        for (int i = 0; i < maxRowsCount; i++)
         {
+            var row = PreviewRows[i];
 
-            for (int i = 0; i < maxRowsCount; i++)
+            if (string.IsNullOrWhiteSpace(row[resultColumnName]) == false && row[resultColumnName]?.ToString() != "Да")
             {
-                var row = PreviewRows[i];
-
-                if (string.IsNullOrWhiteSpace(row[resultColumnName]) == false && row[resultColumnName]?.ToString() != "Да")
-                {
-                    // валидация не удалась, пропускаем
-                    row[errorsColumnName] = "Валидация не удалась";
-                    continue;
-                }
-
-                if (string.IsNullOrWhiteSpace(row[signColumnName]) == false && ForceUploadProcessedRows == false)
-                {
-                    // TODO: Вычислять, что подпись проставлена именно этой программой.
-                    row[errorsColumnName] = "Строка уже была обработана в прошлом запросе.\n Чтобы повторно обработать строку, поставьте галочку \"в том числе уже обработанные\"";
-
-                    // Если подпись стоит, значит уже была обработана в прошлом запросе
-                    continue;
-                }
-
-                var dto = new ProcessedEntityDto()
-                {
-                    ColumnMapping = ColumnMappings,
-                    Row = row,
-                    SearchCriteria = SearchCriteria,
-                    EntitySetName = SelectedEntitySet!.Name,
-                    ChildEntitySetName = SelectedCollectionProperty?.Name,
-                    IsCollection = SelectedCollectionProperty != null,
-                    Operation = SelectedOperation,
-                };
-
-                try
-                {
-                    var result = await EntityService.ProceedEntitiesToOdata(dto);
-
-                    if (result == null)
-                    {
-                        throw new Exception("Не удалось провести операцию");
-                    }
-
-                    if (result.Success == false)
-                    {
-                        throw new Exception($"Операция не удалась: {result.ErrorMessage}");
-                    }
-
-                    row[resultColumnName] = result.Success ? "Да" : "Нет";
-                    row[timeStampColumnName] = result.Timestamp.ToLongTimeString();
-                    row[signColumnName] = result.Stamp;
-                    row[operationNameColumnName] = SelectedOperation.GetDisplayName() ?? string.Empty;
-                    row[idColumnName] = result.EntityId.ToString() ?? string.Empty;
-
-                    continue;
-                }
-                catch (Exception ex)
-                {
-                    row[resultColumnName] = "Нет";
-                    row[operationNameColumnName] = SelectedOperation.GetDisplayName() ?? string.Empty;
-                    row[errorsColumnName] = ex.Message + (string.IsNullOrWhiteSpace(ex.InnerException?.Message) ? string.Empty : " : " + ex.InnerException?.Message);
-
-                    continue;
-                }
-                finally
-                {
-                    var processedRows = i + 1;
-                    // дергаем диалог через делегат
-                    progressUpdater?.Invoke(processedRows);
-                }
+                // валидация не удалась, пропускаем
+                row[errorsColumnName] = "Валидация не удалась";
+                continue;
             }
 
-            DialogService.Close();
-        });
+            if (string.IsNullOrWhiteSpace(row[signColumnName]) == false && ForceUploadProcessedRows == false)
+            {
+                // TODO: Вычислять, что подпись проставлена именно этой программой.
+                row[errorsColumnName] = "Строка уже была обработана в прошлом запросе.\n Чтобы повторно обработать строку, поставьте галочку \"в том числе уже обработанные\"";
 
-        await dialogTask;
+                // Если подпись стоит, значит уже была обработана в прошлом запросе
+                continue;
+            }
+
+            var dto = new ProcessedEntityDto()
+            {
+                ColumnMapping = ColumnMappings,
+                Row = row,
+                SearchCriteria = SearchCriteria,
+                EntitySetName = SelectedEntitySet!.Name,
+                ChildEntitySetName = SelectedCollectionProperty?.Name,
+                IsCollection = SelectedCollectionProperty != null,
+                Operation = SelectedOperation,
+            };
+
+            try
+            {
+                var result = await EntityService.ProceedEntitiesToOdata(dto);
+
+                if (result == null)
+                {
+                    throw new Exception("Не удалось провести операцию");
+                }
+
+                if (result.Success == false)
+                {
+                    throw new Exception($"Операция не удалась: {result.ErrorMessage}");
+                }
+
+                row[resultColumnName] = result.Success ? "Да" : "Нет";
+                row[timeStampColumnName] = result.Timestamp.ToLongTimeString();
+                row[signColumnName] = result.Stamp;
+                row[operationNameColumnName] = SelectedOperation.GetDisplayName() ?? string.Empty;
+                row[idColumnName] = result.EntityId.ToString() ?? string.Empty;
+
+                continue;
+            }
+            catch (Exception ex)
+            {
+                row[resultColumnName] = "Нет";
+                row[operationNameColumnName] = SelectedOperation.GetDisplayName() ?? string.Empty;
+                row[errorsColumnName] = ex.Message + (string.IsNullOrWhiteSpace(ex.InnerException?.Message) ? string.Empty : " : " + ex.InnerException?.Message);
+
+                continue;
+            }
+            finally
+            {
+                progress = i + 1;
+                StateHasChanged();
+            }
+        }
+
         isProceed = false;
     }
 
@@ -612,32 +597,12 @@ public partial class MainPage
         StateHasChanged();
     }
 
-
-    private async Task ShowBusyDialog()
-    {
-        await DialogService.OpenAsync<MigrationToDRX.Pages.Components.OperationProgressDialog>(
-            "Прогресс выполнения операции",
-            new Dictionary<string, object>()
-            {
-                { nameof(Components.OperationProgressDialog.RegisterProgressHandler), new Action<Action<int>>(handler => progressUpdater = handler) },
-                {"Cancel", EventCallback.Factory.Create(this, CancelOperation)},
-                {"Total", maxRowsCount},
-            },
-            new DialogOptions
-            {
-                ShowTitle = true,
-                Style = "width:800;height:auto",
-                CloseDialogOnOverlayClick = false,
-            });
-    }
-
     /// <summary>
     /// Обработка нажатия на кнопку отмены операции
     /// в диалоговом окне
     /// </summary>
     private void CancelOperation()
     {
-        DialogService.Close();
         cancelRequested = true;
     }
 

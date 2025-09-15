@@ -124,6 +124,21 @@
         </div>
     </div>
     
+    @if(isProceed)
+    {
+        <div class="row d-flex justify-content-between">
+            <div class="d-flex align-items-center progress-row">
+                <p>
+                    Прогресс выполнения операции
+                </p>
+                <RadzenProgressBar Value="@progress" Max="@maxRowsCount" Unit="@Unit" style="flex-grow: 1; min-width: 0;" />
+                <button class="btn btn-danger ms-2" style="height: 2.5rem; flex-shrink: 0; width: auto;" @onclick="@CancelOperation">
+                    Прервать
+                </button>
+            </div>
+        </div>
+    }
+
     @* Кнопки валидации и отправки на сервер    *@
     <div class="mb-3 d-flex justify-content-between w-60">
         <div>
@@ -150,7 +165,6 @@
         </button>
 
     </div>
-
 
     @if (PreviewRows.Any())
     {

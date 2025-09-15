@@ -70,3 +70,19 @@
     background-color: #f3f4f6;
     border-color: #9ca3af;
 }
+
+
+.progress-row {
+    border-radius: 0.25rem;
+    width: -webkit-fill-available;
+    border-color: #6c757d;
+    border: 1px solid;
+    padding: 1rem !important;
+    margin: 1rem;
+}
+
+.progress-row p {
+    margin: 0;
+    flex-shrink: 0;
+    margin-right: 1rem;
+}
