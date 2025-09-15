@@ -53,6 +53,8 @@ public class EntityService
             OdataOperation.AddVersionToExistedDocument => await AddVersionToExistedDocumentAsync(dto),
             OdataOperation.AddEntityToCollection => await AddEntityToCollectionAsync(dto),
             OdataOperation.UpdateEntityInCollection => await UpdateEntityInCollectionAsync(dto),
+            OdataOperation.GrantAccessRightsToDocument => await GrantAccessRightsToDocumentAsync(dto),
+            OdataOperation.GrantAccessRightsToFolder => await GrantAccessRightsToFolderAsync(dto),
             _ => throw new ArgumentException("Не удалось обработать сценарий")
         };
     }
@@ -386,6 +388,46 @@ public class EntityService
         return structuralProperties
             .Concat<EntityFieldDto>(navigationProperties)
             .ToList();
+    }
+
+    /// <summary>
+    /// Выдать права на папку
+    /// </summary>
+    /// <param name="dto"></param>
+    /// <returns></returns>
+    public async Task<OperationResult> GrantAccessRightsToFolderAsync(ProcessedEntityDto dto)
+    {
+        try
+        {
+            var entity = await BuildEntityFromRow(dto);
+            await _odataClientService.ExecuteActionAsync(StringConstants.GrantAccessRightsToFolderAction, entity);
+
+            return new OperationResult(sucsess: true, operationName: dto.Operation.GetDisplayName());
+        }
+        catch (Exception ex)
+        {
+            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Выдать права на документ
+    /// </summary>
+    /// <param name="dto"></param>
+    /// <returns></returns>
+    public async Task<OperationResult> GrantAccessRightsToDocumentAsync(ProcessedEntityDto dto)
+    {
+        try
+        {
+            var entity = await BuildEntityFromRow(dto);
+            await _odataClientService.ExecuteActionAsync(StringConstants.GrantAccessRightsToDocumentAction, entity);
+
+            return new OperationResult(sucsess: true, operationName: dto.Operation.GetDisplayName());
+        }
+        catch (Exception ex)
+        {
+            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
+        }
     }
 
     #region Служебные приватные методы

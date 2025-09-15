@@ -235,6 +235,16 @@ public partial class MainPage
             case OdataOperation.UpdateEntityInCollection:
                 EntityFields.AddFirst(OdataOperationHelper.MainIdProperty);
                 break;
+            case OdataOperation.GrantAccessRightsToDocument:
+                EntityFields.AddFirst(OdataOperationHelper.AccessRightTypeGuidProperty);
+                EntityFields.AddFirst(OdataOperationHelper.DocumentIdProperty);
+                EntityFields.AddFirst(OdataOperationHelper.RecipientIdProperty);
+                break;
+            case OdataOperation.GrantAccessRightsToFolder:
+                EntityFields.AddFirst(OdataOperationHelper.AccessRightTypeGuidProperty);
+                EntityFields.AddFirst(OdataOperationHelper.FolderIdProperty);
+                EntityFields.AddFirst(OdataOperationHelper.RecipientIdProperty);
+                break;
         }
 
         StateHasChanged();
@@ -432,7 +442,7 @@ public partial class MainPage
                     ColumnMapping = ColumnMappings,
                     Row = row,
                     SearchCriteria = SearchCriteria,
-                    EntitySetName = SelectedEntitySet!.Name,
+                    EntitySetName = SelectedEntitySet?.Name ?? string.Empty,
                     ChildEntitySetName = SelectedCollectionProperty?.Name,
                     IsCollection = SelectedCollectionProperty != null,
                     Operation = SelectedOperation,
