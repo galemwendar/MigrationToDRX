@@ -585,14 +585,29 @@ public class OdataClientService
     /// </summary>
     /// <param name="actionName">Имя действия</param>
     /// <param name="parameters">Параметры действия</param>
-    public async Task ExecuteActionAsync(string actionName, IDictionary<string, object> parameters)
+    public async Task ExecuteBoundActionAsync(string entitySetName, string actionName, IDictionary<string, object> parameters)
     {
         if (_client == null)
         {
             throw new InvalidOperationException("Odata клиент не инициализирован. Вызовите метод SetConnection");
         }
 
-        await _client.ExecuteActionAsync(actionName, parameters);
+        try
+        {
+            var result = await _client
+            .For("Docflow")
+            .Action(actionName)
+            .Set(parameters)
+            .ExecuteAsScalarAsync<int>();
+        }
+        catch (WebRequestException ex)
+        {
+            throw new ArgumentException(ex.Message + ex.Response);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception(ex.Message, ex);
+        }
     }
 
 }

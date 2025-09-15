@@ -400,7 +400,7 @@ public class EntityService
         try
         {
             var entity = await BuildEntityFromRow(dto);
-            await _odataClientService.ExecuteActionAsync(StringConstants.GrantAccessRightsToFolderAction, entity);
+            await _odataClientService.ExecuteBoundActionAsync(StringConstants.Docflow, StringConstants.GrantAccessRightsToFolderAction, entity);
 
             return new OperationResult(sucsess: true, operationName: dto.Operation.GetDisplayName());
         }
@@ -420,7 +420,7 @@ public class EntityService
         try
         {
             var entity = await BuildEntityFromRow(dto);
-            await _odataClientService.ExecuteActionAsync(StringConstants.GrantAccessRightsToDocumentAction, entity);
+            await _odataClientService.ExecuteBoundActionAsync(StringConstants.Docflow, StringConstants.GrantAccessRightsToDocumentAction, entity);
 
             return new OperationResult(sucsess: true, operationName: dto.Operation.GetDisplayName());
         }

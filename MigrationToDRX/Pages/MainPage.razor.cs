@@ -524,7 +524,7 @@ public partial class MainPage
                 ColumnMapping = ColumnMappings,
                 Row = row,
                 SearchCriteria = SearchCriteria,
-                EntitySetName = SelectedEntitySet!.Name,
+                EntitySetName = SelectedEntitySet?.Name ?? string.Empty,
                 ChildEntitySetName = SelectedCollectionProperty?.Name,
                 IsCollection = SelectedCollectionProperty != null,
                 Operation = SelectedOperation,
