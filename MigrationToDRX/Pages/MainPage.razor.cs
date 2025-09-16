@@ -482,6 +482,8 @@ public partial class MainPage
             return;
         }
 
+        isProceed = true;
+
         var validationColumns = OdataOperationHelper.GetDisplayNames<Data.Models.Dto.OperationResult>();
 
         CreateResultColumns(validationColumns);
