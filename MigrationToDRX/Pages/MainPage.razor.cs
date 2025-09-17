@@ -428,7 +428,10 @@ public partial class MainPage
         CreateResultColumns(validationColumns);
         var resultColumnName = OdataOperationHelper.GetDisplayName<Data.Models.Dto.ValidationResult>(nameof(Data.Models.Dto.ValidationResult.Success));
 
-        maxRowsCount = UploadAllRows ? PreviewRows.Count : RowsToUpload;
+        StartFrom = UploadAllRows ? 1 : StartFrom;
+        maxRowsCount = UploadAllRows ? PreviewRows.Count : RowsToUpload + StartFrom - 1;
+        maxRowsCount = maxRowsCount > PreviewRows.Count ? PreviewRows.Count : maxRowsCount;
+
         progress = 0;
 
         StateHasChanged();
@@ -495,7 +498,10 @@ public partial class MainPage
         var errorsColumnName = OdataOperationHelper.GetDisplayName<Data.Models.Dto.OperationResult>(nameof(Data.Models.Dto.OperationResult.ErrorMessage));
         var idColumnName = OdataOperationHelper.GetDisplayName<Data.Models.Dto.OperationResult>(nameof(Data.Models.Dto.OperationResult.EntityId));
 
-        maxRowsCount = UploadAllRows ? PreviewRows.Count : RowsToUpload;
+        StartFrom = UploadAllRows ? 1 : StartFrom;
+        maxRowsCount = UploadAllRows ? PreviewRows.Count : RowsToUpload + StartFrom - 1;
+        maxRowsCount = maxRowsCount > PreviewRows.Count ? PreviewRows.Count : maxRowsCount;
+
         progress = 0;
         
         StateHasChanged();
@@ -551,6 +557,8 @@ public partial class MainPage
                 row[signColumnName] = result.Stamp;
                 row[operationNameColumnName] = SelectedOperation.GetDisplayName() ?? string.Empty;
                 row[idColumnName] = result.EntityId.ToString() ?? string.Empty;
+                // Для очистки предыдущих ошибок
+                row[errorsColumnName] = string.Empty;
 
                 continue;
             }

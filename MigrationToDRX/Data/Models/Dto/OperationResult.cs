@@ -48,14 +48,14 @@ public class OperationResult
     /// </summary>
     public IDictionary<string, object>? Entity { get; set; }
 
-    public OperationResult(bool sucsess, string operationName, long? entityId = null, IDictionary<string, object>? entity = null, string? errorMessage = null)
+    public OperationResult(bool success, string operationName, long? entityId = null, IDictionary<string, object>? entity = null, string? errorMessage = null)
     {
-        Success = sucsess;
+        Success = success;
         OperationName = operationName;
         EntityId = entityId;
         Entity = entity;
         ErrorMessage = errorMessage;
         Timestamp = DateTime.Now;
-        Stamp = sucsess ? OdataOperationHelper.ComputeStamp(sucsess, entityId ?? 0, Timestamp) : string.Empty;
+        Stamp = success ? OdataOperationHelper.ComputeStamp(success, entityId ?? 0, Timestamp) : string.Empty;
     }
 }
