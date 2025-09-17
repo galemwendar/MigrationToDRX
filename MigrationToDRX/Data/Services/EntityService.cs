@@ -114,19 +114,19 @@ public class EntityService
 
                 if (newId == 0)
                 {
-                    return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось создать сущность");
+                    return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось создать сущность");
                 }
                 else
                 {
-                    return new OperationResult(sucsess: true, operationName: dto.Operation.GetDisplayName(), entityId: newId, entity: savedEntity);
+                    return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName(), entityId: newId, entity: savedEntity);
                 }
             }
 
-            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось создать сущность");
+            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось создать сущность");
         }
         catch (Exception ex)
         {
-            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
+            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
         }
     }
 
@@ -162,16 +162,16 @@ public class EntityService
 
             if (updatedEntity != null)
             {
-                return new OperationResult(sucsess: true, operationName: dto.Operation.GetDisplayName(), entityId: entityId, entity: updatedEntity);
+                return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName(), entityId: entityId, entity: updatedEntity);
             }
             else
             {
-                return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось обновить сущность");
+                return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось обновить сущность");
             }
         }
         catch (Exception ex)
         {
-            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
+            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
         }
 
     }
@@ -190,7 +190,7 @@ public class EntityService
 
             if (fileIsFound == false)
             {
-                return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Файл не найден или слишком большой");
+                return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Файл не найден или слишком большой");
             }
 
             // создаем сущность
@@ -198,7 +198,7 @@ public class EntityService
 
             if (createResult.Success == false)
             {
-                return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось создать документ");
+                return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось создать документ");
             }
 
             var savedEntity = createResult.Entity;
@@ -209,16 +209,16 @@ public class EntityService
 
                 // находим созданную сущность и заполняем тело документа
                 var updatedEntity = await FindEdocAndSetBodyAsync(eDocId, filePath);
-                return new OperationResult(sucsess: true, operationName: dto.Operation.GetDisplayName(), entityId: eDocId, entity: updatedEntity);
+                return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName(), entityId: eDocId, entity: updatedEntity);
             }
             else
             {
-                return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось создать документ");
+                return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось создать документ");
             }
         }
         catch (Exception ex)
         {
-            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
+            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
         }
 
     }
@@ -235,19 +235,19 @@ public class EntityService
 
         if (fileIsFound == false)
         {
-            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Файл не найден или слишком большой");
+            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Файл не найден или слишком большой");
         }
         // находим сущность и заполняем тело документа
         var eDocId = GetIdFromEntityDto(dto);
 
         if(eDocId == 0)
         {
-            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось найти Id сущности");
+            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось найти Id сущности");
         }
         
         var updatedEntity = await FindEdocAndSetBodyAsync(eDocId, filePath);
 
-        return new OperationResult(sucsess: true, operationName: dto.Operation.GetDisplayName(), entityId: eDocId, entity: updatedEntity);
+        return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName(), entityId: eDocId, entity: updatedEntity);
     }
 
     /// <summary>
@@ -288,19 +288,19 @@ public class EntityService
 
                 if (newId == 0)
                 {
-                    return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось создать сущность");
+                    return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось создать сущность");
                 }
                 else
                 {
-                    return new OperationResult(sucsess: true, operationName: dto.Operation.GetDisplayName(), entityId: newId, entity: savedEntity);
+                    return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName(), entityId: newId, entity: savedEntity);
                 }
             }
 
-            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось создать сущность");
+            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось создать сущность");
         }
         catch (Exception ex)
         {
-            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
+            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
         }
     }
 
@@ -343,15 +343,15 @@ public class EntityService
 
             if (updatedEntity != null)
             {
-                return new OperationResult(sucsess: true, operationName: dto.Operation.GetDisplayName(), entityId: childEntityId, entity: updatedEntity);
+                return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName(), entityId: childEntityId, entity: updatedEntity);
             }
 
-            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось обновить свойство-коллекцию");
+            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось обновить свойство-коллекцию");
 
         }
         catch (Exception ex)
         {
-            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
+            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
         }
     }
 
@@ -402,11 +402,11 @@ public class EntityService
             var entity = await BuildEntityFromRow(dto);
             await _odataClientService.ExecuteBoundActionAsync(StringConstants.Docflow, StringConstants.GrantAccessRightsToFolderAction, entity);
 
-            return new OperationResult(sucsess: true, operationName: dto.Operation.GetDisplayName());
+            return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName());
         }
         catch (Exception ex)
         {
-            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
+            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
         }
     }
 
@@ -422,11 +422,11 @@ public class EntityService
             var entity = await BuildEntityFromRow(dto);
             await _odataClientService.ExecuteBoundActionAsync(StringConstants.Docflow, StringConstants.GrantAccessRightsToDocumentAction, entity);
 
-            return new OperationResult(sucsess: true, operationName: dto.Operation.GetDisplayName());
+            return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName());
         }
         catch (Exception ex)
         {
-            return new OperationResult(sucsess: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
+            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
         }
     }
 
