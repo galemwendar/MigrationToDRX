@@ -43,18 +43,18 @@ public class EntityService
     /// <param name="scenario">Сценарий работы</param>
     /// <returns>Результат выполнения</returns>
     /// <exception cref="ArgumentException"></exception>
-    public async Task<OperationResult> ProceedEntitiesToOdata(ProcessedEntityDto dto)
+    public async Task<OperationResult> ProceedEntitiesToOdata(ProcessedEntityDto dto, Func<bool> isCancelled)
     {
         return dto.Operation switch
         {
-            OdataOperation.CreateEntity => await CreateEntityAsync(dto),
-            OdataOperation.UpdateEntity => await UpdateEntityAsync(dto),
-            OdataOperation.CreateDocumentWithVersion => await CreateDocumentWithVersionAsync(dto),
-            OdataOperation.AddVersionToExistedDocument => await AddVersionToExistedDocumentAsync(dto),
-            OdataOperation.AddEntityToCollection => await AddEntityToCollectionAsync(dto),
-            OdataOperation.UpdateEntityInCollection => await UpdateEntityInCollectionAsync(dto),
-            OdataOperation.GrantAccessRightsToDocument => await GrantAccessRightsToDocumentAsync(dto),
-            OdataOperation.GrantAccessRightsToFolder => await GrantAccessRightsToFolderAsync(dto),
+            OdataOperation.CreateEntity => await CreateEntityAsync(dto, isCancelled),
+            OdataOperation.UpdateEntity => await UpdateEntityAsync(dto, isCancelled),
+            OdataOperation.CreateDocumentWithVersion => await CreateDocumentWithVersionAsync(dto, isCancelled),
+            OdataOperation.AddVersionToExistedDocument => await AddVersionToExistedDocumentAsync(dto, isCancelled),
+            OdataOperation.AddEntityToCollection => await AddEntityToCollectionAsync(dto, isCancelled),
+            OdataOperation.UpdateEntityInCollection => await UpdateEntityInCollectionAsync(dto, isCancelled),
+            OdataOperation.GrantAccessRightsToDocument => await GrantAccessRightsToDocumentAsync(dto, isCancelled),
+            OdataOperation.GrantAccessRightsToFolder => await GrantAccessRightsToFolderAsync(dto, isCancelled),
             _ => throw new ArgumentException("Не удалось обработать сценарий")
         };
     }
@@ -62,11 +62,11 @@ public class EntityService
     /// <summary>
     /// Проверяет сущность на основе Excel файла
     /// </summary>
-    public async Task<ValidationResult> ValidateEntity(ProcessedEntityDto dto)
+    public async Task<ValidationResult> ValidateEntity(ProcessedEntityDto dto, Func<bool> isCancelled)
     {
         try
         {
-            var entity = await BuildEntityFromRow(dto);
+            var entity = await BuildEntityFromRow(dto, isCancelled);
 
             if (entity != null)
             {
@@ -86,19 +86,19 @@ public class EntityService
     /// <summary>
     /// Строит сущность из строки Excel на основе маппинга и данных строки
     /// </summary>
-    public async Task<IDictionary<string, object>> BuildEntityFromRow(ProcessedEntityDto dto)
+    public async Task<IDictionary<string, object>> BuildEntityFromRow(ProcessedEntityDto dto, Func<bool> isCancelled)
     {
-        return await _entityBuilderService.BuildEntityFromRow(dto);
+        return await _entityBuilderService.BuildEntityFromRow(dto, isCancelled);
     }
 
     /// <summary>
     /// Создает сущность в OData и возвращает результат выполнения операции
     /// </summary>
-    private async Task<OperationResult> CreateEntityAsync(ProcessedEntityDto dto)
+    private async Task<OperationResult> CreateEntityAsync(ProcessedEntityDto dto,  Func<bool> isCancelled)
     {
         try
         {
-            var entity = await BuildEntityFromRow(dto);
+            var entity = await BuildEntityFromRow(dto, isCancelled);
 
             var entityToSave = entity
                 .Where(p => p.Key != StringConstants.PathPropertyName
@@ -133,11 +133,11 @@ public class EntityService
     /// <summary>
     /// Обновляет сущность в OData и возвращает результат выполнения операции
     /// </summary>
-    private async Task<OperationResult> UpdateEntityAsync(ProcessedEntityDto dto)
+    private async Task<OperationResult> UpdateEntityAsync(ProcessedEntityDto dto,  Func<bool> isCancelled)
     {
         try
         {
-            var entity = await BuildEntityFromRow(dto);
+            var entity = await BuildEntityFromRow(dto, isCancelled);
 
             var entityToSave = entity
                     .Where(p => p.Key != StringConstants.PathPropertyName
@@ -179,7 +179,7 @@ public class EntityService
     /// <summary>
     /// Создает документ c телом в OData и возвращает результат выполнения операции
     /// </summary>
-    private async Task<OperationResult> CreateDocumentWithVersionAsync(ProcessedEntityDto dto)
+    private async Task<OperationResult> CreateDocumentWithVersionAsync(ProcessedEntityDto dto,  Func<bool> isCancelled)
     {
         try
         {
@@ -194,7 +194,7 @@ public class EntityService
             }
 
             // создаем сущность
-            var createResult = await CreateEntityAsync(dto);
+            var createResult = await CreateEntityAsync(dto, isCancelled);
 
             if (createResult.Success == false)
             {
@@ -208,7 +208,7 @@ public class EntityService
                 var eDocId = Convert.ToInt64(id);
 
                 // находим созданную сущность и заполняем тело документа
-                var updatedEntity = await FindEdocAndSetBodyAsync(eDocId, filePath);
+                var updatedEntity = await FindEdocAndSetBodyAsync(eDocId, filePath, isCancelled);
                 return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName(), entityId: eDocId, entity: updatedEntity);
             }
             else
@@ -226,7 +226,7 @@ public class EntityService
     /// <summary>
     /// Добавляет версию документа в OData и возвращает результат выполнения операции
     /// </summary>
-    private async Task<OperationResult> AddVersionToExistedDocumentAsync(ProcessedEntityDto dto)
+    private async Task<OperationResult> AddVersionToExistedDocumentAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
     {
         // перед созданем документа убедимся, что файл найден и не слишком большой
         var filePath = GetFilePathFromEntityDto(dto);
@@ -245,7 +245,7 @@ public class EntityService
             return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось найти Id сущности");
         }
         
-        var updatedEntity = await FindEdocAndSetBodyAsync(eDocId, filePath);
+        var updatedEntity = await FindEdocAndSetBodyAsync(eDocId, filePath, isCancelled);
 
         return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName(), entityId: eDocId, entity: updatedEntity);
     }
@@ -256,7 +256,7 @@ public class EntityService
     /// <param name="dto"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentException"></exception>
-    private async Task<OperationResult> AddEntityToCollectionAsync(ProcessedEntityDto dto)
+    private async Task<OperationResult> AddEntityToCollectionAsync(ProcessedEntityDto dto,  Func<bool> isCancelled)
     {
         try
         {
@@ -265,7 +265,7 @@ public class EntityService
                 throw new ArgumentException("Не указан тип свойства - коллекции");
             }
 
-            var entity = await BuildEntityFromRow(dto);
+            var entity = await BuildEntityFromRow(dto, isCancelled);
 
             var entityToSave = entity
                 .Where(p => p.Key != StringConstants.PathPropertyName
@@ -307,11 +307,11 @@ public class EntityService
     /// <summary>
     /// Обновляет свойство - коллекцию в Odata
     /// </summary>
-    private async Task<OperationResult> UpdateEntityInCollectionAsync(ProcessedEntityDto dto)
+    private async Task<OperationResult> UpdateEntityInCollectionAsync(ProcessedEntityDto dto,  Func<bool> isCancelled)
     {
         try
         {
-            var entity = await BuildEntityFromRow(dto);
+            var entity = await BuildEntityFromRow(dto, isCancelled);
 
             var entityToSave = entity
                     .Where(p => p.Key != StringConstants.PathPropertyName
@@ -395,11 +395,11 @@ public class EntityService
     /// </summary>
     /// <param name="dto"></param>
     /// <returns></returns>
-    public async Task<OperationResult> GrantAccessRightsToFolderAsync(ProcessedEntityDto dto)
+    public async Task<OperationResult> GrantAccessRightsToFolderAsync(ProcessedEntityDto dto,  Func<bool> isCancelled)
     {
         try
         {
-            var entity = await BuildEntityFromRow(dto);
+            var entity = await BuildEntityFromRow(dto, isCancelled);
             await _odataClientService.ExecuteBoundActionAsync(StringConstants.Docflow, StringConstants.GrantAccessRightsToFolderAction, entity);
 
             return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName());
@@ -415,11 +415,11 @@ public class EntityService
     /// </summary>
     /// <param name="dto"></param>
     /// <returns></returns>
-    public async Task<OperationResult> GrantAccessRightsToDocumentAsync(ProcessedEntityDto dto)
+    public async Task<OperationResult> GrantAccessRightsToDocumentAsync(ProcessedEntityDto dto,  Func<bool> isCancelled)
     {
         try
         {
-            var entity = await BuildEntityFromRow(dto);
+            var entity = await BuildEntityFromRow(dto, isCancelled);
             await _odataClientService.ExecuteBoundActionAsync(StringConstants.Docflow, StringConstants.GrantAccessRightsToDocumentAction, entity);
 
             return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName());
@@ -439,8 +439,13 @@ public class EntityService
     /// <param name="filePath"></param>
     /// <param name="ForceUpdateBody"></param>
     /// <returns></returns>
-    private async Task<IDictionary<string, object>> FindEdocAndSetBodyAsync(long eDocId, string filePath, bool ForceUpdateBody = false)
+    private async Task<IDictionary<string, object>> FindEdocAndSetBodyAsync(long eDocId, string filePath, Func<bool> isCancelled, bool ForceUpdateBody = false)
     {
+        if (isCancelled())
+        {
+            throw new OperationCanceledException();
+        }
+
         var eDoc = await _odataClientService.FindEdocAsync(eDocId);
 
         if (eDoc == null)

@@ -134,8 +134,8 @@
                     </div>
 
                     <div class="d-flex flex-column">
-                        <label>Закончить строкой:</label>
-                        <RadzenNumeric @bind-Value="EndAt"
+                        <label>Количество строк:</label>
+                        <RadzenNumeric @bind-Value="RowsToUpload"
                                     Min="1"
                                     Max="@PreviewRows.Count"
                                     Disabled="@UploadAllRows"
@@ -144,9 +144,12 @@
 
 
                 </div>
-                <small class="text-muted d-block mt-1">
-                    Будет обработано @(EndAt - StartAt + 1) строк
-                </small>
+                @if(PreviewRows.Count > 0)
+                {
+                    <small class="text-muted d-block mt-1">
+                        В документе (@PreviewRows.Count) строк
+                    </small>
+                }
                 <small class="text-muted d-block mt-1">
                     Эти настройки применяются только если "Обработать все строки" выключено.
                 </small>
