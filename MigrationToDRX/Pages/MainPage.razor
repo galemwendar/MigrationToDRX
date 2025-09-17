@@ -126,7 +126,7 @@
                 <div class="d-flex gap-4 mb-1">
                     <div class="d-flex flex-column">
                         <label>Начать с строки:</label>
-                        <RadzenNumeric @bind-Value="StartFrom"
+                        <RadzenNumeric @bind-Value="StartAt"
                                     Min="1"
                                     Max="@PreviewRows.Count"
                                     Disabled="@UploadAllRows"
@@ -134,8 +134,8 @@
                     </div>
 
                     <div class="d-flex flex-column">
-                        <label>Количество строк:</label>
-                        <RadzenNumeric @bind-Value="RowsToUpload"
+                        <label>Закончить строкой:</label>
+                        <RadzenNumeric @bind-Value="EndAt"
                                     Min="1"
                                     Max="@PreviewRows.Count"
                                     Disabled="@UploadAllRows"
@@ -144,6 +144,9 @@
 
 
                 </div>
+                <small class="text-muted d-block mt-1">
+                    Будет обработано @(EndAt - StartAt + 1) строк
+                </small>
                 <small class="text-muted d-block mt-1">
                     Эти настройки применяются только если "Обработать все строки" выключено.
                 </small>

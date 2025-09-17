@@ -90,12 +90,12 @@ public partial class MainPage
     /// <summary>
     /// Количество строк для загрузки
     /// </summary>
-    protected int RowsToUpload { get; set; } = 100;
+    protected int EndAt { get; set; } = 100;
 
     /// <summary>
     /// Начальная строка для загрузки
     /// </summary>
-    protected int StartFrom { get; set; } = 1;
+    protected int StartAt { get; set; } = 1;
 
     /// <summary>
     /// Признак того, что пользователь отменил операцию
@@ -369,6 +369,8 @@ public partial class MainPage
                     col => row[col].ToString() ?? string.Empty))
                 .ToList();
 
+            EndAt = PreviewRows.Count;
+
             // Сбрасываем маппинг
             ClearExcelToFieldsMapping();
 
@@ -428,13 +430,19 @@ public partial class MainPage
         CreateResultColumns(validationColumns);
         var resultColumnName = OdataOperationHelper.GetDisplayName<Data.Models.Dto.ValidationResult>(nameof(Data.Models.Dto.ValidationResult.Success));
 
-        maxRowsCount = UploadAllRows ? PreviewRows.Count : RowsToUpload;
+        // Очищаем строки, где уже была обработана в прошлом запросе
+        foreach (var row in PreviewRows.Where(r => !string.IsNullOrWhiteSpace(r[resultColumnName])))
+        {
+            row[resultColumnName] = "";
+        }
+
+        maxRowsCount = UploadAllRows ? PreviewRows.Count : EndAt;
         progress = 0;
 
         StateHasChanged();
         await Task.Delay(10);
 
-        for (int i = StartFrom - 1; i < maxRowsCount; i++)
+        for (int i = StartAt - 1; i < maxRowsCount; i++)
         {
             if (cancelRequested)
             {
@@ -495,13 +503,13 @@ public partial class MainPage
         var errorsColumnName = OdataOperationHelper.GetDisplayName<Data.Models.Dto.OperationResult>(nameof(Data.Models.Dto.OperationResult.ErrorMessage));
         var idColumnName = OdataOperationHelper.GetDisplayName<Data.Models.Dto.OperationResult>(nameof(Data.Models.Dto.OperationResult.EntityId));
 
-        maxRowsCount = UploadAllRows ? PreviewRows.Count : RowsToUpload;
+        maxRowsCount = UploadAllRows ? PreviewRows.Count : EndAt;
         progress = 0;
         
         StateHasChanged();
         await Task.Delay(10);
 
-        for (int i = StartFrom - 1; i < maxRowsCount; i++)
+        for (int i = StartAt - 1; i < maxRowsCount; i++)
         {
             var row = PreviewRows[i];
 
