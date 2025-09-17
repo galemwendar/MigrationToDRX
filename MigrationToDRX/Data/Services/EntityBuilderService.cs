@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using MigrationToDRX.Data.Constants;
 using MigrationToDRX.Data.Enums;
 using MigrationToDRX.Data.Helpers;
+using MigrationToDRX.Data.Models;
 using MigrationToDRX.Data.Models.Dto;
 
 namespace MigrationToDRX.Data.Services;
@@ -26,7 +27,7 @@ public class EntityBuilderService
     /// </summary>
     /// <param name="dto"></param>
     /// <returns>Готовая сущность для вставки в OData</returns>
-    public async Task<IDictionary<string, object>> BuildEntityFromRow(ProcessedEntityDto dto)
+    public async Task<IDictionary<string, object>> BuildEntityFromRow(ProcessedEntityDto dto, Func<bool> isCancelled)
     {
         var buildedEntity = new Dictionary<string, object>();
 
@@ -37,6 +38,11 @@ public class EntityBuilderService
 
         foreach (var (excelColumn, entityField) in dto.ColumnMapping.Where(p => !generatedColumns.Contains(p.Key)))
         {
+            if (isCancelled())
+            {
+                throw new OperationCanceledException();
+            }
+            
             if (entityField == null || !dto.Row.TryGetValue(excelColumn, out var cellValue) || string.IsNullOrWhiteSpace(cellValue))
                 continue;
 
@@ -73,12 +79,26 @@ public class EntityBuilderService
             return;
         }
 
-        if (structural.Name == StringConstants.PathPropertyName)
+        if (structural.Name == StringConstants.AccessRightTypeGuidPropertyName)
         {
-            HandleFilePath(cellValue, structural.Name, buildedEntity);
+            var access = AccessRight.Find(cellValue);
+
+            if (access == null)
+            {
+                throw new Exception($"Не удалось конвертировать {cellValue} в право доступа");
+            }
+
+            buildedEntity[structural.Name] = access.Id;
 
             return;
         }
+
+        if (structural.Name == StringConstants.PathPropertyName)
+            {
+                HandleFilePath(cellValue, structural.Name, buildedEntity);
+
+                return;
+            }
 
         if (structural.Name == StringConstants.StatusPropertyName)
         {

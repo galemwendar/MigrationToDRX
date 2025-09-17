@@ -26,14 +26,9 @@
     display: -webkit-inline-box; 
 }
 
-/* .rz-fileupload {
-    padding: 0.5rem 0;
-} */
-
-
 /* Контейнер с рамкой */
 .file-upload-container {
-     display: flex;
+    display: flex;
     gap: 0.5rem;
     border: 1px solid #d1d5db;
     border-radius: 0.5rem;

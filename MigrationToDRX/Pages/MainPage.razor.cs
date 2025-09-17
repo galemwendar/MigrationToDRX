@@ -90,12 +90,12 @@ public partial class MainPage
     /// <summary>
     /// Количество строк для загрузки
     /// </summary>
-    protected int EndAt { get; set; } = 100;
+    protected int RowsToUpload { get; set; } = 100;
 
     /// <summary>
     /// Начальная строка для загрузки
     /// </summary>
-    protected int StartAt { get; set; } = 1;
+    protected int StartFrom { get; set; } = 1;
 
     /// <summary>
     /// Признак того, что пользователь отменил операцию
@@ -369,7 +369,7 @@ public partial class MainPage
                     col => row[col].ToString() ?? string.Empty))
                 .ToList();
 
-            EndAt = PreviewRows.Count;
+            RowsToUpload = PreviewRows.Count;
 
             // Сбрасываем маппинг
             ClearExcelToFieldsMapping();
@@ -439,7 +439,7 @@ public partial class MainPage
         StateHasChanged();
         await Task.Delay(10);
 
-        for (int i = StartAt - 1; i < maxRowsCount; i++)
+        for (int i = StartFrom - 1; i < maxRowsCount; i++)
         {
             if (cancelRequested)
             {
@@ -460,9 +460,13 @@ public partial class MainPage
 
             try
             {
-                var result = await EntityService.ValidateEntity(dto);
+                var result = await EntityService.ValidateEntity(dto,() => cancelRequested);
                 row[resultColumnName] = result.Success ?? string.Empty;
                 continue;
+            }
+            catch (OperationCanceledException)
+            {
+                // отменено
             }
             catch (Exception e)
             {
@@ -509,7 +513,7 @@ public partial class MainPage
         StateHasChanged();
         await Task.Delay(10);
 
-        for (int i = StartAt - 1; i < maxRowsCount; i++)
+        for (int i = StartFrom - 1; i < maxRowsCount; i++)
         {
             var row = PreviewRows[i];
 
@@ -542,7 +546,7 @@ public partial class MainPage
 
             try
             {
-                var result = await EntityService.ProceedEntitiesToOdata(dto);
+                var result = await EntityService.ProceedEntitiesToOdata(dto, () => cancelRequested);
 
                 if (result == null)
                 {
@@ -563,6 +567,10 @@ public partial class MainPage
                 row[errorsColumnName] = string.Empty;
 
                 continue;
+            }
+            catch (OperationCanceledException)
+            {
+                // отменено
             }
             catch (Exception ex)
             {
