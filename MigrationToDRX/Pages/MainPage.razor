@@ -144,15 +144,15 @@
 
 
                 </div>
-                @if(PreviewRows.Count > 0)
-                {
-                    <small class="text-muted d-block mt-1">
-                        В документе (@PreviewRows.Count) строк
-                    </small>
-                }
                 <small class="text-muted d-block mt-1">
                     Эти настройки применяются только если "Обработать все строки" выключено.
                 </small>
+                @if(PreviewRows.Count > 0)
+                {
+                    <div class="text-muted d-block mt-1" style="font-weight:bold">
+                        В загруженном excel-файле (@PreviewRows.Count) строк
+                    </div>
+                }
             </div>
         </div>
     </div>
