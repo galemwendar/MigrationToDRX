@@ -17,5 +17,6 @@
 - Поиск связанных сущностей по имени и идентификатору.
 - Выгрузка отчета о выполненной операции в Excel (`.xlsx`).
 
+<img width="60" height="30" alt="logo_3" src="https://github.com/user-attachments/assets/f2ccb356-5a61-4dcf-8baa-f15ca1a42557" />
 
 (с) ООО "ЦВД"
