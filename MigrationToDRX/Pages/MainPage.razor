@@ -125,7 +125,7 @@
 
                 <div class="d-flex gap-4 mb-1">
                     <div class="d-flex flex-column">
-                        <label>Начать с строки:</label>
+                        <label>Начальная строка:</label>
                         <RadzenNumeric @bind-Value="StartFrom"
                                     Min="1"
                                     Max="@PreviewRows.Count"
@@ -188,7 +188,7 @@
         <button class="btn btn-outline-secondary mx-1"
                 @onclick="DownloadExcel"
                 disabled="@(ColumnMappings.Any(m => m.Value != null) == false)">
-            Скачать отчет
+            Скачать excel-отчет
         </button>
 
     </div>
@@ -204,12 +204,12 @@
                         AllowColumnResize="true" 
                         AllowColumnReorder="true" 
                         AllowColumnPicking="true"
-                        ColumnsText="колонок выбрано"
+                        ColumnsText="выбор columns (колонок)"
                         ShowR
                         AllowPaging="true"
                         AllColumnsText="Все колонки"
                         ColumnsPickerAllowFiltering="true"
-                        ColumnsShowingText="колонки показаны"
+                        ColumnsShowingText="columns отображается"
 
                         PageSize="100" >
 
