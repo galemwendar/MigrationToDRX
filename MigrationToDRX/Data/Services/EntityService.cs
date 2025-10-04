@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Text.RegularExpressions;
 using MigrationToDRX.Data.Constants;
 using MigrationToDRX.Data.Enums;
 using MigrationToDRX.Data.Helpers;
@@ -651,30 +649,6 @@ public class EntityService
         }
 
         return id;
-    }
-    
-    /// <summary>
-    /// Получает статус сущности из EntityDto
-    /// </summary>
-    /// <param name="dto">Построенная сущность</param>
-    /// <returns>строка со статусом</returns>
-    private static string? GetStatusFromEntityDto(ProcessedEntityDto dto)
-    {
-        var statusKey = dto.ColumnMapping
-            .Where(kvp => kvp.Value is StructuralFieldDto sf && sf.Name == StringConstants.StatusPropertyName)
-            .Select(kvp => kvp.Key)
-            .SingleOrDefault();
-
-        string status = "";
-
-        if (statusKey != null && dto.Row.TryGetValue(statusKey, out var raw) && !string.IsNullOrWhiteSpace(raw))
-        {
-            status = raw!.ToString()!.Trim();
-        }
-
-        var convertedValue = EdmTypeHelper.ConvertStatusToEdm(status);
-
-        return convertedValue;
     }
 
     #endregion

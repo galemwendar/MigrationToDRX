@@ -94,45 +94,9 @@ public class EntityBuilderService
         }
 
         if (structural.Name == StringConstants.PathPropertyName)
-            {
-                HandleFilePath(cellValue, structural.Name, buildedEntity);
-
-                return;
-            }
-
-        if (structural.Name == StringConstants.StatusPropertyName)
         {
-            var status = EdmTypeHelper.ConvertStatusToEdm(cellValue);
-            if (status == null)
-            {
-                throw new Exception($"Не удалось конвертировать {cellValue} в статус");
-            }
-            buildedEntity[structural.Name] = status;
+            HandleFilePath(cellValue, structural.Name, buildedEntity);
 
-            return;
-        }
-
-        if (structural.Name == StringConstants.NumberingTypePropertyName)
-        {
-            var numberingType = EdmTypeHelper.ConvertNumberingTypeToEdm(cellValue);
-            if (numberingType == null)
-            {
-                throw new Exception($"Не удалось конвертировать {cellValue} в статус");
-            }
-            buildedEntity[structural.Name] = numberingType;
-
-            return;
-        }
-
-        if (structural.Name == StringConstants.DocumentFlowPropertyName)
-        {
-            var documentFlow = EdmTypeHelper.ConvertDocumentFlowToEdm(cellValue);
-            if (documentFlow == null)
-            {
-                throw new Exception($"Не удалось конвертировать {cellValue} в статус");
-            }
-            buildedEntity[structural.Name] = documentFlow;
-            
             return;
         }
 
