@@ -323,7 +323,12 @@ public class EntityService
                 throw new Exception($"Не удалось найти Id сущности {dto.EntitySetName}");
             }
 
-            var childEntityId = entity.TryGetValue(StringConstants.IdPropertyName, out var id2) ? (int)id2 : 0;
+            long childEntityId = 0;
+
+            if (entity.TryGetValue(StringConstants.IdPropertyName, out var id2))
+            {
+                childEntityId = Convert.ToInt64(id2);
+            }
 
             if (childEntityId == 0)
             {
@@ -337,7 +342,7 @@ public class EntityService
                 throw new Exception($"Не удалось найти свойство-коллекцию {dto.EntitySetName} по Id {childEntityId}");
             }
 
-            var updatedEntity = await _odataClientService.UpdateChildEntityAsync(entityToSave, dto.EntitySetName, mainEntityId, dto.ChildEntitySetName!);
+            var updatedEntity = await _odataClientService.UpdateChildEntityAsync(entityToSave, dto.EntitySetName, mainEntityId, dto.ChildEntitySetName!, childEntityId);
 
             if (updatedEntity != null)
             {
@@ -628,6 +633,29 @@ public class EntityService
 
         return mainId;
     }
+
+    /// <summary>
+    /// Получает id главной сущности из EntityDto
+    /// </summary>
+    /// <param name="dto">Построенная сущность</param>
+    /// <returns>идентификатор главной сущности</returns>
+    private static long GetChildIdFromEntityDto(ProcessedEntityDto dto)
+    {
+        var childIdKey = dto.ColumnMapping
+            .Where(kvp => kvp.Value is StructuralFieldDto sf && sf.Name == StringConstants.IdPropertyName)
+            .Select(kvp => kvp.Key)
+            .SingleOrDefault();
+
+        long idKey = 0;
+
+        if (childIdKey != null && dto.Row.TryGetValue(childIdKey, out var raw) && !string.IsNullOrWhiteSpace(raw))
+        {
+            idKey = Convert.ToInt64(raw!.ToString()!.Trim());
+        }
+
+        return idKey;
+    }
+
 
     /// <summary>
     /// Получает id сущности из EntityDto

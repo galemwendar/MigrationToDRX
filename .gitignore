@@ -163,6 +163,7 @@ $RECYCLE.BIN/
 *.fakesconfig
 *.messages
 .vs/
+.vscode/
 .idea/
 .sonarlint/
 !*/App_GlobalResources/*.designer.cs

@@ -265,7 +265,7 @@ public class OdataClientService
     /// <param name="propertyName">Свойство-коллекция</param>
     /// <param name="key">Идентификатор свойства-коллекции</param>
     /// <returns></returns>
-    public async Task<IDictionary<string, object>> GetChildEntityAsync(string entitySetName, long mainKey, string propertyName, int key)
+    public async Task<IDictionary<string, object>> GetChildEntityAsync(string entitySetName, long mainKey, string propertyName, long key)
     {
         if (_client == null)
         {
@@ -277,6 +277,7 @@ public class OdataClientService
             return await _client!
                     .For(entitySetName)
                     .Key(mainKey)
+                    .NavigateTo(propertyName)
                     .Key(key)
                     .FindEntryAsync();
         }
@@ -509,7 +510,7 @@ public class OdataClientService
     /// <param name="propertyName">имя свойства - коллекции</param>
     /// <returns></returns>
     /// <exception cref="Exception"></exception>
-    public async Task<IDictionary<string, object>> UpdateChildEntityAsync(IDictionary<string, object> childEntity, string entityset, long id, string propertyName)
+    public async Task<IDictionary<string, object>> UpdateChildEntityAsync(IDictionary<string, object> childEntity, string entityset, long id, string propertyName, long childEntityId)
     {
         if (_client == null)
         {
@@ -518,7 +519,7 @@ public class OdataClientService
         }
         try
         {
-            return await _client.For(entityset).Key(id).NavigateTo(propertyName).Set(childEntity).UpdateEntryAsync();
+            return await _client.For(entityset).Key(id).NavigateTo(propertyName).Key(childEntityId).Set(childEntity).UpdateEntryAsync();
         }
         catch (WebRequestException ex)
         {

@@ -21,7 +21,7 @@ public static class OdataOperationHelper
     public static readonly StructuralFieldDto MainIdProperty = new()
     {
         Name = StringConstants.MainIdPropertyName,
-        Type = "Edm.String",
+        Type = "Edm.Int64",
         Nullable = false
     };
 
