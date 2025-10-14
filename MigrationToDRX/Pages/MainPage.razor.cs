@@ -251,6 +251,10 @@ public partial class MainPage
                 EntityFields.AddFirst(OdataOperationHelper.FolderIdProperty);
                 EntityFields.AddFirst(OdataOperationHelper.RecipientIdProperty);
                 break;
+            case OdataOperation.AddDocumentToFolder:
+                EntityFields.AddFirst(OdataOperationHelper.DocumentIdProperty);
+                EntityFields.AddFirst(OdataOperationHelper.FolderIdProperty);
+                break;
         }
 
         StateHasChanged();

@@ -53,6 +53,7 @@ public class EntityService
             OdataOperation.UpdateEntityInCollection => await UpdateEntityInCollectionAsync(dto, isCancelled),
             OdataOperation.GrantAccessRightsToDocument => await GrantAccessRightsToDocumentAsync(dto, isCancelled),
             OdataOperation.GrantAccessRightsToFolder => await GrantAccessRightsToFolderAsync(dto, isCancelled),
+            OdataOperation.AddDocumentToFolder => await AddDocumentToFolderAsync(dto, isCancelled),
             _ => throw new ArgumentException("Не удалось обработать сценарий")
         };
     }
@@ -424,6 +425,26 @@ public class EntityService
         {
             var entity = await BuildEntityFromRow(dto, isCancelled);
             await _odataClientService.ExecuteBoundActionAsync(StringConstants.Docflow, StringConstants.GrantAccessRightsToDocumentAction, entity);
+
+            return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName());
+        }
+        catch (Exception ex)
+        {
+            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Добавить документ в папку
+    /// </summary>
+    /// <param name="dto"></param>
+    /// <returns></returns>
+    public async Task<OperationResult> AddDocumentToFolderAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
+    {
+        try
+        {
+            var entity = await BuildEntityFromRow(dto, isCancelled);
+            await _odataClientService.ExecuteBoundActionAsync(StringConstants.Docflow, StringConstants.AddDocumentToFolderAction, entity);
 
             return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName());
         }

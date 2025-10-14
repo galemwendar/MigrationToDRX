@@ -88,6 +88,11 @@ public class StringConstants
     public const string GrantAccessRightsToDocumentAction = "GrantAccessRightsToDocument";
 
     /// <summary>
+    /// Наименование действия для добавления документа папку в Odata
+    /// </summary>
+    public const string AddDocumentToFolderAction = "AddDocumentToFolder";
+
+    /// <summary>
     /// Наименование сущности для выдачи прав на документ в Odata
     /// </summary>
     public const string Docflow = "Docflow";

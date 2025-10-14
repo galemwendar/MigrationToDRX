@@ -50,8 +50,14 @@ public enum OdataOperation
     GrantAccessRightsToDocument = 7,
 
     /// <summary>
-    /// Отмена доступа к папке
+    /// Предоставление доступа к папке
     /// </summary>
     [Display(Name = "Предоставление доступа к папке")]
     GrantAccessRightsToFolder = 8,
+
+    /// <summary>
+    /// Добавление документа в папку
+    /// </summary>
+    [Display(Name = "Добавить документ в папку")]
+    AddDocumentToFolder = 9,
 }
