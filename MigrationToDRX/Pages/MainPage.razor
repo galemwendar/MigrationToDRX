@@ -1,4 +1,5 @@
 ﻿@page "/main"
+@using MigrationToDRX.Data.Helpers
 @using Radzen
 @using Radzen.Blazor
 
@@ -43,8 +44,8 @@
             </div>
         </div>
     </div>
-    
-    @if(SelectedOperation != Data.Enums.OdataOperation.GrantAccessRightsToDocument && SelectedOperation != Data.Enums.OdataOperation.GrantAccessRightsToFolder)
+
+    @if(RequiresEntitySelection())
     {
         <div class="row">
             <div class="col col-md-7">
@@ -88,9 +89,9 @@
         <div class="col col-md-7">
             @* Контрол появляется только в том случае, если у выбранной сущности есть свойства-коллекции 
             и выбрана одна из операций работы со свойствами-коллекциями *@
-            @if(CollectionProperties.Any() && (SelectedOperation == Data.Enums.OdataOperation.AddEntityToCollection || SelectedOperation == Data.Enums.OdataOperation.UpdateEntityInCollection))
+            @if(CollectionProperties.Any() && OdataOperationHelper.OperationsWithCollections.Contains(SelectedOperation))
             {
-                @* Выбор свойства - коллекции     *@
+                @* Выбор свойства - коллекции *@
                 <div class="mb-3">
                     <label class="form-label">Свойство - коллекция</label>
                     <RadzenDropDown TextProperty="Name"

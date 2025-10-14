@@ -35,8 +35,9 @@ public class EntityBuilderService
 
         generatedColumns.AddRange(OdataOperationHelper.GetDisplayNames<Data.Models.Dto.OperationResult>());
         generatedColumns.AddRange(OdataOperationHelper.GetDisplayNames<Data.Models.Dto.ValidationResult>());
+        generatedColumns.Remove(StringConstants.IdColumnResult);
 
-        foreach (var (excelColumn, entityField) in dto.ColumnMapping.Where(p => !generatedColumns.Contains(p.Key)))
+        foreach (var (excelColumn, entityField) in dto.ColumnMapping.Where(p => !generatedColumns.Contains(p.Key)|| p.Value != null))
         {
             if (isCancelled())
             {

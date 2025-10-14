@@ -10,7 +10,7 @@ public enum OdataOperation
     /// <summary>
     /// Создание сущности
     /// </summary>
-    [Display(Name ="Создание сущности (документ/справочник/прочее)")]
+    [Display(Name = "Создание сущности (документ/справочник/прочее)")]
     CreateEntity = 1,
 
     /// <summary>
@@ -54,4 +54,16 @@ public enum OdataOperation
     /// </summary>
     [Display(Name = "Предоставление доступа к папке")]
     GrantAccessRightsToFolder = 8,
+
+    /// <summary>
+    /// Запуск задачи
+    /// </summary>
+    [Display(Name = "Стартовать задачу")]
+    StartTask = 9,
+
+    /// <summary>
+    /// Завершение задания
+    /// </summary>
+    [Display(Name = "Завершение задания")]
+    CompleteAssignment = 10,
 }

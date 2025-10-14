@@ -53,6 +53,8 @@ public class EntityService
             OdataOperation.UpdateEntityInCollection => await UpdateEntityInCollectionAsync(dto, isCancelled),
             OdataOperation.GrantAccessRightsToDocument => await GrantAccessRightsToDocumentAsync(dto, isCancelled),
             OdataOperation.GrantAccessRightsToFolder => await GrantAccessRightsToFolderAsync(dto, isCancelled),
+            OdataOperation.StartTask => await StartTaskAsync(dto, isCancelled),
+            OdataOperation.CompleteAssignment => await CompleteAssignmentAsync(dto, isCancelled),
             _ => throw new ArgumentException("Не удалось обработать сценарий")
         };
     }
@@ -402,8 +404,8 @@ public class EntityService
     {
         try
         {
-            var entity = await BuildEntityFromRow(dto, isCancelled);
-            await _odataClientService.ExecuteBoundActionAsync(StringConstants.Docflow, StringConstants.GrantAccessRightsToFolderAction, entity);
+            var parametres = await BuildEntityFromRow(dto, isCancelled);
+            await _odataClientService.ExecuteBoundActionAsync(StringConstants.Docflow, StringConstants.GrantAccessRightsToFolderAction, parametres);
 
             return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName());
         }
@@ -418,12 +420,52 @@ public class EntityService
     /// </summary>
     /// <param name="dto"></param>
     /// <returns></returns>
-    public async Task<OperationResult> GrantAccessRightsToDocumentAsync(ProcessedEntityDto dto,  Func<bool> isCancelled)
+    public async Task<OperationResult> GrantAccessRightsToDocumentAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
     {
         try
         {
-            var entity = await BuildEntityFromRow(dto, isCancelled);
-            await _odataClientService.ExecuteBoundActionAsync(StringConstants.Docflow, StringConstants.GrantAccessRightsToDocumentAction, entity);
+            var parametres = await BuildEntityFromRow(dto, isCancelled);
+            await _odataClientService.ExecuteBoundActionAsync(StringConstants.Docflow, StringConstants.GrantAccessRightsToDocumentAction, parametres);
+
+            return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName());
+        }
+        catch (Exception ex)
+        {
+            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Выдать права на папку
+    /// </summary>
+    /// <param name="dto"></param>
+    /// <returns></returns>
+    public async Task<OperationResult> StartTaskAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
+    {
+        try
+        {
+            var parametres = await BuildEntityFromRow(dto, isCancelled);
+            await _odataClientService.ExecuteBoundActionAsync(StringConstants.Docflow, StringConstants.StartTaskAction, parametres);
+
+            return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName());
+        }
+        catch (Exception ex)
+        {
+            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
+        }
+    }
+    
+    /// <summary>
+    /// Выдать права на папку
+    /// </summary>
+    /// <param name="dto"></param>
+    /// <returns></returns>
+    public async Task<OperationResult> CompleteAssignmentAsync(ProcessedEntityDto dto,  Func<bool> isCancelled)
+    {
+        try
+        {
+            var parametres = await BuildEntityFromRow(dto, isCancelled);
+            await _odataClientService.ExecuteBoundActionAsync(StringConstants.Docflow, StringConstants.CompleteAssignmentAction, parametres);
 
             return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName());
         }

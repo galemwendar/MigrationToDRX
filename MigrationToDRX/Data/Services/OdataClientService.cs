@@ -596,7 +596,7 @@ public class OdataClientService
         try
         {
             var result = await _client
-            .For("Docflow")
+            .For(entitySetName)
             .Action(actionName)
             .Set(parameters)
             .ExecuteAsScalarAsync<int>();

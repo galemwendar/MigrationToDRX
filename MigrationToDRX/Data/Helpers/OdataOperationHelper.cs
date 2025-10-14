@@ -38,6 +38,9 @@ public static class OdataOperationHelper
         Nullable = false
     };
 
+    /// <summary>
+    /// Фейковое структурное поле accessRightsTypeGuid
+    /// </summary>
     public static readonly StructuralFieldDto AccessRightTypeGuidProperty = new()
     {
         Name = StringConstants.AccessRightTypeGuidPropertyName,
@@ -45,6 +48,9 @@ public static class OdataOperationHelper
         Nullable = false
     };
 
+    /// <summary>
+    /// Фейковое структурное поле documentId
+    /// </summary>
     public static readonly StructuralFieldDto DocumentIdProperty = new()
     {
         Name = StringConstants.DocumentIdPropertyName,
@@ -52,6 +58,9 @@ public static class OdataOperationHelper
         Nullable = false
     };
 
+    /// <summary>
+    /// Фейковое структурное поле folderId
+    /// </summary>
     public static readonly StructuralFieldDto FolderIdProperty = new()
     {
         Name = StringConstants.FolderIdPropertyName,
@@ -59,6 +68,9 @@ public static class OdataOperationHelper
         Nullable = false
     };
 
+    /// <summary>
+    /// Фейковое структурное поле recipientId
+    /// </summary>
     public static readonly StructuralFieldDto RecipientIdProperty = new()
     {
         Name = StringConstants.RecipientIdPropertyName,
@@ -67,42 +79,127 @@ public static class OdataOperationHelper
     };
 
     /// <summary>
+    /// Фейковое структурное поле taskId
+    /// </summary>
+    public static readonly StructuralFieldDto TaskIdProperty = new()
+    {
+        Name = StringConstants.TaskIdPropertyName,
+        Type = "Edm.Int64",
+        Nullable = false
+    };
+
+    /// <summary>
+    /// Фейковое структурное поле assignmentId
+    /// </summary>
+    public static readonly StructuralFieldDto AssignmentIdProperty = new()
+    {
+        Name = StringConstants.AssignmentIdPropertyName,
+        Type = "Edm.Int64",
+        Nullable = false
+    };
+
+    /// <summary>
+    /// Фейковое структурное поле assignmentResult
+    /// </summary>
+    public static readonly StructuralFieldDto AssignmentResultProperty = new()
+    {
+        Name = StringConstants.AssignmentResultPropertyName,
+        Type = "Edm.String",
+        Nullable = false
+    };
+
+    /// <summary>
+    /// Список служебных полей
+    /// </summary>
+    private static readonly HashSet<StructuralFieldDto> ServiceFields = new()
+    {
+        MainIdProperty,
+        PathProperty,
+        AccessRightTypeGuidProperty,
+        DocumentIdProperty,
+        FolderIdProperty,
+        RecipientIdProperty,
+        TaskIdProperty,
+        AssignmentIdProperty,
+        AssignmentResultProperty
+    };
+
+    /// <summary>
+    /// Операции, требующие выбора сущности для поиска
+    /// </summary>
+    public static readonly HashSet<OdataOperation> OperationsRequiringEntitySelection = new()
+    {
+        OdataOperation.AddEntityToCollection,
+        OdataOperation.UpdateEntityInCollection,
+        OdataOperation.AddVersionToExistedDocument,
+        OdataOperation.CreateDocumentWithVersion,
+        OdataOperation.CreateEntity,
+        OdataOperation.UpdateEntity
+    };
+
+    /// <summary>
+    /// Список операций, требующих работы со свойствами-коллекциями
+    /// </summary>
+    public static readonly HashSet<OdataOperation> OperationsWithCollections = new()
+    {
+        OdataOperation.AddEntityToCollection,
+        OdataOperation.UpdateEntityInCollection
+    };
+
+    /// <summary>
     /// Добавляет свойства сущности в зависимости от операции
     /// </summary>
-    /// <param name="operation"> Выбранная операция</param>
-    /// <param name="properties">Список сущностей</param>
-    /// <param name="columnMappings">Маппинг сущностей</param>
-    public static void AddPropertiesByOperation(OdataOperation? operation, List<EntityFieldDto> properties, IDictionary<string, EntityFieldDto?> columnMappings)
+    /// <param name="operation">Выбранная операция</param>
+    /// <param name="properties">Список свойств</param>
+    /// <param name="columnMappings">Маппинг колонок</param>
+    public static void AddPropertiesByOperation(
+        OdataOperation? operation, 
+        List<EntityFieldDto> properties, 
+        IDictionary<string, EntityFieldDto?> columnMappings)
     {
         if (operation == null)
-        {
             return;
-        }
 
-        if (columnMappings.Any())
-        {
-            // Находим все ключи, значения которых равны MainIdProperty
-            var keysToRemove = columnMappings
-                .Where(kvp => kvp.Value == MainIdProperty
-                    || kvp.Value == PathProperty
-                    || kvp.Value == FolderIdProperty
-                    || kvp.Value == DocumentIdProperty
-                    || kvp.Value == AccessRightTypeGuidProperty
-                    || kvp.Value == RecipientIdProperty)
-                .Select(kvp => kvp.Key)
-                .ToList();
-            if (keysToRemove.Any())
-            {
-                // Удаляем их
-                foreach (var key in keysToRemove)
-                {
-                    columnMappings[key] = null;
-                }
-            }
-        }
+        // Удаляем старые служебные поля из маппинга
+        RemoveServiceFieldsFromMapping(columnMappings);
+        
+        // Удаляем старые служебные поля из списка свойств
+        RemoveServiceFieldsFromProperties(properties);
 
-        properties.RemoveAll(p => p == MainIdProperty || p == PathProperty);
+        // Добавляем нужные служебные поля в зависимости от операции
+        AddServiceFieldsByOperation(operation.Value, properties);
+    }
 
+    /// <summary>
+    /// Удаляет служебные поля из маппинга
+    /// </summary>
+    private static void RemoveServiceFieldsFromMapping(IDictionary<string, EntityFieldDto?> columnMappings)
+    {
+        if (!columnMappings.Any())
+            return;
+
+        var keysToRemove = columnMappings
+            .Where(kvp => kvp.Value != null && ServiceFields.Contains(kvp.Value))
+            .Select(kvp => kvp.Key)
+            .ToList();
+
+        foreach (var key in keysToRemove)
+            columnMappings[key] = null;
+    }
+
+    /// <summary>
+    /// Удаляет служебные поля из списка свойств
+    /// </summary>
+    private static void RemoveServiceFieldsFromProperties(List<EntityFieldDto> properties)
+    {
+        properties.RemoveAll(p => ServiceFields.Contains(p));
+    }
+
+    /// <summary>
+    /// Добавляет служебные поля в зависимости от операции
+    /// </summary>
+    private static void AddServiceFieldsByOperation(OdataOperation operation, List<EntityFieldDto> properties)
+    {
         switch (operation)
         {
             case OdataOperation.CreateEntity:
@@ -121,9 +218,6 @@ public static class OdataOperationHelper
                 break;
 
             case OdataOperation.AddEntityToCollection:
-                properties.AddFirst(MainIdProperty);
-                break;
-
             case OdataOperation.UpdateEntityInCollection:
                 properties.AddFirst(MainIdProperty);
                 break;
@@ -138,6 +232,15 @@ public static class OdataOperationHelper
                 properties.AddFirst(AccessRightTypeGuidProperty);
                 properties.AddFirst(FolderIdProperty);
                 properties.AddFirst(RecipientIdProperty);
+                break;
+
+            case OdataOperation.StartTask:
+                properties.AddFirst(TaskIdProperty);
+                break;
+
+            case OdataOperation.CompleteAssignment:
+                properties.AddFirst(AssignmentIdProperty);
+                properties.AddFirst(AssignmentResultProperty);
                 break;
         }
     }

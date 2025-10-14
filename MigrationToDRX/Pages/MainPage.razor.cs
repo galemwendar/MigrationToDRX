@@ -208,51 +208,7 @@ public partial class MainPage
     /// </summary>
     private void OnSelectedOperationChanged()
     {
-        //OdataOperationHelper.AddPropertiesByOperation(SelectedOperation, EntityFields, ColumnMappings);
-
-        EntityFields.RemoveAll(p => p == OdataOperationHelper.MainIdProperty || p == OdataOperationHelper.PathProperty);
-        var keysToDelete = ColumnMappings.Where(p => p.Value == OdataOperationHelper.MainIdProperty || p.Value == OdataOperationHelper.PathProperty).ToList();
-        foreach (var kvp in keysToDelete)
-        {
-            ColumnMappings[kvp.Key] = null;
-        }
-
-        switch (SelectedOperation)
-        {
-            case OdataOperation.CreateEntity:
-                break;
-
-            case OdataOperation.UpdateEntity:
-                EntityFields.AddFirst(OdataOperationHelper.MainIdProperty);
-                break;
-
-            case OdataOperation.CreateDocumentWithVersion:
-                EntityFields.AddFirst(OdataOperationHelper.PathProperty);
-                break;
-
-            case OdataOperation.AddVersionToExistedDocument:
-                EntityFields.AddFirstRange(new[] { OdataOperationHelper.MainIdProperty, OdataOperationHelper.PathProperty });
-                break;
-
-            case OdataOperation.AddEntityToCollection:
-                EntityFields.AddFirst(OdataOperationHelper.MainIdProperty);
-                break;
-
-            case OdataOperation.UpdateEntityInCollection:
-                EntityFields.AddFirst(OdataOperationHelper.MainIdProperty);
-                break;
-            case OdataOperation.GrantAccessRightsToDocument:
-                EntityFields.AddFirst(OdataOperationHelper.AccessRightTypeGuidProperty);
-                EntityFields.AddFirst(OdataOperationHelper.DocumentIdProperty);
-                EntityFields.AddFirst(OdataOperationHelper.RecipientIdProperty);
-                break;
-            case OdataOperation.GrantAccessRightsToFolder:
-                EntityFields.AddFirst(OdataOperationHelper.AccessRightTypeGuidProperty);
-                EntityFields.AddFirst(OdataOperationHelper.FolderIdProperty);
-                EntityFields.AddFirst(OdataOperationHelper.RecipientIdProperty);
-                break;
-        }
-
+        OdataOperationHelper.AddPropertiesByOperation(SelectedOperation, EntityFields, ColumnMappings);
         StateHasChanged();
     }
 
@@ -263,30 +219,17 @@ public partial class MainPage
     {
         if (SelectedEntitySet == null)
         {
-            // очищаем список полей
             EntityFields = new();
-
-            // Сбрасываем маппинг
             ColumnMappings = ExcelColumns.Any() ? ExcelColumns.ToDictionary(c => c, _ => (EntityFieldDto?)null) : new();
-
             return;
         }
 
-        // получаем метаданные сущности и парсим поля
         if (OdataClientService.GetEdmxEntityDto(SelectedEntitySet.Name) is { } dto)
         {
-            // Заполняем поля сущности
             EntityFields = EntityService.GetEntityFields(dto);
-
-            // Добавляем свойства сущности в зависимости от операции
             OdataOperationHelper.AddPropertiesByOperation(SelectedOperation, EntityFields, ColumnMappings);
-
-            // Заполняем список свойств-коллекций
             CollectionProperties = dto.NavigationProperties.Where(p => p.IsCollection).ToList();
-
-            // Сбрасываем маппинг
             ColumnMappings = ExcelColumns.ToDictionary(c => c, _ => (EntityFieldDto?)null);
-
         }
 
         StateHasChanged();
@@ -299,24 +242,14 @@ public partial class MainPage
     {
         if (SelectedCollectionProperty == null)
         {
-            // очищаем список полей
             EntityFields = new();
-
-            // Сбрасываем маппинг
             ColumnMappings = ExcelColumns.Any() ? ExcelColumns.ToDictionary(c => c, _ => (EntityFieldDto?)null) : new();
-
             return;
         }
 
         var dto = OdataClientService.GetChildEntities(SelectedCollectionProperty);
-
-        // Заполняем поля сущности
         EntityFields = EntityService.GetEntityFields(dto);
-
-        // Добавляем свойства сущности в зависимости от операции
         OdataOperationHelper.AddPropertiesByOperation(SelectedOperation, EntityFields, ColumnMappings);
-
-        // Сбрасываем маппинг
         ClearExcelToFieldsMapping();
 
         StateHasChanged();
@@ -649,5 +582,10 @@ public partial class MainPage
     private void RemoveMapping()
     {
         ColumnMappings = ExcelColumns.Any() ? ExcelColumns.ToDictionary(c => c, _ => (EntityFieldDto?)null) : new();
+    }
+
+    private bool RequiresEntitySelection()
+    {
+        return OdataOperationHelper.OperationsRequiringEntitySelection.Contains(SelectedOperation);
     }
 }

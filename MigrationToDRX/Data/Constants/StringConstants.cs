@@ -22,20 +22,7 @@ public class StringConstants
     /// </summary>
     public const string PathPropertyName = "Путь до файла";
 
-    /// <summary>
-    /// Строка для поиска свойства "Статус"
-    /// </summary>
-    public const string StatusPropertyName = "Status";
-
-    /// <summary>
-    /// Строка для поиска свойства "Тип нумерации"
-    /// </summary>
-    public const string NumberingTypePropertyName = "NumberingType";
-
-    /// <summary>
-    /// Строка для поиска свойства "Документопоток"
-    /// </summary>
-    public const string DocumentFlowPropertyName = "DocumentFlow";
+    public const string IdColumnResult = "Идентификатор сущности";
 
     /// <summary>
     /// Строка для поиска свойства "accessRightsTypeGuid"
@@ -58,14 +45,19 @@ public class StringConstants
     public const string RecipientIdPropertyName = "recipientId";
 
     /// <summary>
-    /// Строка для поиска свойства "приложение"
+    /// Строка для поиска свойства "taskId"
     /// </summary>
-    public const string AssociatedApplication = "AssociatedApplication";
+    public const string TaskIdPropertyName = "taskId";
 
     /// <summary>
-    /// Строка для поиска свойства "расширение"
+    /// Строка для поиска свойства "assignmentId"
     /// </summary>
-    public const string Extension = "Extension";
+    public const string AssignmentIdPropertyName = "assignmentId";
+
+    /// <summary>
+    /// Строка для поиска свойства "assignmentResult"
+    /// </summary>
+    public const string AssignmentResultPropertyName = "result";
 
     /// <summary>
     /// Строка для поиска свойства "версии"
@@ -86,6 +78,16 @@ public class StringConstants
     /// Наименование действия для выдачи прав на документ в Odata
     /// </summary>
     public const string GrantAccessRightsToDocumentAction = "GrantAccessRightsToDocument";
+
+    /// <summary>
+    /// Наименование действия для создания документа в Odata
+    /// </summary>
+    public const string StartTaskAction = "StartTask";
+
+    /// <summary>
+    /// Наименование действия для завершения документа в Odata
+    /// </summary>
+    public const string CompleteAssignmentAction = "CompleteAssignment";
 
     /// <summary>
     /// Наименование сущности для выдачи прав на документ в Odata
