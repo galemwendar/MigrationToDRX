@@ -66,4 +66,15 @@ public enum OdataOperation
     /// </summary>
     [Display(Name = "Завершение задания")]
     CompleteAssignment = 10,
+
+
+    #region Пакет разработки ExcelMigrator
+
+    /// <summary>
+    /// Импорт подписи на документ
+    /// </summary>
+    [Display(Name = "Импортирует подпись на документ")]
+    ImportSignatureToDocument = 100,
+
+    #endregion
 }

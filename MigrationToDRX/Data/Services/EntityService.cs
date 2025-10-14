@@ -55,6 +55,7 @@ public class EntityService
             OdataOperation.GrantAccessRightsToFolder => await GrantAccessRightsToFolderAsync(dto, isCancelled),
             OdataOperation.StartTask => await StartTaskAsync(dto, isCancelled),
             OdataOperation.CompleteAssignment => await CompleteAssignmentAsync(dto, isCancelled),
+            OdataOperation.ImportSignatureToDocument => await ImportSignatureToDocumentAsync(dto, isCancelled),
             _ => throw new ArgumentException("Не удалось обработать сценарий")
         };
     }
@@ -454,13 +455,13 @@ public class EntityService
             return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
         }
     }
-    
+
     /// <summary>
     /// Выдать права на папку
     /// </summary>
     /// <param name="dto"></param>
     /// <returns></returns>
-    public async Task<OperationResult> CompleteAssignmentAsync(ProcessedEntityDto dto,  Func<bool> isCancelled)
+    public async Task<OperationResult> CompleteAssignmentAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
     {
         try
         {
@@ -474,6 +475,42 @@ public class EntityService
             return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
         }
     }
+
+    /// <summary>
+    /// Выдать права на папку
+    /// </summary>
+    /// <param name="dto"></param>
+    /// <returns></returns>
+    public async Task<OperationResult> ImportSignatureToDocumentAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
+    {
+        try
+        {
+            var parametres = await BuildEntityFromRow(dto, isCancelled);
+
+            var pathToSignature = GetFilePathFromEntityDto(dto);
+
+            var base64Signature = await _fileService.GetFileAsBase64Async(pathToSignature);
+
+
+            parametres.Remove(StringConstants.PathPropertyName);
+            parametres.Add(StringConstants.SignaturePropertyName, base64Signature);
+            if (string.IsNullOrWhiteSpace(pathToSignature))
+            {
+                throw new ArgumentException("Не указан путь к файлу с подписью");
+            }
+
+
+            await _odataClientService.ExecuteBoundActionAsync(StringConstants.ExcelMigrator, StringConstants.ImportSignatureToDocumentAction, parametres);
+
+            return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName());
+        }
+        catch (Exception ex)
+        {
+            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
+        }
+    }
+    
+
 
     #region Служебные приватные методы
 
@@ -530,7 +567,7 @@ public class EntityService
         byte[] body;
         try
         {
-            body = await ReadFileEvenIfOpenAsync(filePath);
+            body = await _fileService.ReadFileEvenIfOpenAsync(filePath);
 
             if (body.Length == 0)
             {
@@ -603,33 +640,6 @@ public class EntityService
             }
         }
         return null;
-    }
-
-    /// <summary>
-    /// Читает файл даже если он открыт
-    /// </summary>
-    private async Task<byte[]> ReadFileEvenIfOpenAsync(string path, CancellationToken cancellationToken = default)
-    {
-        using var stream = new FileStream(
-            path,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.ReadWrite,
-            bufferSize: 81920,  // стандартный буфер .NET
-            useAsync: true       // важно для асинхронного чтения
-        );
-
-        var buffer = new byte[stream.Length];
-        int offset = 0;
-
-        while (offset < buffer.Length)
-        {
-            int bytesRead = await stream.ReadAsync(buffer.AsMemory(offset, buffer.Length - offset), cancellationToken);
-            if (bytesRead == 0) break; // конец файла
-            offset += bytesRead;
-        }
-
-        return buffer;
     }
 
     /// <summary>

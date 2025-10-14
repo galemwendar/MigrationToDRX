@@ -57,7 +57,12 @@ public class StringConstants
     /// <summary>
     /// Строка для поиска свойства "assignmentResult"
     /// </summary>
-    public const string AssignmentResultPropertyName = "result";
+    public const string ResultPropertyName = "result";
+
+    public const string SignaturePropertyName = "signatureBase64";
+
+    public const string TypePropertyName = "type";
+    
 
     /// <summary>
     /// Строка для поиска свойства "версии"
@@ -90,7 +95,17 @@ public class StringConstants
     public const string CompleteAssignmentAction = "CompleteAssignment";
 
     /// <summary>
-    /// Наименование сущности для выдачи прав на документ в Odata
+    /// Наименование действия для импорта подписи к документу в Odata
+    /// </summary>
+    public const string ImportSignatureToDocumentAction = "ImportSignatureToDocument";
+
+    /// <summary>
+    /// namespace Docflow
     /// </summary>
     public const string Docflow = "Docflow";
+
+    /// <summary>
+    /// namespace ExcelMigrator
+    /// </summary>
+    public const string ExcelMigrator = "ExcelMigrator";
 }

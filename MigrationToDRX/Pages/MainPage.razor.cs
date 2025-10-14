@@ -167,6 +167,11 @@ public partial class MainPage
 
     private RadzenDataGrid<Dictionary<string, string>> dataGrid;
 
+    /// <summary>
+    /// Включить расширенные операции
+    /// </summary>
+    protected bool EnableExtendedOperations { get; set; } = false;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await base.OnAfterRenderAsync(firstRender);
@@ -196,7 +201,9 @@ public partial class MainPage
             EntitySets = OdataClientService.GetEntitySets().OrderBy(e => e.Name).ToList();
 
             // получаем список операций для выбора
-            OperationItems = Data.Helpers.EnumHelper.GetItems<OdataOperation>();
+            OperationItems = Data.Helpers.EnumHelper.GetItems<OdataOperation>()
+                .Where(op => !IsExtendedOperation(op.Value))
+                .ToList();
 
             // получаем список полей для поиска навигационных свойств
             SearchEntityByList = Data.Helpers.EnumHelper.GetItems<SearchEntityBy>();
@@ -587,5 +594,40 @@ public partial class MainPage
     private bool RequiresEntitySelection()
     {
         return OdataOperationHelper.OperationsRequiringEntitySelection.Contains(SelectedOperation);
+    }
+
+    /// <summary>
+    /// Обработчик изменения чекбокса расширенных операций
+    /// </summary>
+    private void OnExtendedOperationsChanged()
+    {
+        if (EnableExtendedOperations)
+        {
+            // Добавляем все операции
+            OperationItems = Data.Helpers.EnumHelper.GetItems<OdataOperation>();
+        }
+        else
+        {
+            // Оставляем только базовые операции
+            OperationItems = Data.Helpers.EnumHelper.GetItems<OdataOperation>()
+                .Where(op => !IsExtendedOperation(op.Value))
+                .ToList();
+            
+            // Если выбрана расширенная операция - сбрасываем выбор
+            if (IsExtendedOperation(SelectedOperation))
+            {
+                SelectedOperation = default;
+            }
+        }
+        
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Проверяет, является ли операция расширенной
+    /// </summary>
+    private bool IsExtendedOperation(OdataOperation operation)
+    {
+        return operation == OdataOperation.ImportSignatureToDocument;
     }
 }

@@ -73,13 +73,6 @@ public class EntityBuilderService
             return;
         }
 
-        // if (structural.Name == StringConstants.IdPropertyName)
-        // {
-        //     await EnsureEntityExists(SearchEntityBy.Id, cellValue, dto.EntitySetName, $"Не найдена сущность для обновления {dto.EntitySetName} Id {cellValue}");
-
-        //     return;
-        // }
-
         if (structural.Name == StringConstants.AccessRightTypeGuidPropertyName)
         {
             var access = AccessRight.Find(cellValue);

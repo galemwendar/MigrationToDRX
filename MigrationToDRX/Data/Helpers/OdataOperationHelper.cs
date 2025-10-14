@@ -101,10 +101,30 @@ public static class OdataOperationHelper
     /// <summary>
     /// Фейковое структурное поле assignmentResult
     /// </summary>
-    public static readonly StructuralFieldDto AssignmentResultProperty = new()
+    public static readonly StructuralFieldDto ResultProperty = new()
     {
-        Name = StringConstants.AssignmentResultPropertyName,
+        Name = StringConstants.ResultPropertyName,
         Type = "Edm.String",
+        Nullable = false
+    };
+
+    /// <summary>
+    /// Фейковое структурное поле signatureBase64
+    /// </summary>
+    public static readonly StructuralFieldDto SignatureProperty = new()
+    {
+        Name = StringConstants.SignaturePropertyName,
+        Type = "Edm.String",
+        Nullable = false
+    };
+
+    /// <summary>
+    /// Фейковое структурное поле type
+    /// </summary>
+    public static readonly StructuralFieldDto TypeProperty = new()
+    {
+        Name = StringConstants.TypePropertyName,
+        Type = "Edm.Int32",
         Nullable = false
     };
 
@@ -121,7 +141,9 @@ public static class OdataOperationHelper
         RecipientIdProperty,
         TaskIdProperty,
         AssignmentIdProperty,
-        AssignmentResultProperty
+        ResultProperty,
+        SignatureProperty,
+        TypeProperty
     };
 
     /// <summary>
@@ -240,7 +262,13 @@ public static class OdataOperationHelper
 
             case OdataOperation.CompleteAssignment:
                 properties.AddFirst(AssignmentIdProperty);
-                properties.AddFirst(AssignmentResultProperty);
+                properties.AddFirst(ResultProperty);
+                break;
+
+            case OdataOperation.ImportSignatureToDocument:
+                properties.AddFirst(DocumentIdProperty);
+                properties.AddFirst(PathProperty);
+                properties.AddFirst(TypeProperty);
                 break;
         }
     }
