@@ -53,6 +53,7 @@ public class EntityService
             OdataOperation.UpdateEntityInCollection => await UpdateEntityInCollectionAsync(dto, isCancelled),
             OdataOperation.GrantAccessRightsToDocument => await GrantAccessRightsToDocumentAsync(dto, isCancelled),
             OdataOperation.GrantAccessRightsToFolder => await GrantAccessRightsToFolderAsync(dto, isCancelled),
+            OdataOperation.AddDocumentToFolder => await AddDocumentToFolderAsync(dto, isCancelled),
             OdataOperation.StartTask => await StartTaskAsync(dto, isCancelled),
             OdataOperation.CompleteAssignment => await CompleteAssignmentAsync(dto, isCancelled),
             OdataOperation.ImportSignatureToDocument => await ImportSignatureToDocumentAsync(dto, isCancelled),
@@ -437,7 +438,7 @@ public class EntityService
     }
 
     /// <summary>
-    /// Выдать права на папку
+    /// Стартовать задачу
     /// </summary>
     /// <param name="dto"></param>
     /// <returns></returns>
@@ -457,7 +458,27 @@ public class EntityService
     }
 
     /// <summary>
-    /// Выдать права на папку
+    /// Добавить документ в папку
+    /// </summary>
+    /// <param name="dto"></param>
+    /// <returns></returns>
+    public async Task<OperationResult> AddDocumentToFolderAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
+    {
+        try
+        {
+              var parametres = await BuildEntityFromRow(dto, isCancelled);
+            await _odataClientService.ExecuteBoundActionAsync(StringConstants.Docflow, StringConstants.AddDocumentToFolderAction, parametres);
+
+            return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName());
+        }
+        catch (Exception ex)
+        {
+            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Выполнить задание
     /// </summary>
     /// <param name="dto"></param>
     /// <returns></returns>
@@ -477,7 +498,7 @@ public class EntityService
     }
 
     /// <summary>
-    /// Выдать права на папку
+    /// Импортировать подпись на документ
     /// </summary>
     /// <param name="dto"></param>
     /// <returns></returns>

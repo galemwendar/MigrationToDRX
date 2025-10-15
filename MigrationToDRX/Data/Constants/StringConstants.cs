@@ -22,6 +22,9 @@ public class StringConstants
     /// </summary>
     public const string PathPropertyName = "Путь до файла";
 
+    /// <summary>
+    /// Строка для наименования колонки
+    /// </summary>
     public const string IdColumnResult = "Идентификатор сущности";
 
     /// <summary>
@@ -59,10 +62,15 @@ public class StringConstants
     /// </summary>
     public const string ResultPropertyName = "result";
 
+    /// <summary>
+    /// Строка для поиска свойства "signatureBase64"
+    /// </summary>
     public const string SignaturePropertyName = "signatureBase64";
 
+    /// <summary>
+    /// Строка для поиска типа подписи
+    /// </summary>
     public const string TypePropertyName = "type";
-    
 
     /// <summary>
     /// Строка для поиска свойства "версии"
@@ -98,6 +106,11 @@ public class StringConstants
     /// Наименование действия для импорта подписи к документу в Odata
     /// </summary>
     public const string ImportSignatureToDocumentAction = "ImportSignatureToDocument";
+
+    /// <summary>
+    /// Наименование действия для добавления документа папку в Odata
+    /// </summary>
+    public const string AddDocumentToFolderAction = "AddDocumentToFolder";
 
     /// <summary>
     /// namespace Docflow

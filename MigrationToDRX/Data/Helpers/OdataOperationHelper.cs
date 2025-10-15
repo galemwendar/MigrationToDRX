@@ -254,6 +254,11 @@ public static class OdataOperationHelper
                 properties.AddFirst(AccessRightTypeGuidProperty);
                 properties.AddFirst(FolderIdProperty);
                 properties.AddFirst(RecipientIdProperty);
+                break; 
+
+            case OdataOperation.AddDocumentToFolder:
+                properties.AddFirst(DocumentIdProperty);
+                properties.AddFirst(FolderIdProperty);
                 break;
 
             case OdataOperation.StartTask:

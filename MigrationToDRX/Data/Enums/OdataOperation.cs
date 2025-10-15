@@ -46,26 +46,32 @@ public enum OdataOperation
     /// <summary>
     /// Предоставление доступа к документу
     /// </summary>
-    [Display(Name = "Предоставление доступа к документу")]
+    [Display(Name = "Выдача прав на документ")]
     GrantAccessRightsToDocument = 7,
 
     /// <summary>
-    /// Отмена доступа к папке
+    /// Предоставление доступа к папке
     /// </summary>
-    [Display(Name = "Предоставление доступа к папке")]
+    [Display(Name = "Выдача прав на папку")]
     GrantAccessRightsToFolder = 8,
+
+    /// <summary>
+    /// Добавление документа в папку
+    /// </summary>
+    [Display(Name = "Добавление документа в папку")]
+    AddDocumentToFolder = 9,
 
     /// <summary>
     /// Запуск задачи
     /// </summary>
     [Display(Name = "Стартовать задачу")]
-    StartTask = 9,
+    StartTask = 10,
 
     /// <summary>
-    /// Завершение задания
+    /// Выполнение задания
     /// </summary>
-    [Display(Name = "Завершение задания")]
-    CompleteAssignment = 10,
+    [Display(Name = "Выполнить задание")]
+    CompleteAssignment = 11,
 
 
     #region Пакет разработки ExcelMigrator
@@ -73,7 +79,7 @@ public enum OdataOperation
     /// <summary>
     /// Импорт подписи на документ
     /// </summary>
-    [Display(Name = "Импортирует подпись на документ")]
+    [Display(Name = "Импортировать подпись на документ")]
     ImportSignatureToDocument = 100,
 
     #endregion

@@ -226,16 +226,23 @@ public partial class MainPage
     {
         if (SelectedEntitySet == null)
         {
+            // очищаем список полей
             EntityFields = new();
+            // Сбрасываем маппинг
             ColumnMappings = ExcelColumns.Any() ? ExcelColumns.ToDictionary(c => c, _ => (EntityFieldDto?)null) : new();
             return;
         }
 
+        // Получаем метаданные сущности и парсим поля
         if (OdataClientService.GetEdmxEntityDto(SelectedEntitySet.Name) is { } dto)
         {
+            // Заполняем поля сущности
             EntityFields = EntityService.GetEntityFields(dto);
+            // Добавляем свойства сущности в зависимости от операции
             OdataOperationHelper.AddPropertiesByOperation(SelectedOperation, EntityFields, ColumnMappings);
+            // Заполняем список свойств-коллекций
             CollectionProperties = dto.NavigationProperties.Where(p => p.IsCollection).ToList();
+            // Сбрасываем маппинг
             ColumnMappings = ExcelColumns.ToDictionary(c => c, _ => (EntityFieldDto?)null);
         }
 

@@ -37,6 +37,8 @@
                                 Placeholder="Выберите операцию с данными..."
                                 Style="width:100%"
                                 ValueProperty="Value"
+                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                AllowFiltering="true"
                                 TextProperty="DisplayName">
                 </RadzenDropDown>
 
@@ -48,7 +50,7 @@
                     <RadzenCheckBox @bind-Value="EnableExtendedOperations" 
                                     TValue="bool" 
                                     Change="OnExtendedOperationsChanged" />
-                    <span>Пакет доработок <code>centrvd.ExcelMigrator</code></span>
+                    <span>Пакет разработки от ЦВД <code>centrvd.MigrationToDRX</code></span>
                 </label>
                 <small class="text-muted">Включает дополнительные операции миграции</small>
             </div>
