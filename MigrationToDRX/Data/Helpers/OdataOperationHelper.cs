@@ -175,8 +175,8 @@ public static class OdataOperationHelper
     /// <param name="properties">Список свойств</param>
     /// <param name="columnMappings">Маппинг колонок</param>
     public static void AddPropertiesByOperation(
-        OdataOperation? operation, 
-        List<EntityFieldDto> properties, 
+        OdataOperation? operation,
+        List<EntityFieldDto> properties,
         IDictionary<string, EntityFieldDto?> columnMappings)
     {
         if (operation == null)
@@ -184,9 +184,21 @@ public static class OdataOperationHelper
 
         // Удаляем старые служебные поля из маппинга
         RemoveServiceFieldsFromMapping(columnMappings);
-        
+
         // Удаляем старые служебные поля из списка свойств
         RemoveServiceFieldsFromProperties(properties);
+
+        // Для операций только со служебными свойствами очищаем маппинг и список свойств
+        if (operation == OdataOperation.GrantAccessRightsToDocument ||
+            operation == OdataOperation.GrantAccessRightsToFolder ||
+            operation == OdataOperation.AddDocumentToFolder ||
+            operation == OdataOperation.CompleteAssignment ||
+            operation == OdataOperation.StartTask ||
+            operation == OdataOperation.ImportSignatureToDocument)
+        {
+            RemoveAllFieldsFromMapping(columnMappings);
+            properties.RemoveAll(p => properties.Any());
+        }
 
         // Добавляем нужные служебные поля в зависимости от операции
         AddServiceFieldsByOperation(operation.Value, properties);
@@ -202,6 +214,23 @@ public static class OdataOperationHelper
 
         var keysToRemove = columnMappings
             .Where(kvp => kvp.Value != null && ServiceFields.Contains(kvp.Value))
+            .Select(kvp => kvp.Key)
+            .ToList();
+
+        foreach (var key in keysToRemove)
+            columnMappings[key] = null;
+    }
+
+    /// <summary>
+    /// Удаляет служебные поля из маппинга
+    /// </summary>
+    private static void RemoveAllFieldsFromMapping(IDictionary<string, EntityFieldDto?> columnMappings)
+    {
+        if (!columnMappings.Any())
+            return;
+
+        var keysToRemove = columnMappings
+            .Where(kvp => kvp.Value != null)
             .Select(kvp => kvp.Key)
             .ToList();
 

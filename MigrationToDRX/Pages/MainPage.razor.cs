@@ -556,7 +556,7 @@ public partial class MainPage
         {
             return;
         }
-        // Определяем, какие новые колонки реально нужно добавить
+        // Определяем, какие новые колонки действительно нужно добавить
         var newColumns = resultColumns.Except(ExcelColumns).ToList();
 
         // Добавляем их в ExcelColumns и ColumnMappings
