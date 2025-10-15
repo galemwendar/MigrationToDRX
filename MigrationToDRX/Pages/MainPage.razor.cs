@@ -509,7 +509,16 @@ public partial class MainPage
                 row[timeStampColumnName] = result.Timestamp.ToLongTimeString();
                 row[signColumnName] = result.Stamp;
                 row[operationNameColumnName] = SelectedOperation.GetDisplayName() ?? string.Empty;
-                row[idColumnName] = result.EntityId.ToString() ?? string.Empty;
+                // Не изменять Идентификатор сущности для операций только со служебными свойствами.
+                if ((result.OperationName != OdataOperation.AddDocumentToFolder.GetDisplayName() ||
+                    result.OperationName != OdataOperation.CompleteAssignment.GetDisplayName() ||
+                    result.OperationName != OdataOperation.StartTask.GetDisplayName() ||
+                    result.OperationName != OdataOperation.GrantAccessRightsToDocument.GetDisplayName() ||
+                    result.OperationName != OdataOperation.GrantAccessRightsToFolder.GetDisplayName() ||
+                    result.OperationName != OdataOperation.ImportSignatureToDocument.GetDisplayName()) && result.EntityId != null)
+                {
+                    row[idColumnName] = result.EntityId.ToString() ?? string.Empty;
+                }    
                 // Для очистки предыдущих ошибок
                 row[errorsColumnName] = string.Empty;
 

@@ -188,7 +188,7 @@ public static class OdataOperationHelper
         // Удаляем старые служебные поля из списка свойств
         RemoveServiceFieldsFromProperties(properties);
 
-        // Для операций только со служебными свойствами очищаем маппинг и список свойств
+        // Для операций только со служебными свойствами очищаем маппинг
         if (operation == OdataOperation.GrantAccessRightsToDocument ||
             operation == OdataOperation.GrantAccessRightsToFolder ||
             operation == OdataOperation.AddDocumentToFolder ||
@@ -197,7 +197,6 @@ public static class OdataOperationHelper
             operation == OdataOperation.ImportSignatureToDocument)
         {
             RemoveAllFieldsFromMapping(columnMappings);
-            properties.RemoveAll(p => properties.Any());
         }
 
         // Добавляем нужные служебные поля в зависимости от операции
