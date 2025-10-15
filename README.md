@@ -1,4 +1,4 @@
-# DirectumRX Excel Migrator
+# MigrationToDRX (DirectumRX Excel Migrator)
 
 Мигратор данных в **DirectumRX** из Excel-файлов по протоколу **OData**.  
 Сохраняет бизнес-логику создания и изменения данных на сервере.
