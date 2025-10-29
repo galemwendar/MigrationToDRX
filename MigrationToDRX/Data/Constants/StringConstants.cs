@@ -72,6 +72,36 @@ public class StringConstants
     /// </summary>
     public const string TypePropertyName = "type";
 
+    /// <summary> 
+    /// Строка для поиска Id шаблона 
+    /// </summary>
+    public const string TemplateIdPropertyName = "templateId";
+
+    /// <summary> 
+    /// Строка для поиска имени связи 
+    /// </summary>
+    public const string RelationNamePropertyName = "relationName";
+
+    /// <summary> 
+    /// Строка для поиска Id связываемого документа
+    /// </summary>
+    public const string BaseDocumentIdPropertyName = "baseDocumentId";
+
+    /// <summary> 
+    /// Строка для поиска имени папки
+    /// </summary>
+    public const string FolderNamePropertyName = "folderName";
+
+    /// <summary> 
+    /// Строка для поиска Id родительской папки
+    /// </summary>
+    public const string  ParentFolderIdPropertyName = "parentFolderId";
+
+    /// <summary> 
+    /// Строка для поиска Id связи 
+    /// </summary>
+    public const string RelationDocumentIdPropertyName = "relationDocumentId";
+
     /// <summary>
     /// Строка для поиска свойства "версии"
     /// </summary>
@@ -101,6 +131,26 @@ public class StringConstants
     /// Наименование действия для завершения документа в Odata
     /// </summary>
     public const string CompleteAssignmentAction = "CompleteAssignment";
+
+    /// <summary>
+    /// Наименование действия для добавления связей в Odata
+    /// </summary>
+    public const string AddRelationsAction = "AddRelations";
+
+    /// <summary>
+    /// Наименование действия для создания папки в родительской папке в Odata
+    /// </summary>
+    public const string CreateChildFolderAction = "CreateChildFolder";
+
+    /// <summary>
+    /// Наименование действия для добавления папки в родительскую папку в Odata
+    /// </summary>
+    public const string AddChildFolderAction = "AddChildFolder";
+
+    /// <summary>
+    /// Наименование действия для создания версии из шаблона в Odata
+    /// </summary>
+    public const string CreateVersionFromTemplateAction = "CreateVersionFromTemplate";
 
     /// <summary>
     /// Наименование действия для импорта подписи к документу в Odata

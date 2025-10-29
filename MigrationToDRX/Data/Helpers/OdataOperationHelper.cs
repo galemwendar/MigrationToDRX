@@ -128,6 +128,67 @@ public static class OdataOperationHelper
         Nullable = false
     };
 
+    /// <summary> 
+    /// Фейковое структурное поле templateId
+    /// </summary>
+    public static readonly StructuralFieldDto TemplateIdProperty = new()
+    {
+        Name = StringConstants.TemplateIdPropertyName,
+        Type = "Edm.Int64",
+        Nullable = false
+    };
+
+    /// <summary> 
+    /// Фейковое структурное поле relationName
+    /// </summary>
+    public static readonly StructuralFieldDto RelationNameProperty = new()
+    {
+        Name = StringConstants.RelationNamePropertyName,
+        Type = "Edm.String",
+        Nullable = false
+    };
+
+    /// <summary> 
+    /// Фейковое структурное поле baseDocumentId
+    /// </summary>
+    public static readonly StructuralFieldDto BaseDocumentIdProperty = new()
+    {
+        Name = StringConstants.BaseDocumentIdPropertyName,
+        Type = "Edm.Int64",
+        Nullable = false
+    };
+
+    /// <summary> 
+    /// Фейковое структурное поле folderName
+    /// </summary>
+    public static readonly StructuralFieldDto FolderNameProperty = new()
+    {
+        Name = StringConstants.FolderNamePropertyName,
+        Type = "Edm.String",
+        Nullable = false
+    };
+
+    /// <summary> 
+    /// Фейковое структурное поле parentFolderId
+    /// </summary>
+    public static readonly StructuralFieldDto ParentFolderIdProperty = new()
+    {
+        Name = StringConstants.ParentFolderIdPropertyName,
+        Type = "Edm.Int64",
+        Nullable = false
+    };
+
+    /// <summary> 
+    /// Фейковое структурное поле relationDocumentId
+    /// </summary>
+    public static readonly StructuralFieldDto RelationDocumentIdProperty = new()
+    {
+        Name = StringConstants.RelationDocumentIdPropertyName,
+        Type = "Edm.Int64",
+        Nullable = false
+    };
+    
+
     /// <summary>
     /// Список служебных полей
     /// </summary>
@@ -143,7 +204,13 @@ public static class OdataOperationHelper
         AssignmentIdProperty,
         ResultProperty,
         SignatureProperty,
-        TypeProperty
+        TypeProperty,
+        TemplateIdProperty,
+        RelationNameProperty,
+        BaseDocumentIdProperty,
+        FolderNameProperty,
+        ParentFolderIdProperty,
+        RelationDocumentIdProperty
     };
 
     /// <summary>
@@ -158,6 +225,16 @@ public static class OdataOperationHelper
         OdataOperation.CreateEntity,
         OdataOperation.UpdateEntity
     };
+
+    /// <summary>
+    /// Проверяет, требует ли операция записи EntityId в результат
+    /// </summary>
+    /// <param name="operationName">Имя операции (Display Name)</param>
+    /// <returns>True, если операция требует записи EntityId</returns>
+    public static bool RequiresEntityIdInResult(string operationName)
+    {
+        return OperationsRequiringEntitySelection.Any(op => op.GetDisplayName() == operationName);
+    }
 
     /// <summary>
     /// Список операций, требующих работы со свойствами-коллекциями
@@ -189,12 +266,7 @@ public static class OdataOperationHelper
         RemoveServiceFieldsFromProperties(properties);
 
         // Для операций только со служебными свойствами очищаем маппинг
-        if (operation == OdataOperation.GrantAccessRightsToDocument ||
-            operation == OdataOperation.GrantAccessRightsToFolder ||
-            operation == OdataOperation.AddDocumentToFolder ||
-            operation == OdataOperation.CompleteAssignment ||
-            operation == OdataOperation.StartTask ||
-            operation == OdataOperation.ImportSignatureToDocument)
+        if (OperationsRequiringEntitySelection.Contains(operation.Value) == false)
         {
             RemoveAllFieldsFromMapping(columnMappings);
         }
@@ -302,6 +374,30 @@ public static class OdataOperationHelper
                 properties.AddFirst(DocumentIdProperty);
                 properties.AddFirst(PathProperty);
                 properties.AddFirst(TypeProperty);
+                break;
+
+            case OdataOperation.CreateChildFolder:
+                properties.AddFirst(FolderNameProperty);
+                properties.AddFirst(ParentFolderIdProperty);
+                break;
+
+            case OdataOperation.AddChildFolder:
+                properties.AddFirst(FolderIdProperty);
+                properties.AddFirst(ParentFolderIdProperty);
+                break;
+
+            case OdataOperation.CreateVersionFromTemplate:
+                properties.AddFirst(DocumentIdProperty);
+                properties.AddFirst(TemplateIdProperty);
+                break;
+
+            case OdataOperation.AddRelations:
+                properties.AddFirst(RelationNameProperty);
+                properties.AddFirst(BaseDocumentIdProperty);
+                properties.AddFirst(RelationDocumentIdProperty);
+                break;
+
+            default:
                 break;
         }
     }

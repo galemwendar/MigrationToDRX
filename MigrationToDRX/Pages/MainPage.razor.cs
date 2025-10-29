@@ -119,7 +119,7 @@ public partial class MainPage
     /// <summary>
     /// Имя файла для выгрузки
     /// </summary>
-    protected string FileName { get; set; }
+    protected string? FileName { get; set; }
 
     /// <summary>
     /// Сервис для работы с OData клиентом
@@ -165,7 +165,7 @@ public partial class MainPage
     /// </summary>
     private bool IsConnected => OdataClientService.IsConnected;
 
-    private RadzenDataGrid<Dictionary<string, string>> dataGrid;
+    private RadzenDataGrid<Dictionary<string, string>>? dataGrid;
 
     /// <summary>
     /// Включить расширенные операции
@@ -509,13 +509,9 @@ public partial class MainPage
                 row[timeStampColumnName] = result.Timestamp.ToLongTimeString();
                 row[signColumnName] = result.Stamp;
                 row[operationNameColumnName] = SelectedOperation.GetDisplayName() ?? string.Empty;
+                
                 // Не изменять Идентификатор сущности для операций только со служебными свойствами.
-                if ((result.OperationName != OdataOperation.AddDocumentToFolder.GetDisplayName() ||
-                    result.OperationName != OdataOperation.CompleteAssignment.GetDisplayName() ||
-                    result.OperationName != OdataOperation.StartTask.GetDisplayName() ||
-                    result.OperationName != OdataOperation.GrantAccessRightsToDocument.GetDisplayName() ||
-                    result.OperationName != OdataOperation.GrantAccessRightsToFolder.GetDisplayName() ||
-                    result.OperationName != OdataOperation.ImportSignatureToDocument.GetDisplayName()) && result.EntityId != null)
+                if (OdataOperationHelper.RequiresEntityIdInResult(result.OperationName) && result.EntityId != null)
                 {
                     row[idColumnName] = result.EntityId.ToString() ?? string.Empty;
                 }    

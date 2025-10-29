@@ -57,6 +57,10 @@ public class EntityService
             OdataOperation.StartTask => await StartTaskAsync(dto, isCancelled),
             OdataOperation.CompleteAssignment => await CompleteAssignmentAsync(dto, isCancelled),
             OdataOperation.ImportSignatureToDocument => await ImportSignatureToDocumentAsync(dto, isCancelled),
+            OdataOperation.CreateChildFolder => await CreateChildFolderAsync(dto, isCancelled),
+            OdataOperation.AddChildFolder => await AddChildFolderAsync(dto, isCancelled),
+            OdataOperation.CreateVersionFromTemplate => await CreateVersionFromTemplateAsync(dto, isCancelled),
+            OdataOperation.AddRelations => await AddRelationsAsync(dto, isCancelled),
             _ => throw new ArgumentException("Не удалось обработать сценарий")
         };
     }
@@ -68,7 +72,7 @@ public class EntityService
     {
         try
         {
-            var entity = await BuildEntityFromRow(dto, isCancelled);
+            var entity = await _entityBuilderService.BuildEntityFromRow(dto, isCancelled);
 
             if (entity != null)
             {
@@ -86,27 +90,14 @@ public class EntityService
     }
 
     /// <summary>
-    /// Строит сущность из строки Excel на основе маппинга и данных строки
-    /// </summary>
-    public async Task<IDictionary<string, object>> BuildEntityFromRow(ProcessedEntityDto dto, Func<bool> isCancelled)
-    {
-        return await _entityBuilderService.BuildEntityFromRow(dto, isCancelled);
-    }
-
-    /// <summary>
     /// Создает сущность в OData и возвращает результат выполнения операции
     /// </summary>
     private async Task<OperationResult> CreateEntityAsync(ProcessedEntityDto dto,  Func<bool> isCancelled)
     {
         try
         {
-            var entity = await BuildEntityFromRow(dto, isCancelled);
-
-            var entityToSave = entity
-                .Where(p => p.Key != StringConstants.PathPropertyName
-                    && p.Key != StringConstants.MainIdPropertyName
-                    && p.Key != StringConstants.IdPropertyName)
-                .ToDictionary(p => p.Key, p => p.Value);
+            var entity = await _entityBuilderService.BuildEntityFromRow(dto, isCancelled);
+            var entityToSave = FilterServiceFields(entity);
 
             var savedEntity = await _odataClientService.InsertEntityAsync(entityToSave, dto.EntitySetName);
 
@@ -139,14 +130,10 @@ public class EntityService
     {
         try
         {
-            var entity = await BuildEntityFromRow(dto, isCancelled);
+            var entity = await _entityBuilderService.BuildEntityFromRow(dto, isCancelled);
+            var entityToSave = FilterServiceFields(entity);
 
-            var entityToSave = entity
-                    .Where(p => p.Key != StringConstants.PathPropertyName
-                        && p.Key != StringConstants.MainIdPropertyName && p.Key != StringConstants.IdPropertyName)
-                    .ToDictionary(p => p.Key, p => p.Value);
-
-            var entityId = GetMainIdFromEntityDto(dto);
+            var entityId = GetFieldValueFromEntityDto(dto, StringConstants.MainIdPropertyName);
 
             if (entityId == 0)
             {
@@ -240,7 +227,7 @@ public class EntityService
             return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Файл не найден или слишком большой");
         }
         // находим сущность и заполняем тело документа
-        var eDocId = GetIdFromEntityDto(dto);
+        var eDocId = GetFieldValueFromEntityDto(dto, StringConstants.MainIdPropertyName);
 
         if(eDocId == 0)
         {
@@ -267,15 +254,10 @@ public class EntityService
                 throw new ArgumentException("Не указан тип свойства - коллекции");
             }
 
-            var entity = await BuildEntityFromRow(dto, isCancelled);
+            var entity = await _entityBuilderService.BuildEntityFromRow(dto, isCancelled);
+            var entityToSave = FilterServiceFields(entity);
 
-            var entityToSave = entity
-                .Where(p => p.Key != StringConstants.PathPropertyName
-                    && p.Key != StringConstants.MainIdPropertyName
-                    && p.Key != StringConstants.IdPropertyName)
-                .ToDictionary(p => p.Key, p => p.Value);
-
-            var mainId = GetMainIdFromEntityDto(dto);
+            var mainId = GetFieldValueFromEntityDto(dto, StringConstants.MainIdPropertyName);
 
             if (mainId == 0)
             {
@@ -313,14 +295,10 @@ public class EntityService
     {
         try
         {
-            var entity = await BuildEntityFromRow(dto, isCancelled);
+            var entity = await _entityBuilderService.BuildEntityFromRow(dto, isCancelled);
+            var entityToSave = FilterServiceFields(entity);
 
-            var entityToSave = entity
-                    .Where(p => p.Key != StringConstants.PathPropertyName
-                        && p.Key != StringConstants.MainIdPropertyName && p.Key != StringConstants.IdPropertyName)
-                    .ToDictionary(p => p.Key, p => p.Value);
-
-            var mainEntityId = GetMainIdFromEntityDto(dto);
+            var mainEntityId = GetFieldValueFromEntityDto(dto, StringConstants.MainIdPropertyName);
 
             if (mainEntityId == 0)
             {
@@ -397,99 +375,32 @@ public class EntityService
             .ToList();
     }
 
-    /// <summary>
-    /// Выдать права на папку
+    /// <summary> 
+    /// Выполнить действие на сервере, если действие существует (IsBound = true)
     /// </summary>
-    /// <param name="dto"></param>
-    /// <returns></returns>
-    public async Task<OperationResult> GrantAccessRightsToFolderAsync(ProcessedEntityDto dto,  Func<bool> isCancelled)
+    /// <param name="moduleName">Имя модуля</param>
+    /// <param name="actionName">Имя действия</param>
+    /// <param name="parametres">Параметры действия</param>
+    private async Task<OperationResult> ExecuteActionAsync(string moduleName, string actionName, IDictionary<string, object> parametres)
     {
         try
         {
-            var parametres = await BuildEntityFromRow(dto, isCancelled);
-            await _odataClientService.ExecuteBoundActionAsync(StringConstants.Docflow, StringConstants.GrantAccessRightsToFolderAction, parametres);
+            await _odataClientService.ExecuteBoundActionAsync(moduleName, actionName, parametres);
 
-            return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName());
+            return new OperationResult(success: true, operationName: actionName);
         }
         catch (Exception ex)
         {
-            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
+            return new OperationResult(success: false, operationName: actionName, errorMessage: ex.Message);
         }
     }
 
-    /// <summary>
-    /// Выдать права на документ
-    /// </summary>
-    /// <param name="dto"></param>
-    /// <returns></returns>
-    public async Task<OperationResult> GrantAccessRightsToDocumentAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
+    private async Task<OperationResult> ExecuteSimpleActionAsync(string moduleName, string actionName, ProcessedEntityDto dto, Func<bool> isCancelled)
     {
         try
         {
-            var parametres = await BuildEntityFromRow(dto, isCancelled);
-            await _odataClientService.ExecuteBoundActionAsync(StringConstants.Docflow, StringConstants.GrantAccessRightsToDocumentAction, parametres);
-
-            return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName());
-        }
-        catch (Exception ex)
-        {
-            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
-        }
-    }
-
-    /// <summary>
-    /// Стартовать задачу
-    /// </summary>
-    /// <param name="dto"></param>
-    /// <returns></returns>
-    public async Task<OperationResult> StartTaskAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
-    {
-        try
-        {
-            var parametres = await BuildEntityFromRow(dto, isCancelled);
-            await _odataClientService.ExecuteBoundActionAsync(StringConstants.Docflow, StringConstants.StartTaskAction, parametres);
-
-            return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName());
-        }
-        catch (Exception ex)
-        {
-            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
-        }
-    }
-
-    /// <summary>
-    /// Добавить документ в папку
-    /// </summary>
-    /// <param name="dto"></param>
-    /// <returns></returns>
-    public async Task<OperationResult> AddDocumentToFolderAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
-    {
-        try
-        {
-              var parametres = await BuildEntityFromRow(dto, isCancelled);
-            await _odataClientService.ExecuteBoundActionAsync(StringConstants.Docflow, StringConstants.AddDocumentToFolderAction, parametres);
-
-            return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName());
-        }
-        catch (Exception ex)
-        {
-            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
-        }
-    }
-
-    /// <summary>
-    /// Выполнить задание
-    /// </summary>
-    /// <param name="dto"></param>
-    /// <returns></returns>
-    public async Task<OperationResult> CompleteAssignmentAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
-    {
-        try
-        {
-            var parametres = await BuildEntityFromRow(dto, isCancelled);
-            await _odataClientService.ExecuteBoundActionAsync(StringConstants.Docflow, StringConstants.CompleteAssignmentAction, parametres);
-
-            return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName());
+            var parametres = await _entityBuilderService.BuildEntityFromRow(dto, isCancelled);
+            return await ExecuteActionAsync(moduleName, actionName, parametres);
         }
         catch (Exception ex)
         {
@@ -502,11 +413,11 @@ public class EntityService
     /// </summary>
     /// <param name="dto"></param>
     /// <returns></returns>
-    public async Task<OperationResult> ImportSignatureToDocumentAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
+    private async Task<OperationResult> ImportSignatureToDocumentAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
     {
         try
         {
-            var parametres = await BuildEntityFromRow(dto, isCancelled);
+            var parametres = await _entityBuilderService.BuildEntityFromRow(dto, isCancelled);
 
             var pathToSignature = GetFilePathFromEntityDto(dto);
 
@@ -521,19 +432,121 @@ public class EntityService
             }
 
 
-            await _odataClientService.ExecuteBoundActionAsync(StringConstants.ExcelMigrator, StringConstants.ImportSignatureToDocumentAction, parametres);
-
-            return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName());
+            return await ExecuteActionAsync(StringConstants.ExcelMigrator, StringConstants.ImportSignatureToDocumentAction, parametres);
         }
         catch (Exception ex)
         {
             return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
         }
     }
-    
 
+
+    /// <summary>
+    /// Выдать права на папку
+    /// </summary>
+    /// <param name="dto"></param>
+    /// <returns></returns>
+    private async Task<OperationResult> GrantAccessRightsToFolderAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
+        => await ExecuteSimpleActionAsync(StringConstants.Docflow, StringConstants.GrantAccessRightsToFolderAction, dto, isCancelled);
+        
+    /// <summary>
+    /// Стартовать задачу
+    /// </summary>
+    /// <param name="dto"></param>
+    /// <returns></returns>
+    private async Task<OperationResult> StartTaskAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
+        => await ExecuteSimpleActionAsync(StringConstants.Docflow, StringConstants.StartTaskAction, dto, isCancelled);
+
+    /// <summary>
+    /// Выдать права на документ
+    /// </summary>
+    /// <param name="dto"></param>
+    /// <returns></returns>
+    private async Task<OperationResult> GrantAccessRightsToDocumentAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
+        => await ExecuteSimpleActionAsync(StringConstants.Docflow, StringConstants.GrantAccessRightsToDocumentAction, dto, isCancelled);
+
+    /// <summary>
+    /// Добавить документ в папку
+    /// </summary>
+    /// <param name="dto"></param>
+    /// <returns></returns>
+    private async Task<OperationResult> AddDocumentToFolderAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
+        => await ExecuteSimpleActionAsync(StringConstants.Docflow, StringConstants.AddDocumentToFolderAction, dto, isCancelled);
+
+    /// <summary>
+    /// Выполнить задание
+    /// </summary>
+    /// <param name="dto"></param>
+    /// <returns></returns>
+    private async Task<OperationResult> CompleteAssignmentAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
+        => await ExecuteSimpleActionAsync(StringConstants.Docflow, StringConstants.CompleteAssignmentAction, dto, isCancelled);
+
+    /// <summary>
+    /// Создать версию из шаблона.
+    /// </summary>
+    /// <param name="dto"></param>
+    /// <returns></returns>
+    private async Task<OperationResult> CreateVersionFromTemplateAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
+        => await ExecuteSimpleActionAsync(StringConstants.Docflow, StringConstants.CreateVersionFromTemplateAction, dto, isCancelled);
+
+    /// <summary>
+    /// Создать связь между документами.
+    /// </summary>
+    /// <param name="dto"></param>
+    /// <returns></returns>
+    private async Task<OperationResult> AddRelationsAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
+        => await ExecuteSimpleActionAsync(StringConstants.Docflow, StringConstants.AddRelationsAction, dto, isCancelled);
+
+    /// <summary>
+    /// Создать папку в родительской папке.
+    /// </summary>
+    /// <param name="dto"></param>
+    /// <param name="isCancelled"></param>
+    /// <returns></returns>
+    private async Task<OperationResult> CreateChildFolderAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
+        => await ExecuteSimpleActionAsync(StringConstants.Docflow, StringConstants.CreateChildFolderAction, dto, isCancelled);
+
+    /// <summary>
+    /// Добавить папку в родительскую папку.
+    /// </summary>
+    /// <param name="dto"></param>
+    /// <returns></returns>
+    private async Task<OperationResult> AddChildFolderAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
+        => await ExecuteSimpleActionAsync(StringConstants.Docflow, StringConstants.AddChildFolderAction, dto, isCancelled);
 
     #region Служебные приватные методы
+
+    /// <summary>
+    /// Фильтрует служебные поля из сущности
+    /// </summary>
+    private static IDictionary<string, object> FilterServiceFields(IDictionary<string, object> entity)
+    {
+        return entity
+            .Where(p => p.Key != StringConstants.PathPropertyName
+                && p.Key != StringConstants.MainIdPropertyName
+                && p.Key != StringConstants.IdPropertyName)
+            .ToDictionary(p => p.Key, p => p.Value);
+    }
+
+    /// <summary>
+    /// Получает значение поля из EntityDto по имени служебного свойства
+    /// </summary>
+    private static long GetFieldValueFromEntityDto(ProcessedEntityDto dto, string fieldName)
+    {
+        var fieldKey = dto.ColumnMapping
+            .Where(kvp => kvp.Value is StructuralFieldDto sf && sf.Name == fieldName)
+            .Select(kvp => kvp.Key)
+            .SingleOrDefault();
+
+        long value = 0;
+
+        if (fieldKey != null && dto.Row.TryGetValue(fieldKey, out var raw) && !string.IsNullOrWhiteSpace(raw))
+        {
+            value = Convert.ToInt64(raw!.ToString()!.Trim());
+        }
+
+        return value;
+    }
 
     /// <summary>
     /// Создать тело документа
@@ -542,7 +555,7 @@ public class EntityService
     /// <param name="filePath"></param>
     /// <param name="ForceUpdateBody"></param>
     /// <returns></returns>
-    private async Task<IDictionary<string, object>> FindEdocAndSetBodyAsync(long eDocId, string filePath, Func<bool> isCancelled, bool ForceUpdateBody = false)
+    private async Task<IDictionary<string, object>?> FindEdocAndSetBodyAsync(long eDocId, string filePath, Func<bool> isCancelled, bool ForceUpdateBody = false)
     {
         if (isCancelled())
         {
@@ -683,73 +696,6 @@ public class EntityService
         }
 
         return filePath;
-    }
-
-    /// <summary>
-    /// Получает id главной сущности из EntityDto
-    /// </summary>
-    /// <param name="dto">Построенная сущность</param>
-    /// <returns>идентификатор главной сущности</returns>
-    private static long GetMainIdFromEntityDto(ProcessedEntityDto dto)
-    {
-        var mainIdKey = dto.ColumnMapping
-            .Where(kvp => kvp.Value is StructuralFieldDto sf && sf.Name == StringConstants.MainIdPropertyName)
-            .Select(kvp => kvp.Key)
-            .SingleOrDefault();
-
-        long mainId = 0;
-
-        if (mainIdKey != null && dto.Row.TryGetValue(mainIdKey, out var raw) && !string.IsNullOrWhiteSpace(raw))
-        {
-            mainId = Convert.ToInt64(raw!.ToString()!.Trim());
-        }
-
-        return mainId;
-    }
-
-    /// <summary>
-    /// Получает id главной сущности из EntityDto
-    /// </summary>
-    /// <param name="dto">Построенная сущность</param>
-    /// <returns>идентификатор главной сущности</returns>
-    private static long GetChildIdFromEntityDto(ProcessedEntityDto dto)
-    {
-        var childIdKey = dto.ColumnMapping
-            .Where(kvp => kvp.Value is StructuralFieldDto sf && sf.Name == StringConstants.IdPropertyName)
-            .Select(kvp => kvp.Key)
-            .SingleOrDefault();
-
-        long idKey = 0;
-
-        if (childIdKey != null && dto.Row.TryGetValue(childIdKey, out var raw) && !string.IsNullOrWhiteSpace(raw))
-        {
-            idKey = Convert.ToInt64(raw!.ToString()!.Trim());
-        }
-
-        return idKey;
-    }
-
-
-    /// <summary>
-    /// Получает id сущности из EntityDto
-    /// </summary>
-    /// <param name="dto">Построенная сущность</param>
-    /// <returns>идентификатор сущности</returns>
-    private static long GetIdFromEntityDto(ProcessedEntityDto dto)
-    {
-        var idKey = dto.ColumnMapping
-            .Where(kvp => kvp.Value is StructuralFieldDto sf && sf.Name == StringConstants.MainIdPropertyName)
-            .Select(kvp => kvp.Key)
-            .SingleOrDefault();
-
-        long id = 0;
-
-        if (idKey != null && dto.Row.TryGetValue(idKey, out var raw) && !string.IsNullOrWhiteSpace(raw))
-        {
-            id = Convert.ToInt64(raw!.ToString()!.Trim());
-        }
-
-        return id;
     }
 
     #endregion

@@ -73,6 +73,30 @@ public enum OdataOperation
     [Display(Name = "Выполнить задание")]
     CompleteAssignment = 11,
 
+    /// <summary>
+    /// Добавление связей
+    /// </summary>
+    [Display(Name = "Добавление связей")]
+    AddRelations = 12,
+
+    /// <summary>
+    /// Создание папки в родительской папке
+    /// </summary>
+    [Display(Name = "Создание папки в родительской папке")]
+    CreateChildFolder = 13,
+
+    /// <summary>
+    /// Добавление папки в родительскую папку
+    /// </summary>
+    [Display(Name = "Добавление папки в родительскую папку")]
+    AddChildFolder = 14,
+
+    /// <summary>
+    /// Создание версии из шаблона
+    /// </summary>
+    [Display(Name = "Создание версии из шаблона")]
+    CreateVersionFromTemplate = 15,
+
 
     #region Пакет разработки ExcelMigrator
 
