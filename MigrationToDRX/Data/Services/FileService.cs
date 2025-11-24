@@ -36,8 +36,10 @@ public class FileService
     /// <summary>
     /// Читает файл даже если он открыт
     /// </summary>
-    public async Task<byte[]> ReadFileEvenIfOpenAsync(string path, CancellationToken cancellationToken = default)
+    public async Task<byte[]> ReadFileEvenIfOpenAsync(string path, CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
+
         using var stream = new FileStream(
             path,
             FileMode.Open,
@@ -52,7 +54,7 @@ public class FileService
 
         while (offset < buffer.Length)
         {
-            int bytesRead = await stream.ReadAsync(buffer.AsMemory(offset, buffer.Length - offset), cancellationToken);
+            int bytesRead = await stream.ReadAsync(buffer.AsMemory(offset, buffer.Length - offset), ct);
             if (bytesRead == 0) break; // конец файла
             offset += bytesRead;
         }

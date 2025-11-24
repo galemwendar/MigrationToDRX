@@ -27,7 +27,7 @@ public class EntityBuilderService
     /// </summary>
     /// <param name="dto"></param>
     /// <returns>Готовая сущность для вставки в OData</returns>
-    public async Task<IDictionary<string, object>> BuildEntityFromRow(ProcessedEntityDto dto, Func<bool> isCancelled)
+    public async Task<IDictionary<string, object>> BuildEntityFromRow(ProcessedEntityDto dto, CancellationToken? ct)
     {
         var buildedEntity = new Dictionary<string, object>();
 
@@ -39,10 +39,7 @@ public class EntityBuilderService
 
         foreach (var (excelColumn, entityField) in dto.ColumnMapping.Where(p => !generatedColumns.Contains(p.Key)|| p.Value != null))
         {
-            if (isCancelled())
-            {
-                throw new OperationCanceledException();
-            }
+            ct?.ThrowIfCancellationRequested();
             
             if (entityField == null || !dto.Row.TryGetValue(excelColumn, out var cellValue) || string.IsNullOrWhiteSpace(cellValue))
                 continue;
@@ -50,11 +47,11 @@ public class EntityBuilderService
             switch (entityField)
             {
                 case StructuralPropertyDto structural:
-                    await HandleStructuralField(structural, cellValue, dto, buildedEntity);
+                    await HandleStructuralField(structural, cellValue, dto, buildedEntity, ct);
                     break;
 
                 case NavigationPropertyDto navigation:
-                    await HandleNavigationProperty(navigation, cellValue, dto, buildedEntity);
+                    await HandleNavigationProperty(navigation, cellValue, dto, buildedEntity, ct);
                     break;
             }
         }
@@ -65,11 +62,22 @@ public class EntityBuilderService
     /// <summary>
     /// Обработка структурного поля
     /// </summary>
-    private async Task HandleStructuralField(StructuralPropertyDto structural, string cellValue, ProcessedEntityDto dto, IDictionary<string, object> buildedEntity)
+    private async Task HandleStructuralField(StructuralPropertyDto structural, 
+        string cellValue, 
+        ProcessedEntityDto dto, 
+        IDictionary<string, object> buildedEntity,
+        CancellationToken? ct)
     {
+        ct?.ThrowIfCancellationRequested();
+
         if (structural.Name == OdataPropertyNames.MainId)
         {
-            await EnsureEntityExists(SearchEntityBy.Id, cellValue, dto.EntitySetName, $"Не найдена сущность для добавление в {dto.EntitySetName} Id {cellValue}");
+            await EnsureEntityExists(SearchEntityBy.Id, 
+                cellValue, 
+                dto.EntitySetName, 
+                $"Не найдена сущность для добавление в {dto.EntitySetName} Id {cellValue}", 
+                ct);
+
             return;
         }
 
@@ -101,8 +109,14 @@ public class EntityBuilderService
     /// <summary>
     /// Обработка свойства-коллекции
     /// </summary>
-    private async Task HandleNavigationProperty(NavigationPropertyDto navigation, string cellValue, ProcessedEntityDto dto, IDictionary<string, object> buildedEntity)
+    private async Task HandleNavigationProperty(NavigationPropertyDto navigation, 
+        string cellValue, 
+        ProcessedEntityDto dto, 
+        IDictionary<string, object> buildedEntity,
+        CancellationToken? ct)
     {
+        ct?.ThrowIfCancellationRequested();
+
         if (navigation.IsCollection || navigation.Type == null || navigation.Name == null)
             return;
 
@@ -114,7 +128,7 @@ public class EntityBuilderService
             throw new Exception($"Не удалось найти сущность по типу {navigation.Type}");
         }
 
-        var relatedEntity = await FindRelatedEntity(dto.SearchCriteria, cellValue, entitySet);
+        var relatedEntity = await FindRelatedEntity(dto.SearchCriteria, cellValue, entitySet, ct);
 
         if (relatedEntity != null && relatedEntity.Any())
             buildedEntity[navigation.Name] = relatedEntity;
@@ -125,9 +139,15 @@ public class EntityBuilderService
     /// <summary>
     /// Проверяет, настроено ли соединение с OData-сервисом.
     /// </summary>
-    private async Task EnsureEntityExists(SearchEntityBy criteria, string value, string entitySet, string errorMessage)
+    private async Task EnsureEntityExists(SearchEntityBy criteria, 
+        string value, 
+        string entitySet, 
+        string errorMessage,
+        CancellationToken? ct)
     {
-        var entity = await FindRelatedEntity(criteria, value, entitySet);
+        ct?.ThrowIfCancellationRequested();
+
+        var entity = await FindRelatedEntity(criteria, value, entitySet, ct);
         if (entity == null)
             throw new Exception(errorMessage);
     }
@@ -157,8 +177,13 @@ public class EntityBuilderService
     /// <summary>
     /// Поиск связанной сущности по значению свойства
     /// </summary>
-    private async Task<IDictionary<string, object>?> FindRelatedEntity(SearchEntityBy searchCriteria, string cellValue, string entitySet)
+    private async Task<IDictionary<string, object>?> FindRelatedEntity(SearchEntityBy searchCriteria, 
+        string cellValue, 
+        string entitySet, 
+        CancellationToken? ct)
     {
+        ct?.ThrowIfCancellationRequested();
+
         Type filterType;
 
         if (searchCriteria == SearchEntityBy.Id)
@@ -173,7 +198,7 @@ public class EntityBuilderService
         // Убираем пробелы и обрабатываем входные данные
         var input = Regex.Replace(cellValue, @"\s+", " ").Trim();
 
-        var relatedEntity = await _odataClientService.GetEntityAsync(entitySet, searchCriteria.ToString(), filterType, input);
+        var relatedEntity = await _odataClientService.GetEntityAsync(entitySet, searchCriteria.ToString(), filterType, input, ct);
         return relatedEntity;
     }
 }

@@ -232,8 +232,14 @@ public class OdataClientService
     /// <param name="propertyName">имя свойства, по которому осуществляется фильтр</param>
     /// <param name="filter">критерий фильтрации</param>
     /// <returns>сущность</returns>
-    public async Task<IDictionary<string, object>> GetEntityAsync(string entitySetName, string propertyName, Type filterType, object filter)
+    public async Task<IDictionary<string, object>> GetEntityAsync(string entitySetName,
+        string propertyName,
+        Type filterType,
+        object filter,
+        CancellationToken? ct)
     {
+        ct?.ThrowIfCancellationRequested();
+
         if (_client == null)
         {
             throw new InvalidOperationException("Odata клиент не инициализирован. Вызовите метод SetConnection");
@@ -265,8 +271,14 @@ public class OdataClientService
     /// <param name="propertyName">Свойство-коллекция</param>
     /// <param name="key">Идентификатор свойства-коллекции</param>
     /// <returns></returns>
-    public async Task<IDictionary<string, object>> GetChildEntityAsync(string entitySetName, long mainKey, string propertyName, long key)
+    public async Task<IDictionary<string, object>> GetChildEntityAsync(string entitySetName,
+        long mainKey,
+        string propertyName,
+        long key,
+        CancellationToken? ct)
     {
+        ct?.ThrowIfCancellationRequested();
+
         if (_client == null)
         {
             throw new InvalidOperationException("Odata клиент не инициализирован. Вызовите метод SetConnection");
@@ -293,8 +305,10 @@ public class OdataClientService
     /// <param name="entitySetName">коллекция сущности</param>
     /// <param name="key">ключ, по которому идет фильтр</param>
     /// <returns>сущность</returns>
-    public async Task<IDictionary<string, object>> GetEntityAsync(string entitySetName, long key)
+    public async Task<IDictionary<string, object>> GetEntityAsync(string entitySetName, long key, CancellationToken? ct)
     {
+        ct?.ThrowIfCancellationRequested();
+
         if (_client == null)
         {
             throw new InvalidOperationException("Odata клиент не инициализирован. Вызовите метод SetConnection");
@@ -319,8 +333,10 @@ public class OdataClientService
     /// </summary>
     /// <param name="eDocId">Идентификатор документа</param>
     /// <returns>Документ</returns>
-    public async Task<IDictionary<string, object>> FindEdocAsync(long eDocId)
+    public async Task<IDictionary<string, object>> FindEdocAsync(long eDocId, CancellationToken? ct)
     {
+        ct?.ThrowIfCancellationRequested();
+
         return await _client!
             .For("IElectronicDocuments")
             .Key(eDocId)
@@ -333,8 +349,10 @@ public class OdataClientService
     /// </summary>
     /// <param name="extension">Расширение приложения</param>
     /// <returns></returns>
-    public async Task<IDictionary<string, object>?> FindAssociatedApplication(string extension)
+    public async Task<IDictionary<string, object>?> FindAssociatedApplication(string extension, CancellationToken? ct)
     {
+        ct?.ThrowIfCancellationRequested();
+
         try
         {
             return await _client!.For("IAssociatedApplications").Filter($@"Extension eq '{extension}'").FindEntryAsync();
@@ -353,8 +371,13 @@ public class OdataClientService
     /// <param name="note">Описание версии</param>
     /// <param name="associatedApp">Приложение, связанное с документом</param>
     /// <returns>Сущность созданной версии документа</returns>
-    public async Task<IDictionary<string, object>?> CreateNewVersion(long eDocId, string note, IDictionary<string, object> associatedApp)
+    public async Task<IDictionary<string, object>?> CreateNewVersion(long eDocId, 
+        string note, 
+        IDictionary<string, object> associatedApp,
+        CancellationToken? ct)
     {
+        ct?.ThrowIfCancellationRequested();
+
         try
         {
             return await _client!.For("IElectronicDocuments")
@@ -378,8 +401,10 @@ public class OdataClientService
     /// <param name="body">Тело документа</param>
     /// <param name="lastVersion">Последняя версия документа</param>
     /// <returns></returns>
-    public async Task FillBodyAsync(long eDocId, byte[] body, IDictionary<string, object> lastVersion)
+    public async Task FillBodyAsync(long eDocId, byte[] body, IDictionary<string, object> lastVersion, CancellationToken? ct)
     {
+        ct?.ThrowIfCancellationRequested();
+
         try
         {
             lastVersion.TryGetValue("Id", out var lastVersionKey);
@@ -411,8 +436,12 @@ public class OdataClientService
     /// <param name="entity">сущность</param>
     /// <param name="entitySet">коллекция сущностей</param>
     /// <returns>новая сущность</returns>
-    public async Task<IDictionary<string, object>?> InsertEntityAsync(IDictionary<string, object> entity, string entitySet)
+    public async Task<IDictionary<string, object>?> InsertEntityAsync(IDictionary<string, object> entity, 
+        string entitySet, 
+        CancellationToken? ct)
     {
+        ct?.ThrowIfCancellationRequested();
+
         if (_client == null)
         {
             throw new InvalidOperationException("Odata клиент не инициализирован. Вызовите метод SetConnection");
@@ -446,8 +475,11 @@ public class OdataClientService
     public async Task<IDictionary<string, object>> InsertChildEntityAsync(IDictionary<string, object> childEntity,
         long mainId,
         string entitySet,
-        string collectionPropertyName)
+        string collectionPropertyName,
+        CancellationToken? ct)
     {
+        ct?.ThrowIfCancellationRequested();
+
         if (_client == null)
         {
             throw new InvalidOperationException("Odata клиент не инициализирован. Вызовите метод SetConnection");
@@ -478,8 +510,13 @@ public class OdataClientService
     /// <param name="id">ключ сущности</param>
     /// <returns>Обновленная сущность</returns>
     /// <exception cref="Exception"></exception>
-    public async Task<IDictionary<string, object>> UpdateEntityAsync(IDictionary<string, object> newEntity, string entityset, long id)
+    public async Task<IDictionary<string, object>> UpdateEntityAsync(IDictionary<string, object> newEntity, 
+        string entityset, 
+        long id,
+        CancellationToken? ct)
     {
+        ct?.ThrowIfCancellationRequested();
+
         if (_client == null)
         {
             throw new InvalidOperationException("Odata клиент не инициализирован. Вызовите метод SetConnection");
@@ -510,8 +547,15 @@ public class OdataClientService
     /// <param name="propertyName">имя свойства - коллекции</param>
     /// <returns></returns>
     /// <exception cref="Exception"></exception>
-    public async Task<IDictionary<string, object>> UpdateChildEntityAsync(IDictionary<string, object> childEntity, string entityset, long id, string propertyName, long childEntityId)
+    public async Task<IDictionary<string, object>> UpdateChildEntityAsync(IDictionary<string, object> childEntity, 
+        string entityset, 
+        long id, 
+        string propertyName, 
+        long childEntityId,
+        CancellationToken? ct)
     {
+        ct?.ThrowIfCancellationRequested();
+
         if (_client == null)
         {
             throw new InvalidOperationException("Odata клиент не инициализирован. Вызовите метод SetConnection");
@@ -531,33 +575,6 @@ public class OdataClientService
             logger.Error(ex);
             return new Dictionary<string, object>();
         }
-    }
-
-    /// <summary>
-    /// Получить список сущностей
-    /// </summary>
-    /// <returns>Список сущностей</returns>
-    public async Task<List<string>> GetEntitiesV2Async()
-    {
-        var metadata = await _client!.GetMetadataAsync<Microsoft.OData.Edm.IEdmModel>();
-        return metadata.SchemaElements
-            .OfType<Microsoft.OData.Edm.IEdmEntityType>()
-            .Select(e => e.Name)
-            .OrderBy(x => x)
-            .ToList();
-    }
-
-    public async Task<IEdmEntityType?> GetEntityType(string? entityName)
-    {
-        if (string.IsNullOrWhiteSpace(entityName))
-        {
-            return null;
-        }
-
-        var metadata = await _client!.GetMetadataAsync<Microsoft.OData.Edm.IEdmModel>();
-        return metadata.SchemaElements
-            .OfType<Microsoft.OData.Edm.IEdmEntityType>()
-            .FirstOrDefault(t => t.Name == entityName);
     }
 
     /// <summary>
@@ -586,8 +603,13 @@ public class OdataClientService
     /// </summary>
     /// <param name="actionName">Имя действия</param>
     /// <param name="parameters">Параметры действия</param>
-    public async Task ExecuteBoundActionAsync(string entitySetName, string actionName, IDictionary<string, object> parameters)
+    public async Task ExecuteBoundActionAsync(string entitySetName, 
+        string actionName, 
+        IDictionary<string, object> parameters, 
+        CancellationToken? ct)
     {
+        ct?.ThrowIfCancellationRequested();
+
         if (_client == null)
         {
             throw new InvalidOperationException("Odata клиент не инициализирован. Вызовите метод SetConnection");
@@ -610,5 +632,4 @@ public class OdataClientService
             throw new Exception(ex.Message, ex);
         }
     }
-
 }
