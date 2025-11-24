@@ -67,7 +67,7 @@ public partial class AdvancedPage : ComponentBase
         if (dto != null)
         {
             var structuralProperties = dto.StructuralProperties
-                .Select(p => new StructuralFieldDto
+                .Select(p => new StructuralPropertyDto
                 {
                     Name = p.Name?.ToString() ?? "",
                     Type = p.Type?.ToString() ?? "Неизвестно",
@@ -148,20 +148,20 @@ public partial class AdvancedPage : ComponentBase
 
     }
 
-    public List<StructuralFieldDto> GetEntityFileds(NavigationPropertyDto navigationProperty)
+    public List<StructuralPropertyDto> GetEntityFileds(NavigationPropertyDto navigationProperty)
     {
         if (navigationProperty == null)
         {
-            return new List<StructuralFieldDto>();
+            return new List<StructuralPropertyDto>();
         }
 
         if (string.IsNullOrWhiteSpace(navigationProperty.Type))
         {
-            return new List<StructuralFieldDto>();
+            return new List<StructuralPropertyDto>();
         }
 
         return OdataClientService!.GetEdmxEntityDtoByType(navigationProperty.Type)!.StructuralProperties
-            .Select(p => new StructuralFieldDto
+            .Select(p => new StructuralPropertyDto
             {
                 Name = p.Name?.ToString() ?? "",
                 Type = p.Type?.ToString() ?? "Неизвестно",

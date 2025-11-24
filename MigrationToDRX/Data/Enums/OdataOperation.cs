@@ -106,5 +106,11 @@ public enum OdataOperation
     [Display(Name = "Импортировать подпись на документ")]
     ImportSignatureToDocument = 100,
 
+    /// <summary>
+    /// Переименовать примечание версии документа.
+    /// </summary>
+    [Display(Name = "Переименовать примечание версии документа")]
+    RenameVersionNote = 101,
+
     #endregion
 }

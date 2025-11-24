@@ -640,6 +640,7 @@ public partial class MainPage
     /// </summary>
     private bool IsExtendedOperation(OdataOperation operation)
     {
-        return operation == OdataOperation.ImportSignatureToDocument;
+        return operation == OdataOperation.ImportSignatureToDocument
+            || operation == OdataOperation.RenameVersionNote;
     }
 }

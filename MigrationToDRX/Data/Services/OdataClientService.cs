@@ -123,7 +123,7 @@ public class OdataClientService
             IsOpen = entityType.IsOpen,
             Keys = keys,
 
-            StructuralProperties = entityType.StructuralProperties().Select(p => new StructuralFieldDto
+            StructuralProperties = entityType.StructuralProperties().Select(p => new StructuralPropertyDto
             {
                 Name = p.Name,
                 Type = p.Type.FullName(),
@@ -162,7 +162,7 @@ public class OdataClientService
             IsAbstract = entityType.IsAbstract,
             IsOpen = entityType.IsOpen,
             Keys = keys,
-            StructuralProperties = entityType.StructuralProperties().Select(p => new StructuralFieldDto
+            StructuralProperties = entityType.StructuralProperties().Select(p => new StructuralPropertyDto
             {
                 Name = p.Name,
                 Type = p.Type.FullName(),

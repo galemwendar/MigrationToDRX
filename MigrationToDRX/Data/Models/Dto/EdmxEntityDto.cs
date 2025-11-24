@@ -46,7 +46,7 @@ public class EdmxEntityDto
     /// <summary>
     /// Коллекция структурных (простых) свойств сущности
     /// </summary>
-    public List<StructuralFieldDto> StructuralProperties { get; set; } = new();
+    public List<StructuralPropertyDto> StructuralProperties { get; set; } = new();
 
     /// <summary>
     /// Коллекция навигационных свойств сущности

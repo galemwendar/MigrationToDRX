@@ -36,9 +36,6 @@ public class EntityService
     /// <summary>
     /// Обработка сценария работы с сущностями
     /// </summary>
-    /// <param name="entity">Сущность для создания\обновления</param>
-    /// <param name="entitySet">Коллекция сущностей</param>
-    /// <param name="scenario">Сценарий работы</param>
     /// <returns>Результат выполнения</returns>
     /// <exception cref="ArgumentException"></exception>
     public async Task<OperationResult> ProceedEntitiesToOdata(ProcessedEntityDto dto, Func<bool> isCancelled)
@@ -61,6 +58,8 @@ public class EntityService
             OdataOperation.AddChildFolder => await AddChildFolderAsync(dto, isCancelled),
             OdataOperation.CreateVersionFromTemplate => await CreateVersionFromTemplateAsync(dto, isCancelled),
             OdataOperation.AddRelations => await AddRelationsAsync(dto, isCancelled),
+            OdataOperation.RenameVersionNote => await RenameVersionNoteAsync(dto, isCancelled),
+            
             _ => throw new ArgumentException("Не удалось обработать сценарий")
         };
     }
@@ -103,7 +102,7 @@ public class EntityService
 
             if (savedEntity != null)
             {
-                var newId = savedEntity.TryGetValue(StringConstants.IdPropertyName, out var id) ? (long)id : 0;
+                var newId = savedEntity.TryGetValue(OdataPropertyNames.Id, out var id) ? (long)id : 0;
 
                 if (newId == 0)
                 {
@@ -133,7 +132,7 @@ public class EntityService
             var entity = await _entityBuilderService.BuildEntityFromRow(dto, isCancelled);
             var entityToSave = FilterServiceFields(entity);
 
-            var entityId = GetFieldValueFromEntityDto(dto, StringConstants.MainIdPropertyName);
+            var entityId = GetFieldValueFromEntityDto(dto, OdataPropertyNames.MainId);
 
             if (entityId == 0)
             {
@@ -192,7 +191,7 @@ public class EntityService
 
             var savedEntity = createResult.Entity;
 
-            if (createResult.Success && savedEntity != null && savedEntity.TryGetValue(StringConstants.IdPropertyName, out var id))
+            if (createResult.Success && savedEntity != null && savedEntity.TryGetValue(OdataPropertyNames.Id, out var id))
             {
                 var eDocId = Convert.ToInt64(id);
 
@@ -227,7 +226,7 @@ public class EntityService
             return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Файл не найден или слишком большой");
         }
         // находим сущность и заполняем тело документа
-        var eDocId = GetFieldValueFromEntityDto(dto, StringConstants.MainIdPropertyName);
+        var eDocId = GetFieldValueFromEntityDto(dto, OdataPropertyNames.MainId);
 
         if(eDocId == 0)
         {
@@ -242,8 +241,6 @@ public class EntityService
     /// <summary>
     /// Создает свойство - коллекцию в Odata
     /// </summary>
-    /// <param name="dto"></param>
-    /// <returns></returns>
     /// <exception cref="ArgumentException"></exception>
     private async Task<OperationResult> AddEntityToCollectionAsync(ProcessedEntityDto dto,  Func<bool> isCancelled)
     {
@@ -257,7 +254,7 @@ public class EntityService
             var entity = await _entityBuilderService.BuildEntityFromRow(dto, isCancelled);
             var entityToSave = FilterServiceFields(entity);
 
-            var mainId = GetFieldValueFromEntityDto(dto, StringConstants.MainIdPropertyName);
+            var mainId = GetFieldValueFromEntityDto(dto, OdataPropertyNames.MainId);
 
             if (mainId == 0)
             {
@@ -268,7 +265,7 @@ public class EntityService
 
             if (savedEntity != null)
             {
-                var newId = savedEntity.TryGetValue(StringConstants.IdPropertyName, out var childId) ? (long)childId : 0;
+                var newId = savedEntity.TryGetValue(OdataPropertyNames.Id, out var childId) ? (long)childId : 0;
 
                 if (newId == 0)
                 {
@@ -298,7 +295,7 @@ public class EntityService
             var entity = await _entityBuilderService.BuildEntityFromRow(dto, isCancelled);
             var entityToSave = FilterServiceFields(entity);
 
-            var mainEntityId = GetFieldValueFromEntityDto(dto, StringConstants.MainIdPropertyName);
+            var mainEntityId = GetFieldValueFromEntityDto(dto, OdataPropertyNames.MainId);
 
             if (mainEntityId == 0)
             {
@@ -307,7 +304,7 @@ public class EntityService
 
             long childEntityId = 0;
 
-            if (entity.TryGetValue(StringConstants.IdPropertyName, out var id2))
+            if (entity.TryGetValue(OdataPropertyNames.Id, out var id2))
             {
                 childEntityId = Convert.ToInt64(id2);
             }
@@ -352,7 +349,7 @@ public class EntityService
         }
 
         var structuralProperties = dto.StructuralProperties
-            .Select(p => new StructuralFieldDto
+            .Select(p => new StructuralPropertyDto
             {
                 Name = p.Name?.ToString() ?? "",
                 Type = p.Type?.ToString() ?? "??????????",
@@ -411,7 +408,6 @@ public class EntityService
     /// <summary>
     /// Импортировать подпись на документ
     /// </summary>
-    /// <param name="dto"></param>
     /// <returns></returns>
     private async Task<OperationResult> ImportSignatureToDocumentAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
     {
@@ -424,78 +420,69 @@ public class EntityService
             var base64Signature = await _fileService.GetFileAsBase64Async(pathToSignature);
 
 
-            parametres.Remove(StringConstants.PathPropertyName);
-            parametres.Add(StringConstants.SignaturePropertyName, base64Signature);
+            parametres.Remove(OdataPropertyNames.Path);
+            parametres.Add(OdataPropertyNames.Signature, base64Signature);
             if (string.IsNullOrWhiteSpace(pathToSignature))
             {
                 throw new ArgumentException("Не указан путь к файлу с подписью");
             }
 
 
-            return await ExecuteActionAsync(StringConstants.ExcelMigrator, StringConstants.ImportSignatureToDocumentAction, parametres);
+            return await ExecuteActionAsync(OdataNameSpaces.ExcelMigrator, OdataActionNames.ImportSignatureToDocumentAction, parametres);
         }
         catch (Exception ex)
         {
             return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
         }
     }
-
-
+    
+    /// <summary>
+    /// Переименовать примечание версии документа.
+    /// </summary>
+    private async Task<OperationResult> RenameVersionNoteAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
+        => await ExecuteSimpleActionAsync(OdataNameSpaces.ExcelMigrator, OdataActionNames.RenameVersionNoteAction, dto, isCancelled);
+    
     /// <summary>
     /// Выдать права на папку
     /// </summary>
-    /// <param name="dto"></param>
-    /// <returns></returns>
     private async Task<OperationResult> GrantAccessRightsToFolderAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
-        => await ExecuteSimpleActionAsync(StringConstants.Docflow, StringConstants.GrantAccessRightsToFolderAction, dto, isCancelled);
+        => await ExecuteSimpleActionAsync(OdataNameSpaces.Docflow, OdataActionNames.GrantAccessRightsToFolderAction, dto, isCancelled);
         
     /// <summary>
     /// Стартовать задачу
     /// </summary>
-    /// <param name="dto"></param>
-    /// <returns></returns>
     private async Task<OperationResult> StartTaskAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
-        => await ExecuteSimpleActionAsync(StringConstants.Docflow, StringConstants.StartTaskAction, dto, isCancelled);
+        => await ExecuteSimpleActionAsync(OdataNameSpaces.Docflow, OdataActionNames.StartTaskAction, dto, isCancelled);
 
     /// <summary>
     /// Выдать права на документ
     /// </summary>
-    /// <param name="dto"></param>
-    /// <returns></returns>
     private async Task<OperationResult> GrantAccessRightsToDocumentAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
-        => await ExecuteSimpleActionAsync(StringConstants.Docflow, StringConstants.GrantAccessRightsToDocumentAction, dto, isCancelled);
+        => await ExecuteSimpleActionAsync(OdataNameSpaces.Docflow, OdataActionNames.GrantAccessRightsToDocumentAction, dto, isCancelled);
 
     /// <summary>
     /// Добавить документ в папку
     /// </summary>
-    /// <param name="dto"></param>
-    /// <returns></returns>
     private async Task<OperationResult> AddDocumentToFolderAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
-        => await ExecuteSimpleActionAsync(StringConstants.Docflow, StringConstants.AddDocumentToFolderAction, dto, isCancelled);
+        => await ExecuteSimpleActionAsync(OdataNameSpaces.Docflow, OdataActionNames.AddDocumentToFolderAction, dto, isCancelled);
 
     /// <summary>
     /// Выполнить задание
     /// </summary>
-    /// <param name="dto"></param>
-    /// <returns></returns>
     private async Task<OperationResult> CompleteAssignmentAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
-        => await ExecuteSimpleActionAsync(StringConstants.Docflow, StringConstants.CompleteAssignmentAction, dto, isCancelled);
+        => await ExecuteSimpleActionAsync(OdataNameSpaces.Docflow, OdataActionNames.CompleteAssignmentAction, dto, isCancelled);
 
     /// <summary>
     /// Создать версию из шаблона.
     /// </summary>
-    /// <param name="dto"></param>
-    /// <returns></returns>
     private async Task<OperationResult> CreateVersionFromTemplateAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
-        => await ExecuteSimpleActionAsync(StringConstants.Docflow, StringConstants.CreateVersionFromTemplateAction, dto, isCancelled);
+        => await ExecuteSimpleActionAsync(OdataNameSpaces.Docflow, OdataActionNames.CreateVersionFromTemplateAction, dto, isCancelled);
 
     /// <summary>
     /// Создать связь между документами.
     /// </summary>
-    /// <param name="dto"></param>
-    /// <returns></returns>
     private async Task<OperationResult> AddRelationsAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
-        => await ExecuteSimpleActionAsync(StringConstants.Docflow, StringConstants.AddRelationsAction, dto, isCancelled);
+        => await ExecuteSimpleActionAsync(OdataNameSpaces.Docflow, OdataActionNames.AddRelationsAction, dto, isCancelled);
 
     /// <summary>
     /// Создать папку в родительской папке.
@@ -504,16 +491,14 @@ public class EntityService
     /// <param name="isCancelled"></param>
     /// <returns></returns>
     private async Task<OperationResult> CreateChildFolderAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
-        => await ExecuteSimpleActionAsync(StringConstants.Docflow, StringConstants.CreateChildFolderAction, dto, isCancelled);
+        => await ExecuteSimpleActionAsync(OdataNameSpaces.Docflow, OdataActionNames.CreateChildFolderAction, dto, isCancelled);
 
     /// <summary>
     /// Добавить папку в родительскую папку.
     /// </summary>
-    /// <param name="dto"></param>
-    /// <returns></returns>
     private async Task<OperationResult> AddChildFolderAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
-        => await ExecuteSimpleActionAsync(StringConstants.Docflow, StringConstants.AddChildFolderAction, dto, isCancelled);
-
+        => await ExecuteSimpleActionAsync(OdataNameSpaces.Docflow, OdataActionNames.AddChildFolderAction, dto, isCancelled);
+    
     #region Служебные приватные методы
 
     /// <summary>
@@ -522,9 +507,9 @@ public class EntityService
     private static IDictionary<string, object> FilterServiceFields(IDictionary<string, object> entity)
     {
         return entity
-            .Where(p => p.Key != StringConstants.PathPropertyName
-                && p.Key != StringConstants.MainIdPropertyName
-                && p.Key != StringConstants.IdPropertyName)
+            .Where(p => p.Key != OdataPropertyNames.Path
+                && p.Key != OdataPropertyNames.MainId
+                && p.Key != OdataPropertyNames.Id)
             .ToDictionary(p => p.Key, p => p.Value);
     }
 
@@ -534,7 +519,7 @@ public class EntityService
     private static long GetFieldValueFromEntityDto(ProcessedEntityDto dto, string fieldName)
     {
         var fieldKey = dto.ColumnMapping
-            .Where(kvp => kvp.Value is StructuralFieldDto sf && sf.Name == fieldName)
+            .Where(kvp => kvp.Value is StructuralPropertyDto sf && sf.Name == fieldName)
             .Select(kvp => kvp.Key)
             .SingleOrDefault();
 
@@ -542,7 +527,7 @@ public class EntityService
 
         if (fieldKey != null && dto.Row.TryGetValue(fieldKey, out var raw) && !string.IsNullOrWhiteSpace(raw))
         {
-            value = Convert.ToInt64(raw!.ToString()!.Trim());
+            value = Convert.ToInt64(raw.Trim());
         }
 
         return value;
@@ -551,10 +536,6 @@ public class EntityService
     /// <summary>
     /// Создать тело документа
     /// </summary>
-    /// <param name="eDocId"></param>
-    /// <param name="filePath"></param>
-    /// <param name="ForceUpdateBody"></param>
-    /// <returns></returns>
     private async Task<IDictionary<string, object>?> FindEdocAndSetBodyAsync(long eDocId, string filePath, Func<bool> isCancelled, bool ForceUpdateBody = false)
     {
         if (isCancelled())
@@ -571,7 +552,7 @@ public class EntityService
 
         var extension = Path.GetExtension(filePath).Replace(".", "");
 
-        eDoc.TryGetValue(StringConstants.IdPropertyName, out var docIdObj);
+        eDoc.TryGetValue(OdataPropertyNames.Id, out var docIdObj);
 
         if (docIdObj == null)
         {
@@ -630,10 +611,10 @@ public class EntityService
         // Не удалять!
         //TODO: Добавить логический оператор для выбра, нужно ли перезатирать текущую версию
 
-        // if (!version.TryGetValue(StringConstants.AssociatedApplication, out var application))
+        // if (!version.TryGetValue(PropertyNames.AssociatedApplication, out var application))
         // { return true; }
 
-        // if (application is IDictionary<string, object> currentApp && currentApp.TryGetValue(StringConstants.Extension, out var currentExtension))
+        // if (application is IDictionary<string, object> currentApp && currentApp.TryGetValue(PropertyNames.Extension, out var currentExtension))
         // { return currentExtension.ToString() != extension; }
 
         // return true;
@@ -648,7 +629,7 @@ public class EntityService
     /// <returns>последняя версия</returns>
     private IDictionary<string, object>? GetLastVersion(string extension, IDictionary<string, object> eDoc)
     {
-        if (eDoc.TryGetValue(StringConstants.Versions, out var versions))
+        if (eDoc.TryGetValue(OdataPropertyNames.Versions, out var versions))
         {
             if (versions == null)
             {
@@ -661,7 +642,7 @@ public class EntityService
                     .Select(version => new
                     {
                         Version = version,
-                        Number = version[StringConstants.Number] as int? ?? 0 // Преобразование "Number" в int
+                        Number = version[OdataPropertyNames.Number] as int? ?? 0 // Преобразование "Number" в int
                     })
                     .OrderByDescending(version => version.Number)
                     .FirstOrDefault();
@@ -684,7 +665,7 @@ public class EntityService
     private static string GetFilePathFromEntityDto(ProcessedEntityDto dto)
     {
         var filePathKey = dto.ColumnMapping
-            .Where(kvp => kvp.Value is StructuralFieldDto sf && sf.Name == StringConstants.PathPropertyName)
+            .Where(kvp => kvp.Value is StructuralPropertyDto sf && sf.Name == OdataPropertyNames.Path)
             .Select(kvp => kvp.Key)
             .SingleOrDefault();
 

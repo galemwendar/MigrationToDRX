@@ -35,7 +35,7 @@ public class EntityBuilderService
 
         generatedColumns.AddRange(OdataOperationHelper.GetDisplayNames<Data.Models.Dto.OperationResult>());
         generatedColumns.AddRange(OdataOperationHelper.GetDisplayNames<Data.Models.Dto.ValidationResult>());
-        generatedColumns.Remove(StringConstants.IdColumnResult);
+        generatedColumns.Remove(SystemConstants.IdColumnResult);
 
         foreach (var (excelColumn, entityField) in dto.ColumnMapping.Where(p => !generatedColumns.Contains(p.Key)|| p.Value != null))
         {
@@ -49,7 +49,7 @@ public class EntityBuilderService
 
             switch (entityField)
             {
-                case StructuralFieldDto structural:
+                case StructuralPropertyDto structural:
                     await HandleStructuralField(structural, cellValue, dto, buildedEntity);
                     break;
 
@@ -65,15 +65,15 @@ public class EntityBuilderService
     /// <summary>
     /// Обработка структурного поля
     /// </summary>
-    private async Task HandleStructuralField(StructuralFieldDto structural, string cellValue, ProcessedEntityDto dto, IDictionary<string, object> buildedEntity)
+    private async Task HandleStructuralField(StructuralPropertyDto structural, string cellValue, ProcessedEntityDto dto, IDictionary<string, object> buildedEntity)
     {
-        if (structural.Name == StringConstants.MainIdPropertyName)
+        if (structural.Name == OdataPropertyNames.MainId)
         {
             await EnsureEntityExists(SearchEntityBy.Id, cellValue, dto.EntitySetName, $"Не найдена сущность для добавление в {dto.EntitySetName} Id {cellValue}");
             return;
         }
 
-        if (structural.Name == StringConstants.AccessRightTypeGuidPropertyName)
+        if (structural.Name == OdataPropertyNames.AccessRightTypeGuid)
         {
             var access = AccessRight.Find(cellValue);
 
@@ -87,7 +87,7 @@ public class EntityBuilderService
             return;
         }
 
-        if (structural.Name == StringConstants.PathPropertyName)
+        if (structural.Name == OdataPropertyNames.Path)
         {
             HandleFilePath(cellValue, structural.Name, buildedEntity);
 

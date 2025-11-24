@@ -13,204 +13,29 @@ namespace MigrationToDRX.Data.Helpers;
 public static class OdataOperationHelper
 {
     /// <summary>
-    /// Фейковое структурное поле MainId
-    /// </summary>
-    /// <remarks>Является ключом для поиска сущности при обновлении 
-    /// или поиска свойства - коллекции
-    /// </remarks>
-    public static readonly StructuralFieldDto MainIdProperty = new()
-    {
-        Name = StringConstants.MainIdPropertyName,
-        Type = "Edm.Int64",
-        Nullable = false
-    };
-
-    /// <summary>
-    /// Фейковое структурное поле Путь до файла
-    /// </summary>
-    /// <remarks>Является ключом для поиска файла на машине клиента
-    ///  при добавлении или обновлении версии документа
-    /// </remarks>
-    public static readonly StructuralFieldDto PathProperty = new()
-    {
-        Name = StringConstants.PathPropertyName,
-        Type = "Edm.String",
-        Nullable = false
-    };
-
-    /// <summary>
-    /// Фейковое структурное поле accessRightsTypeGuid
-    /// </summary>
-    public static readonly StructuralFieldDto AccessRightTypeGuidProperty = new()
-    {
-        Name = StringConstants.AccessRightTypeGuidPropertyName,
-        Type = "Edm.String",
-        Nullable = false
-    };
-
-    /// <summary>
-    /// Фейковое структурное поле documentId
-    /// </summary>
-    public static readonly StructuralFieldDto DocumentIdProperty = new()
-    {
-        Name = StringConstants.DocumentIdPropertyName,
-        Type = "Edm.Int64",
-        Nullable = false
-    };
-
-    /// <summary>
-    /// Фейковое структурное поле folderId
-    /// </summary>
-    public static readonly StructuralFieldDto FolderIdProperty = new()
-    {
-        Name = StringConstants.FolderIdPropertyName,
-        Type = "Edm.Int64",
-        Nullable = false
-    };
-
-    /// <summary>
-    /// Фейковое структурное поле recipientId
-    /// </summary>
-    public static readonly StructuralFieldDto RecipientIdProperty = new()
-    {
-        Name = StringConstants.RecipientIdPropertyName,
-        Type = "Edm.Int64",
-        Nullable = false
-    };
-
-    /// <summary>
-    /// Фейковое структурное поле taskId
-    /// </summary>
-    public static readonly StructuralFieldDto TaskIdProperty = new()
-    {
-        Name = StringConstants.TaskIdPropertyName,
-        Type = "Edm.Int64",
-        Nullable = false
-    };
-
-    /// <summary>
-    /// Фейковое структурное поле assignmentId
-    /// </summary>
-    public static readonly StructuralFieldDto AssignmentIdProperty = new()
-    {
-        Name = StringConstants.AssignmentIdPropertyName,
-        Type = "Edm.Int64",
-        Nullable = false
-    };
-
-    /// <summary>
-    /// Фейковое структурное поле assignmentResult
-    /// </summary>
-    public static readonly StructuralFieldDto ResultProperty = new()
-    {
-        Name = StringConstants.ResultPropertyName,
-        Type = "Edm.String",
-        Nullable = false
-    };
-
-    /// <summary>
-    /// Фейковое структурное поле signatureBase64
-    /// </summary>
-    public static readonly StructuralFieldDto SignatureProperty = new()
-    {
-        Name = StringConstants.SignaturePropertyName,
-        Type = "Edm.String",
-        Nullable = false
-    };
-
-    /// <summary>
-    /// Фейковое структурное поле type
-    /// </summary>
-    public static readonly StructuralFieldDto TypeProperty = new()
-    {
-        Name = StringConstants.TypePropertyName,
-        Type = "Edm.Int32",
-        Nullable = false
-    };
-
-    /// <summary> 
-    /// Фейковое структурное поле templateId
-    /// </summary>
-    public static readonly StructuralFieldDto TemplateIdProperty = new()
-    {
-        Name = StringConstants.TemplateIdPropertyName,
-        Type = "Edm.Int64",
-        Nullable = false
-    };
-
-    /// <summary> 
-    /// Фейковое структурное поле relationName
-    /// </summary>
-    public static readonly StructuralFieldDto RelationNameProperty = new()
-    {
-        Name = StringConstants.RelationNamePropertyName,
-        Type = "Edm.String",
-        Nullable = false
-    };
-
-    /// <summary> 
-    /// Фейковое структурное поле baseDocumentId
-    /// </summary>
-    public static readonly StructuralFieldDto BaseDocumentIdProperty = new()
-    {
-        Name = StringConstants.BaseDocumentIdPropertyName,
-        Type = "Edm.Int64",
-        Nullable = false
-    };
-
-    /// <summary> 
-    /// Фейковое структурное поле folderName
-    /// </summary>
-    public static readonly StructuralFieldDto FolderNameProperty = new()
-    {
-        Name = StringConstants.FolderNamePropertyName,
-        Type = "Edm.String",
-        Nullable = false
-    };
-
-    /// <summary> 
-    /// Фейковое структурное поле parentFolderId
-    /// </summary>
-    public static readonly StructuralFieldDto ParentFolderIdProperty = new()
-    {
-        Name = StringConstants.ParentFolderIdPropertyName,
-        Type = "Edm.Int64",
-        Nullable = false
-    };
-
-    /// <summary> 
-    /// Фейковое структурное поле relationDocumentId
-    /// </summary>
-    public static readonly StructuralFieldDto RelationDocumentIdProperty = new()
-    {
-        Name = StringConstants.RelationDocumentIdPropertyName,
-        Type = "Edm.Int64",
-        Nullable = false
-    };
-    
-
-    /// <summary>
     /// Список служебных полей
     /// </summary>
-    private static readonly HashSet<StructuralFieldDto> ServiceFields = new()
+    private static readonly HashSet<StructuralPropertyDto> ServiceFields = new()
     {
-        MainIdProperty,
-        PathProperty,
-        AccessRightTypeGuidProperty,
-        DocumentIdProperty,
-        FolderIdProperty,
-        RecipientIdProperty,
-        TaskIdProperty,
-        AssignmentIdProperty,
-        ResultProperty,
-        SignatureProperty,
-        TypeProperty,
-        TemplateIdProperty,
-        RelationNameProperty,
-        BaseDocumentIdProperty,
-        FolderNameProperty,
-        ParentFolderIdProperty,
-        RelationDocumentIdProperty
+        StructuralProperies.MainId,
+        StructuralProperies.Path,
+        StructuralProperies.AccessRightTypeGuid,
+        StructuralProperies.DocumentId,
+        StructuralProperies.FolderId,
+        StructuralProperies.RecipientId,
+        StructuralProperies.TaskId,
+        StructuralProperies.AssignmentId,
+        StructuralProperies.Result,
+        StructuralProperies.Signature,
+        StructuralProperies.Type,
+        StructuralProperies.TemplateId,
+        StructuralProperies.RelationName,
+        StructuralProperies.BaseDocumentId,
+        StructuralProperies.FolderName,
+        StructuralProperies.ParentFolderId,
+        StructuralProperies.RelationDocumentId,
+        StructuralProperies.NoteVersion,
+        StructuralProperies.NumberVersionId,
     };
 
     /// <summary>
@@ -328,73 +153,79 @@ public static class OdataOperationHelper
                 break;
 
             case OdataOperation.UpdateEntity:
-                properties.AddFirst(MainIdProperty);
+                properties.AddFirst(StructuralProperies.MainId);
                 break;
 
             case OdataOperation.CreateDocumentWithVersion:
-                properties.AddFirst(PathProperty);
+                properties.AddFirst(StructuralProperies.Path);
                 break;
 
             case OdataOperation.AddVersionToExistedDocument:
-                properties.AddFirstRange(new[] { MainIdProperty, PathProperty });
+                properties.AddFirstRange(new[] { StructuralProperies.MainId, StructuralProperies.Path });
                 break;
 
             case OdataOperation.AddEntityToCollection:
             case OdataOperation.UpdateEntityInCollection:
-                properties.AddFirst(MainIdProperty);
+                properties.AddFirst(StructuralProperies.MainId);
                 break;
 
             case OdataOperation.GrantAccessRightsToDocument:
-                properties.AddFirst(AccessRightTypeGuidProperty);
-                properties.AddFirst(DocumentIdProperty);
-                properties.AddFirst(RecipientIdProperty);
+                properties.AddFirst(StructuralProperies.AccessRightTypeGuid);
+                properties.AddFirst(StructuralProperies.DocumentId);
+                properties.AddFirst(StructuralProperies.RecipientId);
                 break;
 
             case OdataOperation.GrantAccessRightsToFolder:
-                properties.AddFirst(AccessRightTypeGuidProperty);
-                properties.AddFirst(FolderIdProperty);
-                properties.AddFirst(RecipientIdProperty);
-                break; 
+                properties.AddFirst(StructuralProperies.AccessRightTypeGuid);
+                properties.AddFirst(StructuralProperies.FolderId);
+                properties.AddFirst(StructuralProperies.RecipientId);
+                break;
 
             case OdataOperation.AddDocumentToFolder:
-                properties.AddFirst(DocumentIdProperty);
-                properties.AddFirst(FolderIdProperty);
+                properties.AddFirst(StructuralProperies.DocumentId);
+                properties.AddFirst(StructuralProperies.FolderId);
                 break;
 
             case OdataOperation.StartTask:
-                properties.AddFirst(TaskIdProperty);
+                properties.AddFirst(StructuralProperies.TaskId);
                 break;
 
             case OdataOperation.CompleteAssignment:
-                properties.AddFirst(AssignmentIdProperty);
-                properties.AddFirst(ResultProperty);
+                properties.AddFirst(StructuralProperies.AssignmentId);
+                properties.AddFirst(StructuralProperies.Result);
                 break;
 
             case OdataOperation.ImportSignatureToDocument:
-                properties.AddFirst(DocumentIdProperty);
-                properties.AddFirst(PathProperty);
-                properties.AddFirst(TypeProperty);
+                properties.AddFirst(StructuralProperies.DocumentId);
+                properties.AddFirst(StructuralProperies.Path);
+                properties.AddFirst(StructuralProperies.Type);
                 break;
 
             case OdataOperation.CreateChildFolder:
-                properties.AddFirst(FolderNameProperty);
-                properties.AddFirst(ParentFolderIdProperty);
+                properties.AddFirst(StructuralProperies.FolderName);
+                properties.AddFirst(StructuralProperies.ParentFolderId);
                 break;
 
             case OdataOperation.AddChildFolder:
-                properties.AddFirst(FolderIdProperty);
-                properties.AddFirst(ParentFolderIdProperty);
+                properties.AddFirst(StructuralProperies.FolderId);
+                properties.AddFirst(StructuralProperies.ParentFolderId);
                 break;
 
             case OdataOperation.CreateVersionFromTemplate:
-                properties.AddFirst(DocumentIdProperty);
-                properties.AddFirst(TemplateIdProperty);
+                properties.AddFirst(StructuralProperies.DocumentId);
+                properties.AddFirst(StructuralProperies.TemplateId);
                 break;
 
             case OdataOperation.AddRelations:
-                properties.AddFirst(RelationNameProperty);
-                properties.AddFirst(BaseDocumentIdProperty);
-                properties.AddFirst(RelationDocumentIdProperty);
+                properties.AddFirst(StructuralProperies.RelationName);
+                properties.AddFirst(StructuralProperies.BaseDocumentId);
+                properties.AddFirst(StructuralProperies.RelationDocumentId);
+                break;
+            
+            case OdataOperation.RenameVersionNote:
+                properties.AddFirst(StructuralProperies.DocumentId);
+                properties.AddFirst(StructuralProperies.NumberVersionId);
+                properties.AddFirst(StructuralProperies.NoteVersion);
                 break;
 
             default:
@@ -433,7 +264,7 @@ public static class OdataOperationHelper
             .Select(attr => attr!.Name ?? string.Empty)
             .ToList();
     }
-    
+
     /// <summary>
     /// Получает Display(Name) поля или свойства типа T по его имени.
     /// Если атрибута Display нет — возвращает имя поля.
