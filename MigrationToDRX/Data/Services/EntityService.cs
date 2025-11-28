@@ -1,3 +1,4 @@
+using DocumentFormat.OpenXml.Spreadsheet;
 using MigrationToDRX.Data.Constants;
 using MigrationToDRX.Data.Enums;
 using MigrationToDRX.Data.Helpers;
@@ -42,23 +43,25 @@ public class EntityService
     {
         return dto.Operation switch
         {
-            OdataOperation.CreateEntity => await CreateEntityAsync(dto, ct),
-            OdataOperation.UpdateEntity => await UpdateEntityAsync(dto, ct),
-            OdataOperation.CreateDocumentWithVersion => await CreateDocumentWithVersionAsync(dto, ct),
-            OdataOperation.AddVersionToExistedDocument => await AddVersionToExistedDocumentAsync(dto, ct),
-            OdataOperation.AddEntityToCollection => await AddEntityToCollectionAsync(dto, ct),
-            OdataOperation.UpdateEntityInCollection => await UpdateEntityInCollectionAsync(dto, ct),
-            OdataOperation.GrantAccessRightsToDocument => await GrantAccessRightsToDocumentAsync(dto, ct),
-            OdataOperation.AddDocumentToFolder => await AddDocumentToFolderAsync(dto, ct),
-            OdataOperation.StartTask => await StartTaskAsync(dto, ct),
-            OdataOperation.CompleteAssignment => await CompleteAssignmentAsync(dto, ct),
-            OdataOperation.ImportSignatureToDocument => await ImportSignatureToDocumentAsync(dto, ct),
-            OdataOperation.CreateChildFolder => await CreateChildFolderAsync(dto, ct),
-            OdataOperation.AddChildFolder => await AddChildFolderAsync(dto, ct),
-            OdataOperation.CreateVersionFromTemplate => await CreateVersionFromTemplateAsync(dto, ct),
-            OdataOperation.AddRelations => await AddRelationsAsync(dto, ct),
-            OdataOperation.RenameVersionNote => await RenameVersionNoteAsync(dto, ct),
-            
+            OdataOperation.CreateEntity => await CreateEntityAsync(dto, isCancelled),
+            OdataOperation.UpdateEntity => await UpdateEntityAsync(dto, isCancelled),
+            OdataOperation.CreateDocumentWithVersion => await CreateDocumentWithVersionAsync(dto, isCancelled),
+            OdataOperation.AddVersionToExistedDocument => await AddVersionToExistedDocumentAsync(dto, isCancelled),
+            OdataOperation.AddEntityToCollection => await AddEntityToCollectionAsync(dto, isCancelled),
+            OdataOperation.UpdateEntityInCollection => await UpdateEntityInCollectionAsync(dto, isCancelled),
+            OdataOperation.GrantAccessRightsToDocument => await GrantAccessRightsToDocumentAsync(dto, isCancelled),
+            OdataOperation.GrantAccessRightsToFolder => await GrantAccessRightsToFolderAsync(dto, isCancelled),
+            OdataOperation.AddDocumentToFolder => await AddDocumentToFolderAsync(dto, isCancelled),
+            OdataOperation.StartTask => await StartTaskAsync(dto, isCancelled),
+            OdataOperation.CompleteAssignment => await CompleteAssignmentAsync(dto, isCancelled),
+            OdataOperation.ImportSignatureToDocument => await ImportSignatureToDocumentAsync(dto, isCancelled),
+            OdataOperation.CreateChildFolder => await CreateChildFolderAsync(dto, isCancelled),
+            OdataOperation.AddChildFolder => await AddChildFolderAsync(dto, isCancelled),
+            OdataOperation.CreateVersionFromTemplate => await CreateVersionFromTemplateAsync(dto, isCancelled),
+            OdataOperation.AddRelations => await AddRelationsAsync(dto, isCancelled),
+            OdataOperation.RenameVersionNote => await RenameVersionNoteAsync(dto, isCancelled),
+            OdataOperation.ImportCertificate => await ImportCertificateAsync(dto, isCancelled),
+
             _ => throw new ArgumentException("Не удалось обработать сценарий")
         };
     }
@@ -449,14 +452,75 @@ public class EntityService
             }
 
 
-            return await ExecuteActionAsync(OdataNameSpaces.ExcelMigrator, OdataActionNames.ImportSignatureToDocumentAction, parametres, ct);
+            return await ExecuteActionAsync(OdataNameSpaces.ExcelMigrator, OdataActionNames.ImportSignatureToDocumentAction, parametres);
         }
         catch (Exception ex)
         {
             return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
         }
     }
-    
+
+    /// <summary>
+    /// Импортировать сертификат пользователя
+    /// </summary>
+    /// <returns></returns>
+    private async Task<OperationResult> ImportCertificateAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
+    {
+        try
+        {
+            var parametres = await _entityBuilderService.BuildEntityFromRow(dto, isCancelled);
+
+            var pathToCertificate = GetFilePathFromEntityDto(dto);
+
+            var base64Certificate = await _fileService.GetFileAsBase64Async(pathToCertificate);
+
+
+            parametres.Remove(OdataPropertyNames.Path);
+            parametres.Add(OdataPropertyNames.Certificate, base64Certificate);
+            if (string.IsNullOrWhiteSpace(pathToCertificate))
+            {
+                throw new ArgumentException("Не указан путь к файлу сертификата");
+            }
+
+            return await ExecuteActionAsync(OdataNameSpaces.ExcelMigrator, OdataActionNames.ImportCertificateAction, parametres);
+        }
+        catch (Exception ex)
+        {
+            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
+        }
+    }
+
+
+    /// <summary>
+    /// Импортировать сертификат пользователя
+    /// </summary>
+    /// <returns></returns>
+    private async Task<OperationResult> ImportCertificateAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
+    {
+        try
+        {
+            var parametres = await _entityBuilderService.BuildEntityFromRow(dto, isCancelled);
+
+            var pathToCertificate = GetFilePathFromEntityDto(dto);
+
+            var base64Certificate = await _fileService.GetFileAsBase64Async(pathToCertificate);
+
+
+            parametres.Remove(OdataPropertyNames.Path);
+            parametres.Add(OdataPropertyNames.Certificate, base64Certificate);
+            if (string.IsNullOrWhiteSpace(pathToCertificate))
+            {
+                throw new ArgumentException("Не указан путь к файлу сертификата");
+            }
+
+            return await ExecuteActionAsync(OdataNameSpaces.ExcelMigrator, OdataActionNames.ImportCertificateAction, parametres);
+        }
+        catch (Exception ex)
+        {
+            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
+        }
+    }
+
     /// <summary>
     /// Переименовать примечание версии документа.
     /// </summary>

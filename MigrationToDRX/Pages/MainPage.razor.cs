@@ -651,6 +651,7 @@ public partial class MainPage
     private bool IsExtendedOperation(OdataOperation operation)
     {
         return operation == OdataOperation.ImportSignatureToDocument
-            || operation == OdataOperation.RenameVersionNote;
+            || operation == OdataOperation.RenameVersionNote
+            || operation == OdataOperation.ImportCertificate;
     }
 }

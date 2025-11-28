@@ -112,5 +112,11 @@ public enum OdataOperation
     [Display(Name = "Переименовать примечание версии документа")]
     RenameVersionNote = 101,
 
+    /// <summary>
+    /// Импортировать сертификат пользователя.
+    /// </summary>
+    [Display(Name = "Импортировать сертификат пользователя")]
+    ImportCertificate = 102,
+
     #endregion
 }
