@@ -27,7 +27,7 @@ public class EntityBuilderService
     /// </summary>
     /// <param name="dto"></param>
     /// <returns>Готовая сущность для вставки в OData</returns>
-    public async Task<IDictionary<string, object>> BuildEntityFromRow(ProcessedEntityDto dto, CancellationToken? ct)
+    public async Task<IDictionary<string, object>> BuildEntityFromRow(ProcessedEntityDto dto, CancellationToken ct)
     {
         var buildedEntity = new Dictionary<string, object>();
 
@@ -39,7 +39,7 @@ public class EntityBuilderService
 
         foreach (var (excelColumn, entityField) in dto.ColumnMapping.Where(p => !generatedColumns.Contains(p.Key)|| p.Value != null))
         {
-            ct?.ThrowIfCancellationRequested();
+            ct.ThrowIfCancellationRequested();
             
             if (entityField == null || !dto.Row.TryGetValue(excelColumn, out var cellValue) || string.IsNullOrWhiteSpace(cellValue))
                 continue;
@@ -66,9 +66,9 @@ public class EntityBuilderService
         string cellValue, 
         ProcessedEntityDto dto, 
         IDictionary<string, object> buildedEntity,
-        CancellationToken? ct)
+        CancellationToken ct)
     {
-        ct?.ThrowIfCancellationRequested();
+        ct.ThrowIfCancellationRequested();
 
         if (structural.Name == OdataPropertyNames.MainId)
         {
@@ -113,9 +113,9 @@ public class EntityBuilderService
         string cellValue, 
         ProcessedEntityDto dto, 
         IDictionary<string, object> buildedEntity,
-        CancellationToken? ct)
+        CancellationToken ct)
     {
-        ct?.ThrowIfCancellationRequested();
+        ct.ThrowIfCancellationRequested();
 
         if (navigation.IsCollection || navigation.Type == null || navigation.Name == null)
             return;
@@ -143,9 +143,9 @@ public class EntityBuilderService
         string value, 
         string entitySet, 
         string errorMessage,
-        CancellationToken? ct)
+        CancellationToken ct)
     {
-        ct?.ThrowIfCancellationRequested();
+        ct.ThrowIfCancellationRequested();
 
         var entity = await FindRelatedEntity(criteria, value, entitySet, ct);
         if (entity == null)
@@ -180,9 +180,9 @@ public class EntityBuilderService
     private async Task<IDictionary<string, object>?> FindRelatedEntity(SearchEntityBy searchCriteria, 
         string cellValue, 
         string entitySet, 
-        CancellationToken? ct)
+        CancellationToken ct)
     {
-        ct?.ThrowIfCancellationRequested();
+        ct.ThrowIfCancellationRequested();
 
         Type filterType;
 

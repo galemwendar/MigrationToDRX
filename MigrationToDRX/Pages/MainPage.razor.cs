@@ -395,6 +395,8 @@ public partial class MainPage
 
         for (int i = StartFrom - 1; i < maxRowsCount; i++)
         {
+            // Даем UI обработать события (в т.ч. нажатие Отмена)
+            await Task.Delay(1, ct);
             ct.ThrowIfCancellationRequested();
 
             var row = PreviewRows[i];
@@ -417,7 +419,8 @@ public partial class MainPage
             }
             catch (OperationCanceledException)
             {
-                // отменено
+                isProceed = false;
+                break;
             }
             catch (Exception e)
             {
@@ -472,6 +475,9 @@ public partial class MainPage
 
         for (int i = StartFrom - 1; i < maxRowsCount; i++)
         {
+            await Task.Delay(1, ct);
+            ct.ThrowIfCancellationRequested();
+
             var row = PreviewRows[i];
 
             if (string.IsNullOrWhiteSpace(row[resultColumnName]) == false && row[resultColumnName]?.ToString() != "Да")
@@ -532,7 +538,8 @@ public partial class MainPage
             }
             catch (OperationCanceledException)
             {
-                // отменено
+               isProceed = false;
+               break;
             }
             catch (Exception ex)
             {
@@ -602,6 +609,11 @@ public partial class MainPage
     /// </summary>
     private void CancelOperation()
     {
+        // Скрываем прогресс сразу после нажатия отмены
+        isProceed = false;
+        StateHasChanged();
+        
+        // Инициируем отмену выполняемой операции
         cancelRequested?.Cancel();
     }
 
