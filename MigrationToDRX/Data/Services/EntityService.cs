@@ -1,3 +1,4 @@
+using DocumentFormat.OpenXml.Spreadsheet;
 using MigrationToDRX.Data.Constants;
 using MigrationToDRX.Data.Enums;
 using MigrationToDRX.Data.Helpers;
@@ -59,7 +60,8 @@ public class EntityService
             OdataOperation.CreateVersionFromTemplate => await CreateVersionFromTemplateAsync(dto, isCancelled),
             OdataOperation.AddRelations => await AddRelationsAsync(dto, isCancelled),
             OdataOperation.RenameVersionNote => await RenameVersionNoteAsync(dto, isCancelled),
-            
+            OdataOperation.ImportCertificate => await ImportCertificateAsync(dto, isCancelled),
+
             _ => throw new ArgumentException("Не удалось обработать сценарий")
         };
     }
@@ -435,7 +437,37 @@ public class EntityService
             return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
         }
     }
-    
+
+    /// <summary>
+    /// Импортировать сертификат пользователя
+    /// </summary>
+    /// <returns></returns>
+    private async Task<OperationResult> ImportCertificateAsync(ProcessedEntityDto dto, Func<bool> isCancelled)
+    {
+        try
+        {
+            var parametres = await _entityBuilderService.BuildEntityFromRow(dto, isCancelled);
+
+            var pathToCertificate = GetFilePathFromEntityDto(dto);
+
+            var base64Certificate = await _fileService.GetFileAsBase64Async(pathToCertificate);
+
+
+            parametres.Remove(OdataPropertyNames.Path);
+            parametres.Add(OdataPropertyNames.Certificate, base64Certificate);
+            if (string.IsNullOrWhiteSpace(pathToCertificate))
+            {
+                throw new ArgumentException("Не указан путь к файлу сертификата");
+            }
+
+            return await ExecuteActionAsync(OdataNameSpaces.ExcelMigrator, OdataActionNames.ImportCertificateAction, parametres);
+        }
+        catch (Exception ex)
+        {
+            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
+        }
+    }
+
     /// <summary>
     /// Переименовать примечание версии документа.
     /// </summary>
