@@ -193,4 +193,24 @@ public static class StructuralProperies
         Type = "Edm.String",
         Nullable = false
     };
+
+    /// <summary>
+    /// Фейковое структурное поле employeeId
+    /// </summary>
+    public static readonly StructuralPropertyDto EmployeeId = new()
+    {
+        Name = OdataPropertyNames.EmployeeId,
+        Type = "Edm.Int64",
+        Nullable = false
+    };
+
+    /// <summary>
+    /// Фейковое структурное поле certificateBase64
+    /// </summary>
+    public static readonly StructuralPropertyDto Certificate = new()
+    {
+        Name = OdataPropertyNames.Certificate,
+        Type = "Edm.String",
+        Nullable = false
+    };
 }

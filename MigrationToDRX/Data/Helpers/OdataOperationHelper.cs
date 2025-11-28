@@ -36,6 +36,8 @@ public static class OdataOperationHelper
         StructuralProperies.RelationDocumentId,
         StructuralProperies.NoteVersion,
         StructuralProperies.NumberVersionId,
+        StructuralProperies.EmployeeId,
+        StructuralProperies.Certificate,
     };
 
     /// <summary>
@@ -226,6 +228,11 @@ public static class OdataOperationHelper
                 properties.AddFirst(StructuralProperies.DocumentId);
                 properties.AddFirst(StructuralProperies.NumberVersionId);
                 properties.AddFirst(StructuralProperies.NoteVersion);
+                break;
+
+            case OdataOperation.ImportCertificate:
+                properties.AddFirst(StructuralProperies.EmployeeId);
+                properties.AddFirst(StructuralProperies.Path);
                 break;
 
             default:
