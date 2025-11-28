@@ -61,8 +61,7 @@ public class EntityService
             OdataOperation.CreateVersionFromTemplate => await CreateVersionFromTemplateAsync(dto, ct),
             OdataOperation.AddRelations => await AddRelationsAsync(dto, ct),
             OdataOperation.RenameVersionNote => await RenameVersionNoteAsync(dto, ct),
-            OdataOperation.ImportCertificate => await ImportCertificateAsync(dto, ct),
-
+            
             _ => throw new ArgumentException("Не удалось обработать сценарий")
         };
     }
@@ -491,6 +490,8 @@ public class EntityService
         }
     }
 
+
+    
     /// <summary>
     /// Переименовать примечание версии документа.
     /// </summary>
