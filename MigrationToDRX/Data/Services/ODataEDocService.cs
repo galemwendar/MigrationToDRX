@@ -29,8 +29,10 @@ public class ODataEDocService
     /// </summary>
     /// <param name="eDocId">Идентификатор электронного документа</param>
     /// <returns>Коллекция свойств электронного документа</returns>
-    public async Task<IDictionary<string, object>> FindEdocAsync(long eDocId)
+    public async Task<IDictionary<string, object>> FindEdocAsync(long eDocId, CancellationToken? ct)
     {
+        ct?.ThrowIfCancellationRequested();
+
         logger.Trace("FindEdocAsync");
         return await _client
             .For("IElectronicDocuments")
@@ -44,8 +46,10 @@ public class ODataEDocService
     /// </summary>
     /// <param name="extension">Расширение файла</param>
     /// <returns>Коллекция свойств приложения</returns>
-    public async Task<IDictionary<string, object>?> FindAssociatedApplication(string extension)
+    public async Task<IDictionary<string, object>?> FindAssociatedApplication(string extension, CancellationToken? ct)
     {
+        ct?.ThrowIfCancellationRequested();
+
         try
         {
             return await _client.For("IAssociatedApplications").Filter($@"Extension eq '{extension}'").FindEntryAsync();
@@ -60,8 +64,10 @@ public class ODataEDocService
     /// <param name="note">Описание версии</param>
     /// <param name="associatedApp">связанное приложение по расширению файла</param>
     /// <returns>Коллекция свойств версии документа</returns>
-    public async Task<IDictionary<string, object>?> CreateNewVersion(long eDocId, string note, IDictionary<string, object> associatedApp)
+    public async Task<IDictionary<string, object>?> CreateNewVersion(long eDocId, string note, IDictionary<string, object> associatedApp, CancellationToken? ct)
     {
+        ct?.ThrowIfCancellationRequested();
+
         try
         {
             return await _client.For("IElectronicDocuments")
@@ -89,8 +95,10 @@ public class ODataEDocService
     /// <param name="eDocId">идентификатор документа</param>
     /// <param name="body">тело документа</param>
     /// <param name="lastVersion">последняя версия документа</param>
-    public async Task FillBodyAsync(long eDocId, byte[] body, IDictionary<string, object> lastVersion)
+    public async Task FillBodyAsync(long eDocId, byte[] body, IDictionary<string, object> lastVersion, CancellationToken? ct)
     {
+        ct?.ThrowIfCancellationRequested();
+
         try
         {
             lastVersion.TryGetValue("Id", out var lastVersionKey);
@@ -114,6 +122,5 @@ public class ODataEDocService
             logger.Error(ex);
             return;
         }
-
     }
 }

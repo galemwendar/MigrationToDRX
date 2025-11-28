@@ -100,7 +100,7 @@ public partial class MainPage
     /// <summary>
     /// Признак того, что пользователь отменил операцию
     /// </summary>
-    protected bool cancelRequested = false;
+    //protected bool cancelRequested = false;
 
     /// <summary>
     /// Признак того, что операция выполняется
@@ -120,6 +120,8 @@ public partial class MainPage
     /// Имя файла для выгрузки
     /// </summary>
     protected string? FileName { get; set; }
+
+    private CancellationTokenSource? cancelRequested;
 
     /// <summary>
     /// Сервис для работы с OData клиентом
@@ -370,12 +372,17 @@ public partial class MainPage
             return;
         }
 
-        cancelRequested = false;
+        cancelRequested?.Cancel();
+        cancelRequested?.Dispose();
+
+        cancelRequested = new CancellationTokenSource();
+        var ct = cancelRequested.Token;
+
         isProceed = true;
 
-        var validationColumns = OdataOperationHelper.GetDisplayNames<Data.Models.Dto.ValidationResult>();
+        var validationColumns = OdataOperationHelper.GetDisplayNames<ValidationResult>();
         CreateResultColumns(validationColumns);
-        var resultColumnName = OdataOperationHelper.GetDisplayName<Data.Models.Dto.ValidationResult>(nameof(Data.Models.Dto.ValidationResult.Success));
+        var resultColumnName = OdataOperationHelper.GetDisplayName<ValidationResult>(nameof(ValidationResult.Success));
 
         StartFrom = UploadAllRows ? 1 : StartFrom;
         maxRowsCount = UploadAllRows ? PreviewRows.Count : RowsToUpload + StartFrom - 1;
@@ -388,32 +395,32 @@ public partial class MainPage
 
         for (int i = StartFrom - 1; i < maxRowsCount; i++)
         {
-            if (cancelRequested)
-            {
-                break; // досрочный выход
-            }
+            // Даем UI обработать события (в т.ч. нажатие Отмена)
+            await Task.Delay(1, ct);
+            ct.ThrowIfCancellationRequested();
 
-                var row = PreviewRows[i];
-                var dto = new ProcessedEntityDto()
-                {
-                    ColumnMapping = ColumnMappings,
-                    Row = row,
-                    SearchCriteria = SearchCriteria,
-                    EntitySetName = SelectedEntitySet?.Name ?? string.Empty,
-                    ChildEntitySetName = SelectedCollectionProperty?.Name,
-                    IsCollection = SelectedCollectionProperty != null,
-                    Operation = SelectedOperation,
-                };
+            var row = PreviewRows[i];
+            var dto = new ProcessedEntityDto()
+            {
+                ColumnMapping = ColumnMappings,
+                Row = row,
+                SearchCriteria = SearchCriteria,
+                EntitySetName = SelectedEntitySet?.Name ?? string.Empty,
+                ChildEntitySetName = SelectedCollectionProperty?.Name,
+                IsCollection = SelectedCollectionProperty != null,
+                Operation = SelectedOperation,
+            };
 
             try
             {
-                var result = await EntityService.ValidateEntity(dto,() => cancelRequested);
+                var result = await EntityService.ValidateEntity(dto, ct);
                 row[resultColumnName] = result.Success ?? string.Empty;
                 continue;
             }
             catch (OperationCanceledException)
             {
-                // отменено
+                isProceed = false;
+                break;
             }
             catch (Exception e)
             {
@@ -438,30 +445,39 @@ public partial class MainPage
             return;
         }
 
+        cancelRequested?.Cancel();
+        cancelRequested?.Dispose();
+
+        cancelRequested = new CancellationTokenSource();
+        var ct = cancelRequested.Token;
+
         isProceed = true;
 
-        var validationColumns = OdataOperationHelper.GetDisplayNames<Data.Models.Dto.OperationResult>();
+        var validationColumns = OdataOperationHelper.GetDisplayNames<OperationResult>();
 
         CreateResultColumns(validationColumns);
 
-        var resultColumnName = OdataOperationHelper.GetDisplayName<Data.Models.Dto.OperationResult>(nameof(Data.Models.Dto.OperationResult.Success));
-        var timeStampColumnName = OdataOperationHelper.GetDisplayName<Data.Models.Dto.OperationResult>(nameof(Data.Models.Dto.OperationResult.Timestamp));
-        var signColumnName = OdataOperationHelper.GetDisplayName<Data.Models.Dto.OperationResult>(nameof(Data.Models.Dto.OperationResult.Stamp));
-        var operationNameColumnName = OdataOperationHelper.GetDisplayName<Data.Models.Dto.OperationResult>(nameof(Data.Models.Dto.OperationResult.OperationName));
-        var errorsColumnName = OdataOperationHelper.GetDisplayName<Data.Models.Dto.OperationResult>(nameof(Data.Models.Dto.OperationResult.ErrorMessage));
-        var idColumnName = OdataOperationHelper.GetDisplayName<Data.Models.Dto.OperationResult>(nameof(Data.Models.Dto.OperationResult.EntityId));
+        var resultColumnName = OdataOperationHelper.GetDisplayName<OperationResult>(nameof(OperationResult.Success));
+        var timeStampColumnName = OdataOperationHelper.GetDisplayName<OperationResult>(nameof(OperationResult.Timestamp));
+        var signColumnName = OdataOperationHelper.GetDisplayName<OperationResult>(nameof(OperationResult.Stamp));
+        var operationNameColumnName = OdataOperationHelper.GetDisplayName<OperationResult>(nameof(OperationResult.OperationName));
+        var errorsColumnName = OdataOperationHelper.GetDisplayName<OperationResult>(nameof(OperationResult.ErrorMessage));
+        var idColumnName = OdataOperationHelper.GetDisplayName<OperationResult>(nameof(OperationResult.EntityId));
 
         StartFrom = UploadAllRows ? 1 : StartFrom;
         maxRowsCount = UploadAllRows ? PreviewRows.Count : RowsToUpload + StartFrom - 1;
         maxRowsCount = maxRowsCount > PreviewRows.Count ? PreviewRows.Count : maxRowsCount;
 
         progress = 0;
-        
+
         StateHasChanged();
         await Task.Delay(10);
 
         for (int i = StartFrom - 1; i < maxRowsCount; i++)
         {
+            await Task.Delay(1, ct);
+            ct.ThrowIfCancellationRequested();
+
             var row = PreviewRows[i];
 
             if (string.IsNullOrWhiteSpace(row[resultColumnName]) == false && row[resultColumnName]?.ToString() != "Да")
@@ -493,7 +509,7 @@ public partial class MainPage
 
             try
             {
-                var result = await EntityService.ProceedEntitiesToOdata(dto, () => cancelRequested);
+                var result = await EntityService.ProceedEntitiesToOdata(dto, ct);
 
                 if (result == null)
                 {
@@ -509,12 +525,12 @@ public partial class MainPage
                 row[timeStampColumnName] = result.Timestamp.ToLongTimeString();
                 row[signColumnName] = result.Stamp;
                 row[operationNameColumnName] = SelectedOperation.GetDisplayName() ?? string.Empty;
-                
+
                 // Не изменять Идентификатор сущности для операций только со служебными свойствами.
                 if (OdataOperationHelper.RequiresEntityIdInResult(result.OperationName) && result.EntityId != null)
                 {
                     row[idColumnName] = result.EntityId.ToString() ?? string.Empty;
-                }    
+                }
                 // Для очистки предыдущих ошибок
                 row[errorsColumnName] = string.Empty;
 
@@ -522,7 +538,8 @@ public partial class MainPage
             }
             catch (OperationCanceledException)
             {
-                // отменено
+               isProceed = false;
+               break;
             }
             catch (Exception ex)
             {
@@ -592,7 +609,12 @@ public partial class MainPage
     /// </summary>
     private void CancelOperation()
     {
-        cancelRequested = true;
+        // Скрываем прогресс сразу после нажатия отмены
+        isProceed = false;
+        StateHasChanged();
+        
+        // Инициируем отмену выполняемой операции
+        cancelRequested?.Cancel();
     }
 
     /// <summary>
@@ -624,14 +646,14 @@ public partial class MainPage
             OperationItems = Data.Helpers.EnumHelper.GetItems<OdataOperation>()
                 .Where(op => !IsExtendedOperation(op.Value))
                 .ToList();
-            
+
             // Если выбрана расширенная операция - сбрасываем выбор
             if (IsExtendedOperation(SelectedOperation))
             {
                 SelectedOperation = default;
             }
         }
-        
+
         StateHasChanged();
     }
 
