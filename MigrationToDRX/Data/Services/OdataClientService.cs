@@ -603,7 +603,7 @@ public class OdataClientService
     /// </summary>
     /// <param name="actionName">Имя действия</param>
     /// <param name="parameters">Параметры действия</param>
-    public async Task ExecuteBoundActionAsync(string entitySetName, 
+    public async Task<int> ExecuteBoundActionAsync(string entitySetName, 
         string actionName, 
         IDictionary<string, object> parameters, 
         CancellationToken? ct)
@@ -617,7 +617,7 @@ public class OdataClientService
 
         try
         {
-            var result = await _client
+            return await _client
             .For(entitySetName)
             .Action(actionName)
             .Set(parameters)

@@ -403,9 +403,16 @@ public class EntityService
     {
         try
         {
-            await _odataClientService.ExecuteBoundActionAsync(moduleName, actionName, parametres, ct);
+            var entityId = await _odataClientService.ExecuteBoundActionAsync(moduleName, actionName, parametres, ct);
 
-            return new OperationResult(success: true, operationName: actionName);
+            if(entityId == 0)
+            {
+              return new OperationResult(success: true, operationName: actionName);
+            }
+            else
+            {
+              return new OperationResult(success: false, operationName: actionName, entityId: entityId);
+            }
         }
         catch (Exception ex)
         {
