@@ -371,8 +371,8 @@ public class OdataClientService
     /// <param name="note">Описание версии</param>
     /// <param name="associatedApp">Приложение, связанное с документом</param>
     /// <returns>Сущность созданной версии документа</returns>
-    public async Task<IDictionary<string, object>?> CreateNewVersion(long eDocId, 
-        string note, 
+    public async Task<IDictionary<string, object>?> CreateNewVersion(long eDocId,
+        string note,
         IDictionary<string, object> associatedApp,
         CancellationToken? ct)
     {
@@ -436,8 +436,8 @@ public class OdataClientService
     /// <param name="entity">сущность</param>
     /// <param name="entitySet">коллекция сущностей</param>
     /// <returns>новая сущность</returns>
-    public async Task<IDictionary<string, object>?> InsertEntityAsync(IDictionary<string, object> entity, 
-        string entitySet, 
+    public async Task<IDictionary<string, object>?> InsertEntityAsync(IDictionary<string, object> entity,
+        string entitySet,
         CancellationToken? ct)
     {
         ct?.ThrowIfCancellationRequested();
@@ -510,8 +510,8 @@ public class OdataClientService
     /// <param name="id">ключ сущности</param>
     /// <returns>Обновленная сущность</returns>
     /// <exception cref="Exception"></exception>
-    public async Task<IDictionary<string, object>> UpdateEntityAsync(IDictionary<string, object> newEntity, 
-        string entityset, 
+    public async Task<IDictionary<string, object>> UpdateEntityAsync(IDictionary<string, object> newEntity,
+        string entityset,
         long id,
         CancellationToken? ct)
     {
@@ -547,10 +547,10 @@ public class OdataClientService
     /// <param name="propertyName">имя свойства - коллекции</param>
     /// <returns></returns>
     /// <exception cref="Exception"></exception>
-    public async Task<IDictionary<string, object>> UpdateChildEntityAsync(IDictionary<string, object> childEntity, 
-        string entityset, 
-        long id, 
-        string propertyName, 
+    public async Task<IDictionary<string, object>> UpdateChildEntityAsync(IDictionary<string, object> childEntity,
+        string entityset,
+        long id,
+        string propertyName,
         long childEntityId,
         CancellationToken? ct)
     {
@@ -603,12 +603,12 @@ public class OdataClientService
     /// </summary>
     /// <param name="actionName">Имя действия</param>
     /// <param name="parameters">Параметры действия</param>
-    public async Task<int> ExecuteBoundActionAsync(string entitySetName, 
-        string actionName, 
-        IDictionary<string, object> parameters, 
-        CancellationToken? ct)
+    public async Task ExecuteVoidBoundActionAsync(string entitySetName,
+        string actionName,
+        IDictionary<string, object> parameters,
+        CancellationToken ct)
     {
-        ct?.ThrowIfCancellationRequested();
+        ct.ThrowIfCancellationRequested();
 
         if (_client == null)
         {
@@ -617,11 +617,153 @@ public class OdataClientService
 
         try
         {
+            await _client
+            .For(entitySetName)
+            .Action(actionName)
+            .Set(parameters)
+            .ExecuteAsync(ct);
+        }
+        catch (WebRequestException ex)
+        {
+            throw new ArgumentException(ex.Message + ex.Response);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception(ex.Message, ex);
+        }
+    }
+
+    // /// <summary>
+    // /// Выполнить действие на сервере, если действие существует (IsBound = true)
+    // /// </summary>
+    // /// <param name="actionName">Имя действия</param>
+    // /// <param name="parameters">Параметры действия</param>
+    // public async Task<IEnumerable<IDictionary<string, object>>> ExecuteBoundActionAsync(string entitySetName,
+    //     string actionName,
+    //     IDictionary<string, object> parameters,
+    //     CancellationToken? ct)
+    // {
+    //     ct?.ThrowIfCancellationRequested();
+
+    //     if (_client == null)
+    //     {
+    //         throw new InvalidOperationException("Odata клиент не инициализирован. Вызовите метод SetConnection");
+    //     }
+    //     try
+    //     {
+    //         return await _client
+    //         .For(entitySetName)
+    //         .Action(actionName)
+    //         .Set(parameters)
+    //         .ExecuteAsEnumerableAsync();
+    //     }
+    //     catch (WebRequestException ex)
+    //     {
+    //         throw new ArgumentException(ex.Message + ex.Response);
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         throw new Exception(ex.Message, ex);
+    //     }
+    // }
+
+    /// <summary>
+    /// Выполнить действие на сервере, если действие существует (IsBound = true)
+    /// </summary>
+    /// <param name="actionName">Имя действия</param>
+    /// <param name="parameters">Параметры действия</param>
+    /// <typeparam name="T">Тип ответа</typeparam>
+    /// <returns>Результат выполнения операции</returns>
+    public async Task<T> ExecuteBoundActionAsSingleAsync<T>(string entitySetName,
+        string actionName,
+        IDictionary<string, object> parameters,
+        CancellationToken? ct)
+    {
+        ct?.ThrowIfCancellationRequested();
+
+        if (_client == null)
+        {
+            throw new InvalidOperationException("Odata клиент не инициализирован. Вызовите метод SetConnection");
+        }
+        try
+        {
             return await _client
             .For(entitySetName)
             .Action(actionName)
             .Set(parameters)
-            .ExecuteAsScalarAsync<int>();
+            .ExecuteAsSingleAsync<T>();
+        }
+        catch (WebRequestException ex)
+        {
+            throw new ArgumentException(ex.Message + ex.Response);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception(ex.Message, ex);
+        }
+    }
+
+    /// <summary>
+    /// Выполнить действие на сервере, если действие существует (IsBound = true)
+    /// </summary>
+    /// <param name="actionName">Имя действия</param>
+    /// <param name="parameters">Параметры действия</param>
+    /// <typeparam name="T">Тип результата</typeparam>
+    /// <returns>Результат выполнения операции</returns>
+    public async Task<T> ExecuteBoundActionAsScalarAsync<T>(string entitySetName,
+        string actionName,
+        IDictionary<string, object> parameters,
+        CancellationToken? ct)
+    {
+        ct?.ThrowIfCancellationRequested();
+
+        if (_client == null)
+        {
+            throw new InvalidOperationException("Odata клиент не инициализирован. Вызовите метод SetConnection");
+        }
+        try
+        {
+            return await _client
+            .For(entitySetName)
+            .Action(actionName)
+            .Set(parameters)
+            .ExecuteAsScalarAsync<T>();
+        }
+        catch (WebRequestException ex)
+        {
+            throw new ArgumentException(ex.Message + ex.Response);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception(ex.Message, ex);
+        }
+    }
+
+        /// <summary>
+    /// Выполнить действие на сервере, если действие существует (IsBound = true)
+    /// </summary>
+    /// <param name="actionName">Имя действия</param>
+    /// <param name="parameters">Параметры действия</param>
+    /// <typeparam name="T">Тип результата</typeparam>
+    /// <returns>Результат выполнения операции</returns>
+    public async Task<IEnumerable<IDictionary<string, object>>> ExecuteBoundActionAsEnumerableAsync<T>(string entitySetName,
+        string actionName,
+        IDictionary<string, object> parameters,
+        CancellationToken? ct)
+    {
+        ct?.ThrowIfCancellationRequested();
+
+        if (_client == null)
+        {
+            throw new InvalidOperationException("Odata клиент не инициализирован. Вызовите метод SetConnection");
+        }
+        try
+        {
+            return await _client
+            .For(entitySetName)
+            .Action(actionName)
+            .Set(parameters)
+            .ExecuteAsEnumerableAsync();
         }
         catch (WebRequestException ex)
         {

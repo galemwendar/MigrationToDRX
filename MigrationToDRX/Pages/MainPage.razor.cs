@@ -127,28 +127,31 @@ public partial class MainPage
     /// Сервис для работы с OData клиентом
     /// </summary>
     [Inject]
-    private OdataClientService OdataClientService { get; set; } = null!;
+    protected OdataClientService OdataClientService { get; set; } = null!;
+
+    [Inject]
+    protected OperationService OperationService { get; set; } = null!;
 
     /// <summary>
     /// Сервис для работы с уведомлениями
     /// </summary>
     [Inject]
-    private NotificationService NotificationService { get; set; } = null!;
+    protected NotificationService NotificationService { get; set; } = null!;
 
     /// <summary>
     /// Сервис для работы с Excel
     /// </summary>
     [Inject]
-    private ExcelService ExcelService { get; set; } = null!;
+    protected ExcelService ExcelService { get; set; } = null!;
 
     /// <summary>
     /// Сервис для работы с EdmxEntity
     /// </summary>
     [Inject]
-    private EntityService EntityService { get; set; } = null!;
+    protected EntityService EntityService { get; set; } = null!;
 
     [Inject]
-    private IJSRuntime JS { get; set; } = null!;
+    protected IJSRuntime JS { get; set; } = null!;
 
     /// <summary>
     /// Cервис для работы с диалогами
@@ -239,7 +242,7 @@ public partial class MainPage
         if (OdataClientService.GetEdmxEntityDto(SelectedEntitySet.Name) is { } dto)
         {
             // Заполняем поля сущности
-            EntityFields = EntityService.GetEntityFields(dto);
+            EntityFields = EntityHelper.GetEntityFields(dto);
             // Добавляем свойства сущности в зависимости от операции
             OdataOperationHelper.AddPropertiesByOperation(SelectedOperation, EntityFields, ColumnMappings);
             // Заполняем список свойств-коллекций
@@ -264,7 +267,7 @@ public partial class MainPage
         }
 
         var dto = OdataClientService.GetChildEntities(SelectedCollectionProperty);
-        EntityFields = EntityService.GetEntityFields(dto);
+        EntityFields = EntityHelper.GetEntityFields(dto);
         OdataOperationHelper.AddPropertiesByOperation(SelectedOperation, EntityFields, ColumnMappings);
         ClearExcelToFieldsMapping();
 
@@ -509,7 +512,7 @@ public partial class MainPage
 
             try
             {
-                var result = await EntityService.ProceedEntitiesToOdata(dto, ct);
+                var result = await OperationService.ExecuteOperation(dto, ct);
 
                 if (result == null)
                 {
@@ -527,7 +530,7 @@ public partial class MainPage
                 row[operationNameColumnName] = SelectedOperation.GetDisplayName() ?? string.Empty;
 
                 // Не изменять Идентификатор сущности для операций только со служебными свойствами.
-                if (OdataOperationHelper.RequiresEntityIdInResult(result.OperationName) && result.EntityId != null)
+                if (OdataOperationHelper.RequiresEntityIdInResult(dto.Operation) && result.EntityId != null)
                 {
                     row[idColumnName] = result.EntityId.ToString() ?? string.Empty;
                 }
@@ -538,8 +541,8 @@ public partial class MainPage
             }
             catch (OperationCanceledException)
             {
-               isProceed = false;
-               break;
+                isProceed = false;
+                break;
             }
             catch (Exception ex)
             {
@@ -612,7 +615,7 @@ public partial class MainPage
         // Скрываем прогресс сразу после нажатия отмены
         isProceed = false;
         StateHasChanged();
-        
+
         // Инициируем отмену выполняемой операции
         cancelRequested?.Cancel();
     }

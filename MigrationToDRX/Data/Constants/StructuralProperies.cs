@@ -180,6 +180,9 @@ public static class StructuralProperies
         Nullable = false
     };
 
+    /// <summary>
+    /// Фейковое структурное поле numberVersion
+    /// </summary>
     public static readonly StructuralPropertyDto NumberVersionId = new()
     {
         Name = OdataPropertyNames.NumberVersion,
@@ -187,6 +190,9 @@ public static class StructuralProperies
         Nullable = false
     };
 
+    /// <summary>
+    /// Фейковое структурное поле noteVersion
+    /// </summary>
     public static readonly StructuralPropertyDto NoteVersion = new()
     {
         Name = OdataPropertyNames.NoteVersion,
