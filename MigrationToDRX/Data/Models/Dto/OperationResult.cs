@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using MigrationToDRX.Data.Helpers;
 
 namespace MigrationToDRX.Data.Models.Dto;
+
 /// <summary>
 /// Результат выполнения операции
 /// </summary>
@@ -48,7 +49,12 @@ public class OperationResult
     /// </summary>
     public IDictionary<string, object>? Entity { get; set; }
 
-    public OperationResult(bool success, string operationName, long? entityId = null, IDictionary<string, object>? entity = null, string? errorMessage = null)
+    public IEnumerable<IDictionary<string, object>>? Entities { get; set; }
+
+    public OperationResult(bool success, string operationName, long? entityId = null,
+        IDictionary<string, object>? entity = null,
+        IEnumerable<IDictionary<string, object>>? entities = null, 
+        string? errorMessage = null)
     {
         Success = success;
         OperationName = operationName;

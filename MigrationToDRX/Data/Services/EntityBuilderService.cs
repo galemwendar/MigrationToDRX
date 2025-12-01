@@ -75,7 +75,7 @@ public class EntityBuilderService
             await EnsureEntityExists(SearchEntityBy.Id, 
                 cellValue, 
                 dto.EntitySetName, 
-                $"Не найдена сущность для добавление в {dto.EntitySetName} Id {cellValue}", 
+                $"Не найдена сущность для добавления в {dto.EntitySetName} Id {cellValue}", 
                 ct);
 
             return;
