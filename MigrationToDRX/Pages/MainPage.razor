@@ -241,7 +241,7 @@
             <Columns>
                 <RadzenDataGridColumn Width="50px" Title="#" Filterable="false" Sortable="false" TextAlign="TextAlign.Center">
                     <Template Context="data">
-                        @(dataGrid.View.ToList().IndexOf(data) + 1)
+                        @(dataGrid?.View.ToList().IndexOf(data) + 1)
                     </Template>
                 </RadzenDataGridColumn>
 

@@ -43,6 +43,8 @@ try
     builder.Services.AddScoped<ContextMenuService>();
     builder.Services.AddScoped<TooltipService>();
     builder.Services.AddScoped<FileService>();
+    builder.Services.AddScoped<ActionService>();
+    builder.Services.AddScoped<OperationService>();
     System.Console.WriteLine("Adding services...");
     var app = builder.Build();
     System.Console.WriteLine("Building...");

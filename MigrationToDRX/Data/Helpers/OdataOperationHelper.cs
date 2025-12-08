@@ -36,6 +36,8 @@ public static class OdataOperationHelper
         StructuralProperies.RelationDocumentId,
         StructuralProperies.NoteVersion,
         StructuralProperies.NumberVersionId,
+        StructuralProperies.EmployeeId,
+        StructuralProperies.Certificate,
     };
 
     /// <summary>
@@ -48,7 +50,22 @@ public static class OdataOperationHelper
         OdataOperation.AddVersionToExistedDocument,
         OdataOperation.CreateDocumentWithVersion,
         OdataOperation.CreateEntity,
-        OdataOperation.UpdateEntity
+        OdataOperation.UpdateEntity,
+    };
+
+    /// <summary>
+    /// Операции, требующие выбора сущности для поиска
+    /// </summary>
+    public static readonly HashSet<OdataOperation> OperationsRequiringEntityIdInResult = new()
+    {
+        OdataOperation.AddEntityToCollection,
+        OdataOperation.UpdateEntityInCollection,
+        OdataOperation.AddVersionToExistedDocument,
+        OdataOperation.CreateDocumentWithVersion,
+        OdataOperation.CreateEntity,
+        OdataOperation.UpdateEntity,
+        OdataOperation.CreateChildFolder,
+        OdataOperation.ImportCertificate
     };
 
     /// <summary>
@@ -56,9 +73,9 @@ public static class OdataOperationHelper
     /// </summary>
     /// <param name="operationName">Имя операции (Display Name)</param>
     /// <returns>True, если операция требует записи EntityId</returns>
-    public static bool RequiresEntityIdInResult(string operationName)
+    public static bool RequiresEntityIdInResult(OdataOperation operation)
     {
-        return OperationsRequiringEntitySelection.Any(op => op.GetDisplayName() == operationName);
+        return OperationsRequiringEntityIdInResult.Contains(operation);
     }
 
     /// <summary>
@@ -197,6 +214,7 @@ public static class OdataOperationHelper
 
             case OdataOperation.ImportSignatureToDocument:
                 properties.AddFirst(StructuralProperies.DocumentId);
+                properties.AddFirst(StructuralProperies.NumberVersionId);
                 properties.AddFirst(StructuralProperies.Path);
                 properties.AddFirst(StructuralProperies.Type);
                 break;
@@ -226,6 +244,11 @@ public static class OdataOperationHelper
                 properties.AddFirst(StructuralProperies.DocumentId);
                 properties.AddFirst(StructuralProperies.NumberVersionId);
                 properties.AddFirst(StructuralProperies.NoteVersion);
+                break;
+
+            case OdataOperation.ImportCertificate:
+                properties.AddFirst(StructuralProperies.EmployeeId);
+                properties.AddFirst(StructuralProperies.Path);
                 break;
 
             default:

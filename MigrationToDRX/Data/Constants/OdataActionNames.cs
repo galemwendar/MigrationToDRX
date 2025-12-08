@@ -59,4 +59,9 @@ public static class OdataActionNames
     /// Наименование действия для переименования примечания версии документа.
     /// </summary>
     public const string RenameVersionNoteAction = "RenameVersionNote";
+
+    /// <summary>
+    /// Наименование действия для импорта сертификата пользователя в Odata
+    /// </summary>
+    public const string ImportCertificateAction = "ImportCertificate";
 }

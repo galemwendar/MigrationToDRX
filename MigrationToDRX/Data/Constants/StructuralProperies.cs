@@ -180,6 +180,9 @@ public static class StructuralProperies
         Nullable = false
     };
 
+    /// <summary>
+    /// Фейковое структурное поле numberVersion
+    /// </summary>
     public static readonly StructuralPropertyDto NumberVersionId = new()
     {
         Name = OdataPropertyNames.NumberVersion,
@@ -187,9 +190,32 @@ public static class StructuralProperies
         Nullable = false
     };
 
+    /// <summary>
+    /// Фейковое структурное поле noteVersion
+    /// </summary>
     public static readonly StructuralPropertyDto NoteVersion = new()
     {
         Name = OdataPropertyNames.NoteVersion,
+        Type = "Edm.String",
+        Nullable = false
+    };
+
+    /// <summary>
+    /// Фейковое структурное поле employeeId
+    /// </summary>
+    public static readonly StructuralPropertyDto EmployeeId = new()
+    {
+        Name = OdataPropertyNames.EmployeeId,
+        Type = "Edm.Int64",
+        Nullable = false
+    };
+
+    /// <summary>
+    /// Фейковое структурное поле certificateBase64
+    /// </summary>
+    public static readonly StructuralPropertyDto Certificate = new()
+    {
+        Name = OdataPropertyNames.Certificate,
         Type = "Edm.String",
         Nullable = false
     };

@@ -116,4 +116,14 @@ public static class OdataPropertyNames
     /// Строка для поиска свойства "номер версии"
     /// </summary>
     public const string Number = "Number";
+
+    /// <summary>
+    /// Строка для поиска свойства "Ид пользователя"
+    /// </summary>
+    public const string EmployeeId = "employeeId";
+
+    /// <summary>
+    /// Строка для поиска свойства "certificateBase64"
+    /// </summary>
+    public const string Certificate = "certificateBase64";
 }
