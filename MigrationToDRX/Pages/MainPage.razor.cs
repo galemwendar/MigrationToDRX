@@ -11,7 +11,7 @@ using Microsoft.JSInterop;
 using Radzen.Blazor;
 using MigrationToDRX.Data.Services.DbServices;
 using MigrationToDRX.Data.Models.ViewModels;
-
+using MigrationToDRX.Data.Services.Settings;
 namespace MigrationToDRX.Pages;
 
 public partial class MainPage
@@ -204,6 +204,12 @@ public partial class MainPage
     private NavigationManager NavigationManager { get; set; } = null!;
 
     /// <summary>
+    /// Сервис для работы с файлом конфигурации
+    /// </summary>
+    [Inject]
+    private SettingService SettingService { get; set; } = null!;
+
+    /// <summary>
     /// Признак подключения к OData сервису
     /// </summary>
     private bool IsConnected => OdataClientService.IsConnected;
@@ -214,6 +220,16 @@ public partial class MainPage
     /// Включить расширенные операции
     /// </summary>
     protected bool EnableExtendedOperations { get; set; } = false;
+
+    /// <summary>
+    /// Список настроек этапов миграции
+    /// </summary>
+    protected List<SettingStage> SettingStages { get; set; } = new();
+
+    /// <summary>
+    /// Выбранный этап для редактирования
+    /// </summary>
+    protected SettingStage? SelectedStage { get; set; }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -271,6 +287,26 @@ public partial class MainPage
 
         // получаем список полей для поиска навигационных свойств
         SearchEntityByList = Data.Helpers.EnumHelper.GetItems<SearchEntityBy>();
+
+        // загружаем настройки этапов
+        await LoadSettingStages();
+    }
+
+    /// <summary>
+    /// Загрузка настроек этапов миграции
+    /// </summary>
+    private async Task LoadSettingStages()
+    {
+        SettingStages = await SettingService.GetSettingStages();
+
+        // Восстанавливаем IEdmEntitySet для каждого этапа
+        foreach (var stage in SettingStages)
+        {
+            if (!string.IsNullOrEmpty(stage.SelectedEntitySetName))
+            {
+                stage.SelectedEntitySet = EntitySets.FirstOrDefault(e => e.Name == stage.SelectedEntitySetName);
+            }
+        }
     }
 
     /// <summary>
@@ -866,4 +902,178 @@ public partial class MainPage
             || operation == OdataOperation.RenameVersionNote
             || operation == OdataOperation.ImportCertificate;
     }
+
+    #region Управление этапами
+
+    /// <summary>
+    /// Выбор этапа для редактирования
+    /// </summary>
+    private void SelectStage(SettingStage stage)
+    {
+        SelectedStage = stage;
+
+        // Загружаем настройки выбранного этапа в форму
+        if (SelectedStage != null)
+        {
+            SelectedSourceType = SelectedStage.SourceType;
+            SelectedOperation = SelectedStage.Operation;
+            EnableExtendedOperations = SelectedStage.EnableExtendedOperations;
+
+            // Восстанавливаем IEdmEntitySet из сохраненного имени
+            if (!string.IsNullOrEmpty(SelectedStage.SelectedEntitySetName))
+            {
+                SelectedEntitySet = EntitySets.FirstOrDefault(e => e.Name == SelectedStage.SelectedEntitySetName);
+                SelectedStage.SelectedEntitySet = SelectedEntitySet;
+            }
+            else
+            {
+                SelectedEntitySet = null;
+            }
+
+            SearchCriteria = SelectedStage.SearchCriteria;
+            UploadAllRows = SelectedStage.UploadAllRows;
+            ForceUploadProcessedRows = SelectedStage.ForceUploadProcessedRows;
+            StartFrom = SelectedStage.StartFrom;
+            RowsToUpload = SelectedStage.RowsToUpload;
+        }
+
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Сохранение настроек текущего этапа
+    /// </summary>
+    private async Task SaveStageSettings()
+    {
+        if (SelectedStage == null) return;
+
+        // Сохраняем настройки из формы в выбранный этап
+        SelectedStage.SourceType = SelectedSourceType;
+        SelectedStage.Operation = SelectedOperation;
+        SelectedStage.EnableExtendedOperations = EnableExtendedOperations;
+        SelectedStage.SelectedOperation = SelectedOperation;
+        SelectedStage.SelectedEntitySet = SelectedEntitySet;
+        SelectedStage.SelectedEntitySetName = SelectedEntitySet?.Name;
+        SelectedStage.SelectedCollectionPropertyName = SelectedCollectionProperty?.Name;
+        SelectedStage.SearchCriteria = SearchCriteria;
+        SelectedStage.UploadAllRows = UploadAllRows;
+        SelectedStage.ForceUploadProcessedRows = ForceUploadProcessedRows;
+        SelectedStage.StartFrom = StartFrom;
+        SelectedStage.RowsToUpload = RowsToUpload;
+
+        await SettingService.UpdateStages(SettingStages);
+
+        NotificationService.Notify(new NotificationMessage
+        {
+            Summary = "Сохранено",
+            Detail = $"Настройки этапа \"{SelectedStage.Name}\" сохранены",
+            Severity = NotificationSeverity.Success,
+            Duration = 3000
+        });
+    }
+
+    /// <summary>
+    /// Добавление нового этапа
+    /// </summary>
+    private async Task AddNewStage()
+    {
+        var newStage = new SettingStage
+        {
+            Number = SettingStages.Any() ? SettingStages.Max(s => s.Number) + 1 : 1,
+            Name = $"Этап {SettingStages.Count + 1}",
+            Description = "Описание этапа",
+            SourceType = SourceType.Excel,
+            Operation = OdataOperation.CreateEntity,
+            EnableExtendedOperations = false,
+            UploadAllRows = true,
+            StartFrom = 1,
+            RowsToUpload = 100,
+            SearchCriteria = SearchEntityBy.Name
+        };
+
+        SettingStages.Add(newStage);
+        await SettingService.UpdateStages(SettingStages);
+        SelectedStage = newStage;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Удаление этапа
+    /// </summary>
+    private async Task DeleteStage(SettingStage stage)
+    {
+        var confirmed = await DialogService.Confirm(
+            $"Вы уверены, что хотите удалить этап \"{stage.Name}\"?",
+            "Подтверждение удаления",
+            new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" });
+
+        if (confirmed == true)
+        {
+            SettingStages.Remove(stage);
+
+            // Переназначаем номера этапов
+            for (int i = 0; i < SettingStages.Count; i++)
+            {
+                SettingStages[i].Number = i + 1;
+            }
+
+            if (SelectedStage == stage)
+            {
+                SelectedStage = SettingStages.FirstOrDefault();
+            }
+
+            await SettingService.UpdateStages(SettingStages);
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Переместить этап вверх
+    /// </summary>
+    private async Task MoveStageUp(SettingStage stage)
+    {
+        var index = SettingStages.IndexOf(stage);
+        if (index > 0)
+        {
+            var previousStage = SettingStages[index - 1];
+
+            // Меняем номера местами
+            var tempNumber = stage.Number;
+            stage.Number = previousStage.Number;
+            previousStage.Number = tempNumber;
+
+            // Меняем позиции в списке
+            SettingStages[index] = previousStage;
+            SettingStages[index - 1] = stage;
+
+            await SettingService.UpdateStages(SettingStages);
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Переместить этап вниз
+    /// </summary>
+    private async Task MoveStageDown(SettingStage stage)
+    {
+        var index = SettingStages.IndexOf(stage);
+        if (index < SettingStages.Count - 1)
+        {
+            var nextStage = SettingStages[index + 1];
+
+            // Меняем номера местами
+            var tempNumber = stage.Number;
+            stage.Number = nextStage.Number;
+            nextStage.Number = tempNumber;
+
+            // Меняем позиции в списке
+            SettingStages[index] = nextStage;
+            SettingStages[index + 1] = stage;
+
+            await SettingService.UpdateStages(SettingStages);
+            StateHasChanged();
+        }
+    }
+
+    #endregion
 }

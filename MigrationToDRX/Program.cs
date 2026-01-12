@@ -9,6 +9,7 @@ using System.Diagnostics;
 using NLog;
 using NLog.Web;
 using MigrationToDRX.Data.Helpers;
+using MigrationToDRX.Data.Services.Settings;
 
 
 try
@@ -45,6 +46,7 @@ try
     builder.Services.AddScoped<FileService>();
     builder.Services.AddScoped<ActionService>();
     builder.Services.AddScoped<OperationService>();
+    builder.Services.AddScoped<SettingService>();
     System.Console.WriteLine("Adding services...");
     var app = builder.Build();
     System.Console.WriteLine("Building...");

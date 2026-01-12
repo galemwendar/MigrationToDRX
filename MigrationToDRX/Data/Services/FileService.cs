@@ -91,4 +91,15 @@ public class FileService
             throw new IOException($"Ошибка при чтении файла {filePath}", ex);
         }
     }
+
+    /// <summary>
+    /// Записать данные в файл
+    /// </summary>
+    /// <param name="filePath"></param>
+    /// <param name="data"></param>
+    /// <returns></returns>
+    public async Task WriteToFile(string filePath, byte[] data)
+    {
+        await File.WriteAllBytesAsync(filePath, data);
+    }
 }

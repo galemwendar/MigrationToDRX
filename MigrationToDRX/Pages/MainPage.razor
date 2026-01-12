@@ -1,6 +1,7 @@
 ﻿@page "/main"
 @using MigrationToDRX.Data.Helpers
 @using MigrationToDRX.Data.Models.ViewModels
+@using MigrationToDRX.Data.Services.Settings
 @using Radzen
 @using Radzen.Blazor
 
@@ -10,320 +11,393 @@
 
 <div class="page-background-main">
     <RadzenComponents />
-    <div class="card">
-    <div class="card-header"><h3>Импорт из Excel</h3></div>
-    <div class="card-body">
-    
-    <div class="row">
-        <div class="col col-md-7">
-            <div class="mb-3">
-                <label class="form-label">Тип источника</label>
-                <RadzenDropDown Data="@SourceTypes"
-                                @bind-Value="SelectedSourceType"
-                                Placeholder="Выберите тип источника данных..."
-                                Style="width:100%"
-                                ValueProperty="Value"
-                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                                AllowFiltering="true"
-                                TextProperty="DisplayName">
-                </RadzenDropDown>
 
-                <RadzenRequiredValidator TValue="string" Required="true" Text="Тип источника должен быть выбран" />
-            </div>
-
-            @if (SelectedExcelSourceType())
-            {
-                @* Выбор файла *@
-                <label class="file-upload-label">Excel файл</label>
-                <div class="file-upload-container mb-3">
-        
-                    <RadzenUpload Accept=".xlsx,.xls,.odf,.ods,.csv"
-                                  Multiple="false"
-                                  ChooseText="Выбрать..."
-                                  Change="@OnFileUpload"
-                                  class="file-upload-control" />
-                              
-                </div>           
-            } else if (SelectedDatabaseMssqlSourceType())
-            {
-                <label class="form-label">Строка подключения к БД</label>
-                <div class="col">
-                    <RadzenTemplateForm TItem="string">
-                    <div class="mb-3">
-                        <RadzenTextBox @bind-Value="@DbConnectionString" class="w-100"
-                                            Placeholder="Например: Server=myServerAddress;Database=myDataBase;User Id=myUsername;Password=myPassword;"/>
-                    </div>                                          
-                    <button type="submit" class="btn btn-primary" style="width: auto;" @onclick="ConnectToDatabase" disabled="@string.IsNullOrWhiteSpace(@DbConnectionString)">
-                        Подключиться
-                    </button>
-                    </RadzenTemplateForm>
-                </div>
-
-                @if (IsDbConnectionSuccess)
-                {
-                    <label class="form-label">Таблица</label>
-                    <RadzenDropDown Data="@DbTables"
-                        @bind-Value="SelectedTable"
-                        Placeholder="Выберите таблицу из которой будут загружены данные..."
-                        Style="width:100%"
-                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                        AllowFiltering="true"
-                        Change="@OnDbTableChanged">
-                    </RadzenDropDown>
-                }
-            }
-        </div>
-        <div class="col col-md-5">
-            @* Выбор операции *@
-            <div class="mb-3">
-                <label class="form-label">Операция</label>
-                <RadzenDropDown Data="@OperationItems"
-                                @bind-Value="SelectedOperation"
-                                Change="OnSelectedOperationChanged"
-                                Placeholder="Выберите операцию с данными..."
-                                Style="width:100%"
-                                ValueProperty="Value"
-                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                                AllowFiltering="true"
-                                TextProperty="DisplayName">
-                </RadzenDropDown>
-
-                <RadzenRequiredValidator TValue="string" Required="true" Text="Операция должна быть выбрана" />
-            </div>
-                @* Чекбокс для расширенных операций *@
-            <div class="mb-3">
-                <label class="d-flex align-items-center" style="gap:5px;">
-                    <RadzenCheckBox @bind-Value="EnableExtendedOperations" 
-                                    TValue="bool" 
-                                    Change="OnExtendedOperationsChanged" />
-                    <span>Пакет разработки от ЦВД <code>centrvd.MigrationToDRX</code></span>
-                </label>
-                <small class="text-muted">Включает дополнительные операции миграции</small>
-            </div>
-        </div>
-    </div>
-
-    @if(RequiresEntitySelection())
-    {
-        <div class="row">
-            <div class="col col-md-7">
-                @* Выбор сущности     *@
-                <div class="mb-3">
-                    <label class="form-label">Сущность в Odata</label>
-                    <RadzenDropDown TextProperty="Name"
-                                    Data="@EntitySets"
-                                    @bind-Value="SelectedEntitySet"
-                                    Placeholder="Выберите сущность..."
-                                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                                    AllowClear="true"
-                                    AllowFiltering="true"
-                                    Style="width:100%"
-                                    Change="OnSelectedEntitySetChanged">
-                    </RadzenDropDown>
-
-                    <RadzenRequiredValidator TValue="string" Required="true" Text="Сущность должна быть выбрана" />
-                </div>
-            </div>
-            <div class="col col-md-5">
-                @* Выбор ключа для всех связанных сущностей *@
-                <div class="mb-3">
-                    <label class="form-label">Поиск связанных сущностей по:</label>
-                    <RadzenDropDown Data="@SearchEntityByList"
-                                    @bind-Value="SearchCriteria"
-                                    Placeholder="Выберите из списка..."
-                                    Style="width:100%"
-                                    ValueProperty="Value"
-                                    TextProperty="DisplayName">
-                    </RadzenDropDown>
-
-                    <RadzenRequiredValidator TValue="string" Required="true" Text="Критерий поиска должен быть выбран" />
-                </div>
-
-            </div>
-        </div>
-    }
-    
-    <div class="row">
-        <div class="col col-md-7">
-            @* Контрол появляется только в том случае, если у выбранной сущности есть свойства-коллекции 
-            и выбрана одна из операций работы со свойствами-коллекциями *@
-            @if(CollectionProperties.Any() && OdataOperationHelper.OperationsWithCollections.Contains(SelectedOperation))
-            {
-                @* Выбор свойства - коллекции *@
-                <div class="mb-3">
-                    <label class="form-label">Свойство - коллекция</label>
-                    <RadzenDropDown TextProperty="Name"
-                                    Data="@CollectionProperties"
-                                    @bind-Value="SelectedCollectionProperty"
-                                    Placeholder="Выберите сущность..."
-                                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                                    AllowClear="true"
-                                    AllowFiltering="true"
-                                    Style="width:100%"
-                                    Change="OnSelectedCollectionPropertyChanged">
-                    </RadzenDropDown>
-                </div>
-            }
-
-        </div>
-        <div class="col col-md-5">
-            <!-- 📊 Количество строк -->
-            <div class="mb-3">
-                <h5>Настройка обработки строк</h5>
-
-                <div class="mb-2">
-                    <label class="d-flex align-items-center mb-1" style="gap:5px;">
-                        <RadzenCheckBox @bind-Value="UploadAllRows" TValue="bool" />
-                        Обработать все строки
-                    </label>
-                    <label class="d-flex align-items-center" style="gap:5px;">
-                        <RadzenCheckBox @bind-Value="ForceUploadProcessedRows" TValue="bool" />
-                            В том числе уже обработанные
-                    </label>
-                </div>
-
-                <div class="d-flex gap-4 mb-1">
-                    <div class="d-flex flex-column">
-                        <label>Начальная строка:</label>
-                        <RadzenNumeric @bind-Value="StartFrom"
-                                    Min="1"
-                                    Max="@PreviewRows.Count"
-                                    Disabled="@UploadAllRows"
-                                    Style="width:120px;" />
-                    </div>
-
-                    <div class="d-flex flex-column">
-                        <label>Количество строк:</label>
-                        <RadzenNumeric @bind-Value="RowsToUpload"
-                                    Min="1"
-                                    Max="@PreviewRows.Count"
-                                    Disabled="@UploadAllRows"
-                                    Style="width:120px;" />
-                    </div>
-
-
-                </div>
-                <small class="text-muted d-block mt-1">
-                    Эти настройки применяются только если "Обработать все строки" выключено.
-                </small>
-                @if(PreviewRows.Count > 0)
-                {
-                    <div class="text-muted d-block mt-1" style="font-weight:bold">
-                        В загруженном excel-файле @PreviewRows.Count строк(-и)
-                    </div>
-                }
-            </div>
-        </div>
-    </div>
-
-    @if (isProceed)
-    {
-        <div class="row d-flex justify-content-between">
-            <div class="d-flex align-items-center progress-row">
-                <p>
-                    Прогресс выполнения операции
-                </p>
-                <RadzenProgressBar Value="@progress" Max="@maxRowsCount" Unit="@Unit" style="flex-grow: 1; min-width: 0;" />
-                <button class="btn btn-danger ms-2" style="height: 2.5rem; flex-shrink: 0; width: auto;" @onclick="@CancelOperation">
-                    Прервать
+    @* Список этапов миграции *@
+    <div class="card mb-3">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3>Этапы миграции</h3>
+                <button class="btn btn-primary" @onclick="AddNewStage">
+                    Добавить этап
                 </button>
             </div>
         </div>
-    }
-    
-    @* Кнопки валидации и отправки на сервер    *@
-    <div class="mb-3 d-flex justify-content-between w-60">
-        <div>
+        <div class="card-body">
 
-            <button class="btn btn-outline-secondary mx-1"
-                @onclick="Validate"
-                disabled="@(ColumnMappings.Any(m => m.Value != null) == false)">
-                Проверить
-            </button>
+            @if (SettingStages.Any())
+            {
+                <div class="list-group mb-3">
+                    @foreach (var stage in SettingStages.OrderBy(s => s.Number))
+                    {
+                        <div class="list-group-item @(SelectedStage == stage ? "active" : "")"
+                             style="cursor: pointer;"
+                             @onclick="() => SelectStage(stage)">
+                            <h5 class="mb-1">
+                                <span class="badge bg-secondary me-2">@stage.Number</span>
+                                @stage.Name
+                            </h5>
+                            <p class="mb-1">@stage.Description</p>
+                            <small>
+                                @stage.SourceType.GetDisplayName() → @stage.Operation.GetDisplayName()
+                                @if (stage.SelectedEntitySet != null)
+                                {
+                                    <span> (@stage.SelectedEntitySet.Name)</span>
+                                }
+                            </small>
+                        </div>
+                    }
+                </div>
 
-            <button class="btn btn-primary mx-1"
-                    @onclick="Upload"
-                    disabled="@(ColumnMappings.Any(m => m.Value != null) == false)">
-                Отправить
-            </button>
-
-
+                @if (SelectedStage != null)
+                {
+                    <div class="btn-toolbar mb-3" role="toolbar">
+                        <div class="btn-group me-2" role="group">
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    @onclick="() => MoveStageUp(SelectedStage)"
+                                    disabled="@(SelectedStage.Number == 1)">
+                                ▲ Вверх
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    @onclick="() => MoveStageDown(SelectedStage)"
+                                    disabled="@(SelectedStage.Number == SettingStages.Count)">
+                                ▼ Вниз
+                            </button>
+                        </div>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-sm btn-danger"
+                                    @onclick="() => DeleteStage(SelectedStage)">
+                                Удалить
+                            </button>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <p class="text-muted">Нет настроенных этапов. Нажмите "Добавить этап" для создания нового.</p>
+            }
         </div>
-
-        <button class="btn btn-outline-secondary mx-1"
-                @onclick="DownloadExcel"
-                disabled="@(ColumnMappings.Any(m => m.Value != null) == false)">
-            Скачать excel-отчет
-        </button>
-
     </div>
 
-
-    @if (PreviewRows.Any())
+    @* Форма редактирования выбранного этапа *@
+    @if (SelectedStage != null)
     {
-         @* Предпросмотр таблицы     *@
-
-        <RadzenDataGrid Data="@PreviewRows" 
-                        @ref="@dataGrid"
-                        TItem="Dictionary<string, string>" 
-                        AllowColumnResize="true" 
-                        AllowColumnReorder="true" 
-                        AllowColumnPicking="true"
-                        ColumnsText="выбор columns (колонок)"
-                        ShowR
-                        AllowPaging="true"
-                        AllColumnsText="Все колонки"
-                        ColumnsPickerAllowFiltering="true"
-                        ColumnsShowingText="columns отображается"
-
-                        PageSize="100" >
-
-                <HeaderTemplate>
-                    <button class="btn btn-outline-secondary" @onclick="RemoveMapping"> 
-                        Очистить выбранные свойства
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h3>Настройка этапа: @SelectedStage.Name</h3>
+                    <button class="btn btn-success" @onclick="SaveStageSettings">
+                        Сохранить настройки этапа
                     </button>
-                </HeaderTemplate>
+                </div>
+            </div>
+            <div class="card-body">
 
-            <Columns>
-                <RadzenDataGridColumn Width="50px" Title="#" Filterable="false" Sortable="false" TextAlign="TextAlign.Center">
-                    <Template Context="data">
-                        @(dataGrid?.View.ToList().IndexOf(data) + 1)
-                    </Template>
-                </RadzenDataGridColumn>
+                @* Название и описание этапа *@
+                <div class="row mb-3">
+                    <div class="col col-md-6">
+                        <label class="form-label">Название этапа</label>
+                        <RadzenTextBox @bind-Value="SelectedStage.Name" class="w-100" Placeholder="Введите название этапа..." />
+                    </div>
+                    <div class="col col-md-6">
+                        <label class="form-label">Описание этапа</label>
+                        <RadzenTextBox @bind-Value="SelectedStage.Description" class="w-100" Placeholder="Введите описание..." />
+                    </div>
+                </div>
 
-                @foreach (var col in TableColumns)
-                {
-                    <RadzenDataGridColumn TItem="Dictionary<string,string>" Title="@col" Property="@col">
-                        <HeaderTemplate>
-                            <p>@col</p>
-                            <RadzenDropDown Data="AvailableEntityFields"
-                                            TextProperty="Name" 
-                                            AllowClear="true"
-                                            AllowFiltering="true"
+                <div class="row">
+                    <div class="col col-md-7">
+                        <div class="mb-3">
+                            <label class="form-label">Тип источника</label>
+                            <RadzenDropDown Data="@SourceTypes"
+                                            @bind-Value="SelectedSourceType"
+                                            Placeholder="Выберите тип источника данных..."
+                                            Style="width:100%"
+                                            ValueProperty="Value"
                                             FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                                            @bind-Value="ColumnMappings[col]"
-                                            Placeholder="Выберите свойство...">
-
-                                @* Кастомный шаблон для отображения элементов *@
-                                    <Template Context="field">
-                                        <div style="display:flex; flex-direction:column;">
-                                            <span>@field.Name</span>
-                                            <span style="color:gray; font-size:0.85em;">
-                                                (@field.ShortType) Nullable:@(field.Nullable ? "Yes" : "No")
-                                            </span>
-                                        </div>
-                                    </Template>  
+                                            AllowFiltering="true"
+                                            TextProperty="DisplayName">
                             </RadzenDropDown>
-                        </HeaderTemplate>
-                        <Template Context="data">
-                            @data[col] 
-                        </Template>
-                    </RadzenDataGridColumn>
-                }
-            </Columns>
-        </RadzenDataGrid>
-    }
+                            <RadzenRequiredValidator TValue="string" Required="true" Text="Тип источника должен быть выбран" />
+                        </div>
 
-</div>
-</div>
+                        @if (SelectedExcelSourceType())
+                        {
+                            @* Выбор файла *@
+                            <label class="file-upload-label">Excel файл</label>
+                            <div class="file-upload-container mb-3">
+                                <RadzenUpload Accept=".xlsx,.xls,.odf,.ods,.csv"
+                                              Multiple="false"
+                                              ChooseText="Выбрать..."
+                                              Change="@OnFileUpload"
+                                              class="file-upload-control" />
+                            </div>
+                        }
+                        else if (SelectedDatabaseMssqlSourceType())
+                        {
+                            <label class="form-label">Строка подключения к БД</label>
+                            <div class="col">
+                                <RadzenTemplateForm TItem="string">
+                                    <div class="mb-3">
+                                        <RadzenTextBox @bind-Value="@DbConnectionString" class="w-100"
+                                                       Placeholder="Например: Server=myServerAddress;Database=myDataBase;User Id=myUsername;Password=myPassword;"/>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary" style="width: auto;" @onclick="ConnectToDatabase" disabled="@string.IsNullOrWhiteSpace(@DbConnectionString)">
+                                        Подключиться
+                                    </button>
+                                </RadzenTemplateForm>
+                            </div>
+
+                            @if (IsDbConnectionSuccess)
+                            {
+                                <label class="form-label">Таблица</label>
+                                <RadzenDropDown Data="@DbTables"
+                                                @bind-Value="SelectedTable"
+                                                Placeholder="Выберите таблицу из которой будут загружены данные..."
+                                                Style="width:100%"
+                                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                                AllowFiltering="true"
+                                                Change="@OnDbTableChanged">
+                                </RadzenDropDown>
+                            }
+                        }
+                    </div>
+                    <div class="col col-md-5">
+                        @* Выбор операции *@
+                        <div class="mb-3">
+                            <label class="form-label">Операция</label>
+                            <RadzenDropDown Data="@OperationItems"
+                                            @bind-Value="SelectedOperation"
+                                            Change="OnSelectedOperationChanged"
+                                            Placeholder="Выберите операцию с данными..."
+                                            Style="width:100%"
+                                            ValueProperty="Value"
+                                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                            AllowFiltering="true"
+                                            TextProperty="DisplayName">
+                            </RadzenDropDown>
+                            <RadzenRequiredValidator TValue="string" Required="true" Text="Операция должна быть выбрана" />
+                        </div>
+                        @* Чекбокс для расширенных операций *@
+                        <div class="mb-3">
+                            <label class="d-flex align-items-center" style="gap:5px;">
+                                <RadzenCheckBox @bind-Value="EnableExtendedOperations"
+                                                TValue="bool"
+                                                Change="OnExtendedOperationsChanged" />
+                                <span>Пакет разработки от ЦВД <code>centrvd.MigrationToDRX</code></span>
+                            </label>
+                            <small class="text-muted">Включает дополнительные операции миграции</small>
+                        </div>
+                    </div>
+                </div>
+
+                @if(RequiresEntitySelection())
+                {
+                    <div class="row">
+                        <div class="col col-md-7">
+                            @* Выбор сущности *@
+                            <div class="mb-3">
+                                <label class="form-label">Сущность в Odata</label>
+                                <RadzenDropDown TextProperty="Name"
+                                                Data="@EntitySets"
+                                                @bind-Value="SelectedEntitySet"
+                                                Placeholder="Выберите сущность..."
+                                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                                AllowClear="true"
+                                                AllowFiltering="true"
+                                                Style="width:100%"
+                                                Change="OnSelectedEntitySetChanged">
+                                </RadzenDropDown>
+                                <RadzenRequiredValidator TValue="string" Required="true" Text="Сущность должна быть выбрана" />
+                            </div>
+                        </div>
+                        <div class="col col-md-5">
+                            @* Выбор ключа для всех связанных сущностей *@
+                            <div class="mb-3">
+                                <label class="form-label">Поиск связанных сущностей по:</label>
+                                <RadzenDropDown Data="@SearchEntityByList"
+                                                @bind-Value="SearchCriteria"
+                                                Placeholder="Выберите из списка..."
+                                                Style="width:100%"
+                                                ValueProperty="Value"
+                                                TextProperty="DisplayName">
+                                </RadzenDropDown>
+                                <RadzenRequiredValidator TValue="string" Required="true" Text="Критерий поиска должен быть выбран" />
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <div class="row">
+                    <div class="col col-md-7">
+                        @* Контрол появляется только в том случае, если у выбранной сущности есть свойства-коллекции
+                        и выбрана одна из операций работы со свойствами-коллекциями *@
+                        @if(CollectionProperties.Any() && OdataOperationHelper.OperationsWithCollections.Contains(SelectedOperation))
+                        {
+                            @* Выбор свойства - коллекции *@
+                            <div class="mb-3">
+                                <label class="form-label">Свойство - коллекция</label>
+                                <RadzenDropDown TextProperty="Name"
+                                                Data="@CollectionProperties"
+                                                @bind-Value="SelectedCollectionProperty"
+                                                Placeholder="Выберите сущность..."
+                                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                                AllowClear="true"
+                                                AllowFiltering="true"
+                                                Style="width:100%"
+                                                Change="OnSelectedCollectionPropertyChanged">
+                                </RadzenDropDown>
+                            </div>
+                        }
+                    </div>
+                    <div class="col col-md-5">
+                        <!-- 📊 Количество строк -->
+                        <div class="mb-3">
+                            <h5>Настройка обработки строк</h5>
+
+                            <div class="mb-2">
+                                <label class="d-flex align-items-center mb-1" style="gap:5px;">
+                                    <RadzenCheckBox @bind-Value="UploadAllRows" TValue="bool" />
+                                    Обработать все строки
+                                </label>
+                                <label class="d-flex align-items-center" style="gap:5px;">
+                                    <RadzenCheckBox @bind-Value="ForceUploadProcessedRows" TValue="bool" />
+                                    В том числе уже обработанные
+                                </label>
+                            </div>
+
+                            <div class="d-flex gap-4 mb-1">
+                                <div class="d-flex flex-column">
+                                    <label>Начальная строка:</label>
+                                    <RadzenNumeric @bind-Value="StartFrom"
+                                                   Min="1"
+                                                   Max="@PreviewRows.Count"
+                                                   Disabled="@UploadAllRows"
+                                                   Style="width:120px;" />
+                                </div>
+
+                                <div class="d-flex flex-column">
+                                    <label>Количество строк:</label>
+                                    <RadzenNumeric @bind-Value="RowsToUpload"
+                                                   Min="1"
+                                                   Max="@PreviewRows.Count"
+                                                   Disabled="@UploadAllRows"
+                                                   Style="width:120px;" />
+                                </div>
+                            </div>
+                            <small class="text-muted d-block mt-1">
+                                Эти настройки применяются только если "Обработать все строки" выключено.
+                            </small>
+                            @if(PreviewRows.Count > 0)
+                            {
+                                <div class="text-muted d-block mt-1" style="font-weight:bold">
+                                    В загруженном excel-файле @PreviewRows.Count строк(-и)
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                @if (isProceed)
+                {
+                    <div class="row d-flex justify-content-between">
+                        <div class="d-flex align-items-center progress-row">
+                            <p>
+                                Прогресс выполнения операции
+                            </p>
+                            <RadzenProgressBar Value="@progress" Max="@maxRowsCount" Unit="@Unit" style="flex-grow: 1; min-width: 0;" />
+                            <button class="btn btn-danger ms-2" style="height: 2.5rem; flex-shrink: 0; width: auto;" @onclick="@CancelOperation">
+                                Прервать
+                            </button>
+                        </div>
+                    </div>
+                }
+
+                @* Кнопки валидации и отправки на сервер *@
+                <div class="mb-3 d-flex justify-content-between w-60">
+                    <div>
+                        <button class="btn btn-outline-secondary mx-1"
+                                @onclick="Validate"
+                                disabled="@(ColumnMappings.Any(m => m.Value != null) == false)">
+                            Проверить
+                        </button>
+
+                        <button class="btn btn-primary mx-1"
+                                @onclick="Upload"
+                                disabled="@(ColumnMappings.Any(m => m.Value != null) == false)">
+                            Отправить
+                        </button>
+                    </div>
+
+                    <button class="btn btn-outline-secondary mx-1"
+                            @onclick="DownloadExcel"
+                            disabled="@(ColumnMappings.Any(m => m.Value != null) == false)">
+                        Скачать excel-отчет
+                    </button>
+                </div>
+
+                @if (PreviewRows.Any())
+                {
+                    @* Предпросмотр таблицы *@
+                    <RadzenDataGrid Data="@PreviewRows"
+                                    @ref="@dataGrid"
+                                    TItem="Dictionary<string, string>"
+                                    AllowColumnResize="true"
+                                    AllowColumnReorder="true"
+                                    AllowColumnPicking="true"
+                                    ColumnsText="выбор columns (колонок)"
+                                    ShowR
+                                    AllowPaging="true"
+                                    AllColumnsText="Все колонки"
+                                    ColumnsPickerAllowFiltering="true"
+                                    ColumnsShowingText="columns отображается"
+                                    PageSize="100" >
+
+                        <HeaderTemplate>
+                            <button class="btn btn-outline-secondary" @onclick="RemoveMapping">
+                                Очистить выбранные свойства
+                            </button>
+                        </HeaderTemplate>
+
+                        <Columns>
+                            <RadzenDataGridColumn Width="50px" Title="#" Filterable="false" Sortable="false" TextAlign="TextAlign.Center">
+                                <Template Context="data">
+                                    @(dataGrid?.View.ToList().IndexOf(data) + 1)
+                                </Template>
+                            </RadzenDataGridColumn>
+
+                            @foreach (var col in TableColumns)
+                            {
+                                <RadzenDataGridColumn TItem="Dictionary<string,string>" Title="@col" Property="@col">
+                                    <HeaderTemplate>
+                                        <p>@col</p>
+                                        <RadzenDropDown Data="AvailableEntityFields"
+                                                        TextProperty="Name"
+                                                        AllowClear="true"
+                                                        AllowFiltering="true"
+                                                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                                        @bind-Value="ColumnMappings[col]"
+                                                        Placeholder="Выберите свойство...">
+                                            @* Кастомный шаблон для отображения элементов *@
+                                            <Template Context="field">
+                                                <div style="display:flex; flex-direction:column;">
+                                                    <span>@field.Name</span>
+                                                    <span style="color:gray; font-size:0.85em;">
+                                                        (@field.ShortType) Nullable:@(field.Nullable ? "Yes" : "No")
+                                                    </span>
+                                                </div>
+                                            </Template>
+                                        </RadzenDropDown>
+                                    </HeaderTemplate>
+                                    <Template Context="data">
+                                        @data[col]
+                                    </Template>
+                                </RadzenDataGridColumn>
+                            }
+                        </Columns>
+                    </RadzenDataGrid>
+                }
+            </div>
+        </div>
+    }
 </div>
