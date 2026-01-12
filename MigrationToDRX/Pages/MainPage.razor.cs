@@ -9,11 +9,49 @@ using MigrationToDRX.Data.Services;
 using Radzen;
 using Microsoft.JSInterop;
 using Radzen.Blazor;
+using MigrationToDRX.Data.Services.DbServices;
+using MigrationToDRX.Data.Models.ViewModels;
 
 namespace MigrationToDRX.Pages;
 
 public partial class MainPage
 {
+
+    /// <summary>
+    /// Выбранный тип миграции (Excel, БД)
+    /// </summary>
+    protected SourceType SelectedSourceType { get; set; }
+
+    /// <summary>
+    /// Строка подключения к базе данных
+    /// </summary>
+    public string? DbConnectionString { get; set; }
+
+    /// <summary>
+    /// Сервис
+    /// </summary>
+    protected DbService? DbService { get; set; }
+
+    /// <summary>
+    /// Таблицы, полученные из БД
+    /// </summary>
+    public List<string> DbTables { get; set; } = new();
+
+    /// <summary>
+    /// Выбранная таблица БД для загрузки в RX
+    /// </summary>
+    public string? SelectedTable { get; set; }
+
+    /// <summary>
+    /// Установлено ли успешно соединение с БД
+    /// </summary>
+    protected bool IsDbConnectionSuccess => DbService?.IsConnected ?? false;
+
+    /// <summary>
+    /// Список типов источника для выбора
+    /// </summary>
+    private List<EnumItem<SourceType>> SourceTypes { get; set; } = new();
+
     /// <summary>
     /// Выбранная операция миграции
     /// </summary>
@@ -64,7 +102,7 @@ public partial class MainPage
     /// <summary>
     /// Список колонок, загруженных из Excel
     /// </summary>
-    private List<string> ExcelColumns { get; set; } = new();
+    private List<string> TableColumns { get; set; } = new();
 
     /// <summary>
     /// Строки Excel, загруженные из файла
@@ -201,17 +239,6 @@ public partial class MainPage
                 NavigationManager.NavigateTo("/");
                 return;
             }
-
-            // получаем список сущностей из OData
-            EntitySets = OdataClientService.GetEntitySets().OrderBy(e => e.Name).ToList();
-
-            // получаем список операций для выбора
-            OperationItems = Data.Helpers.EnumHelper.GetItems<OdataOperation>()
-                .Where(op => !IsExtendedOperation(op.Value))
-                .ToList();
-
-            // получаем список полей для поиска навигационных свойств
-            SearchEntityByList = Data.Helpers.EnumHelper.GetItems<SearchEntityBy>();
         }
     }
 
@@ -225,6 +252,28 @@ public partial class MainPage
     }
 
     /// <summary>
+    /// Инициализация страницы
+    /// </summary>
+    /// <returns></returns>
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        // получаем список сущностей из OData
+        EntitySets = OdataClientService.GetEntitySets().OrderBy(e => e.Name).ToList();
+
+        // получаем список типов источинка
+        SourceTypes = Data.Helpers.EnumHelper.GetItems<SourceType>();
+
+        // получаем список операций для выбора
+        OperationItems = Data.Helpers.EnumHelper.GetItems<OdataOperation>()
+            .Where(op => !IsExtendedOperation(op.Value))
+            .ToList();
+
+        // получаем список полей для поиска навигационных свойств
+        SearchEntityByList = Data.Helpers.EnumHelper.GetItems<SearchEntityBy>();
+    }
+
+    /// <summary>
     /// Обработчик изменения SelectedEntitySet
     /// </summary>
     protected void OnSelectedEntitySetChanged(object value)
@@ -234,7 +283,7 @@ public partial class MainPage
             // очищаем список полей
             EntityFields = new();
             // Сбрасываем маппинг
-            ColumnMappings = ExcelColumns.Any() ? ExcelColumns.ToDictionary(c => c, _ => (EntityFieldDto?)null) : new();
+            ColumnMappings = TableColumns.Any() ? TableColumns.ToDictionary(c => c, _ => (EntityFieldDto?)null) : new();
             return;
         }
 
@@ -248,7 +297,7 @@ public partial class MainPage
             // Заполняем список свойств-коллекций
             CollectionProperties = dto.NavigationProperties.Where(p => p.IsCollection).ToList();
             // Сбрасываем маппинг
-            ColumnMappings = ExcelColumns.ToDictionary(c => c, _ => (EntityFieldDto?)null);
+            ColumnMappings = TableColumns.ToDictionary(c => c, _ => (EntityFieldDto?)null);
         }
 
         StateHasChanged();
@@ -262,7 +311,7 @@ public partial class MainPage
         if (SelectedCollectionProperty == null)
         {
             EntityFields = new();
-            ColumnMappings = ExcelColumns.Any() ? ExcelColumns.ToDictionary(c => c, _ => (EntityFieldDto?)null) : new();
+            ColumnMappings = TableColumns.Any() ? TableColumns.ToDictionary(c => c, _ => (EntityFieldDto?)null) : new();
             return;
         }
 
@@ -281,7 +330,7 @@ public partial class MainPage
     {
         ColumnMappings = new();
         PreviewRows = new();
-        ExcelColumns = new();
+        TableColumns = new();
 
         // Если нет файла — очищаем связанные словари и списки
         if (args.Files == null || !args.Files.Any())
@@ -303,20 +352,20 @@ public partial class MainPage
 
             if (rows.Count == 0)
             {
-                ExcelColumns = new List<string>();
+                TableColumns = new List<string>();
                 PreviewRows = new List<Dictionary<string, string>>();
                 return;
             }
 
             // Формируем список колонок из заголовков
             //HACK: Внимание! Если заголовков нет, то будет использоваться первая строка!
-            // Данные этой строки НЕ БУДУТ загружены в OData! 
-            ExcelColumns = rows.First().Keys.ToList();
+            // Данные этой строки НЕ БУДУТ загружены в OData!
+            TableColumns = rows.First().Keys.ToList();
 
             // Формируем PreviewRows (берем максимум 5-6 строк)
             PreviewRows = rows
             // HACK:    .Take(6) <= Так можно ограничить, сколько строк мы забираем и храним в памяти
-                .Select(row => ExcelColumns.ToDictionary(
+                .Select(row => TableColumns.ToDictionary(
                     col => col,
                     col => row[col].ToString() ?? string.Empty))
                 .ToList();
@@ -337,6 +386,85 @@ public partial class MainPage
                 Duration = 4000
             });
         }
+
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Обработчик загрузки таблицы БД
+    /// </summary>
+    private async Task OnDbTableChanged()
+    {
+        if (DbService is null)
+        {
+            await InvokeAsync(async () =>
+            {
+                await DialogService.Alert(
+                    "Получение данных из таблицы БД\n" +
+                    "Не удалось получить данные из таблицы БД. Сервис БД не инициализирован.",
+                    "Ошибка",
+                    new AlertOptions
+                    {
+                        OkButtonText = "Ок",
+                        CloseDialogOnEsc = false,
+                        CloseDialogOnOverlayClick = false,
+                        ShowClose = false
+                    });
+            });
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(SelectedTable))
+        {
+            await InvokeAsync(async () =>
+            {
+                await DialogService.Alert(
+                    "Получение данных из таблицы БД\n" +
+                    "Не выбрана таблица для получения данных.",
+                    "Ошибка",
+                    new AlertOptions
+                    {
+                        OkButtonText = "Ок",
+                        CloseDialogOnEsc = false,
+                        CloseDialogOnOverlayClick = false,
+                        ShowClose = false
+                    });
+            });
+            return;
+        }
+
+        ColumnMappings = new();
+        PreviewRows = new();
+        TableColumns = new();
+
+        // Если нет файла — очищаем связанные словари и списки
+
+        var rows = await DbService.ReadTableAsync(SelectedTable);
+
+        if (rows.Count == 0)
+        {
+            TableColumns = new List<string>();
+            PreviewRows = new List<Dictionary<string, string>>();
+            return;
+        }
+
+        // Формируем список колонок из заголовков
+        //HACK: Внимание! Если заголовков нет, то будет использоваться первая строка!
+        // Данные этой строки НЕ БУДУТ загружены в OData!
+        TableColumns = rows.First().Keys.ToList();
+
+        // Формируем PreviewRows (берем максимум 5-6 строк)
+        PreviewRows = rows
+        // HACK:    .Take(6) <= Так можно ограничить, сколько строк мы забираем и храним в памяти
+            .Select(row => TableColumns.ToDictionary(
+                col => col,
+                col => row[col].ToString() ?? string.Empty))
+            .ToList();
+
+        RowsToUpload = PreviewRows.Count;
+
+        // Сбрасываем маппинг
+        ClearExcelToFieldsMapping();
 
         StateHasChanged();
     }
@@ -365,7 +493,7 @@ public partial class MainPage
     /// </summary>
     private void ClearExcelToFieldsMapping()
     {
-        ColumnMappings = ExcelColumns.Any() ? ExcelColumns.ToDictionary(c => c, _ => (EntityFieldDto?)null) : new();
+        ColumnMappings = TableColumns.Any() ? TableColumns.ToDictionary(c => c, _ => (EntityFieldDto?)null) : new();
     }
 
     private async Task Validate()
@@ -567,9 +695,78 @@ public partial class MainPage
     /// </summary>
     private async Task DownloadExcel()
     {
-        var fileBytes = ExcelService.GetExcelBytes(PreviewRows, ExcelColumns, "Отчет");
+        var fileBytes = ExcelService.GetExcelBytes(PreviewRows, TableColumns, "Отчет");
         var base64 = Convert.ToBase64String(fileBytes);
         await JS.InvokeVoidAsync("downloadFileFromBase64", $"Отчет_по_{FileName}_{SelectedOperation.GetDisplayName()}_за_{DateTime.Now.ToShortDateString()}.xlsx", base64);
+    }
+
+    /// <summary>
+    /// Выбран тип источинка Excel
+    /// </summary>
+    /// <returns></returns>
+    private bool SelectedExcelSourceType() => SelectedSourceType == SourceType.Excel;
+
+    /// <summary>
+    /// Выбран тип источинка База данных MSSQL
+    /// </summary>
+    /// <returns></returns>
+    private bool SelectedDatabaseMssqlSourceType() => SelectedSourceType == SourceType.DatabaseMssql;
+
+    /// <summary>
+    /// Подключиться к БД по строке подключения
+    /// </summary>
+    /// <returns></returns>
+    private async Task ConnectToDatabase()
+    {
+        if (string.IsNullOrWhiteSpace(DbConnectionString))
+        {
+            await InvokeAsync(async () =>
+            {
+                await DialogService.Alert(
+                    "Подключение к базе данных\n" +
+                    "Не удалось подключиться к базе данных. Проверьте строку подключения.",
+                    "Ошибка",
+                    new AlertOptions
+                    {
+                        OkButtonText = "Ок",
+                        CloseDialogOnEsc = false,
+                        CloseDialogOnOverlayClick = false,
+                        ShowClose = false
+                    });
+            });
+            DbService = null;
+            return;
+        }
+
+        try
+        {
+            switch (SelectedSourceType)
+            {
+                case SourceType.DatabaseMssql: DbService = new MssqlService(DbConnectionString); break;
+                default: return;
+            }
+
+            await DbService.ConnectAsync();
+            DbTables = (await DbService.GetTablesAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            await InvokeAsync(async () =>
+            {
+                await DialogService.Alert(
+                    "Подключение к базе данных\n" +
+                    $"Не удалось подключиться к базе данных: {ex.Message}",
+                    "Ошибка",
+                    new AlertOptions
+                    {
+                        OkButtonText = "Ок",
+                        CloseDialogOnEsc = false,
+                        CloseDialogOnOverlayClick = false,
+                        ShowClose = false
+                    });
+            });
+            DbService = null;
+        }
     }
 
     /// <summary>
@@ -582,10 +779,10 @@ public partial class MainPage
             return;
         }
         // Определяем, какие новые колонки действительно нужно добавить
-        var newColumns = resultColumns.Except(ExcelColumns).ToList();
+        var newColumns = resultColumns.Except(TableColumns).ToList();
 
         // Добавляем их в ExcelColumns и ColumnMappings
-        ExcelColumns.AddRange(newColumns);
+        TableColumns.AddRange(newColumns);
         foreach (var col in newColumns)
             ColumnMappings[col] = null;
 
@@ -625,7 +822,7 @@ public partial class MainPage
     /// </summary>
     private void RemoveMapping()
     {
-        ColumnMappings = ExcelColumns.Any() ? ExcelColumns.ToDictionary(c => c, _ => (EntityFieldDto?)null) : new();
+        ColumnMappings = TableColumns.Any() ? TableColumns.ToDictionary(c => c, _ => (EntityFieldDto?)null) : new();
     }
 
     private bool RequiresEntitySelection()

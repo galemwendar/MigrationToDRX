@@ -1,5 +1,6 @@
 ﻿@page "/main"
 @using MigrationToDRX.Data.Helpers
+@using MigrationToDRX.Data.Models.ViewModels
 @using Radzen
 @using Radzen.Blazor
 
@@ -15,17 +16,62 @@
     
     <div class="row">
         <div class="col col-md-7">
-            @* Выбор файла *@
-            <label class="file-upload-label">Excel файл</label>
-            <div class="file-upload-container mb-3">
-        
-                <RadzenUpload Accept=".xlsx,.xls,.odf,.ods,.csv"
-                              Multiple="false"
-                              ChooseText="Выбрать..."
-                              Change="@OnFileUpload"
-                              class="file-upload-control" />
-                              
+            <div class="mb-3">
+                <label class="form-label">Тип источника</label>
+                <RadzenDropDown Data="@SourceTypes"
+                                @bind-Value="SelectedSourceType"
+                                Placeholder="Выберите тип источника данных..."
+                                Style="width:100%"
+                                ValueProperty="Value"
+                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                AllowFiltering="true"
+                                TextProperty="DisplayName">
+                </RadzenDropDown>
+
+                <RadzenRequiredValidator TValue="string" Required="true" Text="Тип источника должен быть выбран" />
             </div>
+
+            @if (SelectedExcelSourceType())
+            {
+                @* Выбор файла *@
+                <label class="file-upload-label">Excel файл</label>
+                <div class="file-upload-container mb-3">
+        
+                    <RadzenUpload Accept=".xlsx,.xls,.odf,.ods,.csv"
+                                  Multiple="false"
+                                  ChooseText="Выбрать..."
+                                  Change="@OnFileUpload"
+                                  class="file-upload-control" />
+                              
+                </div>           
+            } else if (SelectedDatabaseMssqlSourceType())
+            {
+                <label class="form-label">Строка подключения к БД</label>
+                <div class="col">
+                    <RadzenTemplateForm TItem="string">
+                    <div class="mb-3">
+                        <RadzenTextBox @bind-Value="@DbConnectionString" class="w-100"
+                                            Placeholder="Например: Server=myServerAddress;Database=myDataBase;User Id=myUsername;Password=myPassword;"/>
+                    </div>                                          
+                    <button type="submit" class="btn btn-primary" style="width: auto;" @onclick="ConnectToDatabase" disabled="@string.IsNullOrWhiteSpace(@DbConnectionString)">
+                        Подключиться
+                    </button>
+                    </RadzenTemplateForm>
+                </div>
+
+                @if (IsDbConnectionSuccess)
+                {
+                    <label class="form-label">Таблица</label>
+                    <RadzenDropDown Data="@DbTables"
+                        @bind-Value="SelectedTable"
+                        Placeholder="Выберите таблицу из которой будут загружены данные..."
+                        Style="width:100%"
+                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                        AllowFiltering="true"
+                        Change="@OnDbTableChanged">
+                    </RadzenDropDown>
+                }
+            }
         </div>
         <div class="col col-md-5">
             @* Выбор операции *@
@@ -245,7 +291,7 @@
                     </Template>
                 </RadzenDataGridColumn>
 
-                @foreach (var col in ExcelColumns)
+                @foreach (var col in TableColumns)
                 {
                     <RadzenDataGridColumn TItem="Dictionary<string,string>" Title="@col" Property="@col">
                         <HeaderTemplate>
