@@ -1,5 +1,6 @@
-using MigrationToDRX.Data.Enums;
 using Microsoft.OData.Edm;
+using MigrationToDRX.Data.Enums;
+using MigrationToDRX.Data.Models.Dto;
 
 namespace MigrationToDRX.Data.Services.Settings;
 
@@ -75,6 +76,21 @@ public class SettingStage
     /// Количество загружаемых строк
     /// </summary>
     public int RowsToUpload { get; set; }
+
+    /// <summary>
+    /// Строка подключения к БД
+    /// </summary>
+    public string? ConnectionString { get; set; }
+
+    /// <summary>
+    /// Выбранная в БД таблица
+    /// </summary>
+    public string? SelectedTable { get; set; }
+
+    /// <summary>
+    /// Сопоставление колонок (имя колонки -> имя поля сущности)
+    /// </summary>
+    public Dictionary<string, string?> ColumnMappings { get; set; }
 
     /// <summary>
     /// Имя выбранного свойства-коллекции

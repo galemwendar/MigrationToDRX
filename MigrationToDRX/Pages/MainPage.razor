@@ -12,76 +12,73 @@
 <div class="page-background-main">
     <RadzenComponents />
 
-    @* Список этапов миграции *@
-    <div class="card mb-3">
-        <div class="card-header">
-            <div class="d-flex justify-content-between align-items-center">
-                <h3>Этапы миграции</h3>
-                <button class="btn btn-primary" @onclick="AddNewStage">
-                    Добавить этап
-                </button>
-            </div>
-        </div>
-        <div class="card-body">
-
-            @if (SettingStages.Any())
-            {
-                <div class="list-group mb-3">
-                    @foreach (var stage in SettingStages.OrderBy(s => s.Number))
+    <div class="row">
+        @* Список этапов миграции слева *@
+        <div class="col-md-3">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5>Этапы миграции</h5>
+                    <button class="btn btn-primary btn-sm w-100 mt-2" @onclick="AddNewStage">
+                        Добавить этап
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    @if (SettingStages.Any())
                     {
-                        <div class="list-group-item @(SelectedStage == stage ? "active" : "")"
-                             style="cursor: pointer;"
-                             @onclick="() => SelectStage(stage)">
-                            <h5 class="mb-1">
-                                <span class="badge bg-secondary me-2">@stage.Number</span>
-                                @stage.Name
-                            </h5>
-                            <p class="mb-1">@stage.Description</p>
-                            <small>
-                                @stage.SourceType.GetDisplayName() → @stage.Operation.GetDisplayName()
-                                @if (stage.SelectedEntitySet != null)
-                                {
-                                    <span> (@stage.SelectedEntitySet.Name)</span>
-                                }
-                            </small>
+                        <div class="list-group list-group-flush">
+                            @foreach (var stage in SettingStages.OrderBy(s => s.Number))
+                            {
+                                <div class="list-group-item @(SelectedStage == stage ? "active" : "")"
+                                     style="cursor: pointer;"
+                                     @onclick="() => SelectStage(stage)">
+                                    <div class="d-flex align-items-center mb-1">
+                                        <span class="badge bg-secondary me-2">@stage.Number</span>
+                                        <strong>@stage.Name</strong>
+                                    </div>
+                                    <small class="d-block text-truncate">@stage.Description</small>
+                                    <small class="d-block">
+                                        @stage.SourceType.GetDisplayName()
+                                    </small>
+                                </div>
+                            }
+                        </div>
+
+                        @if (SelectedStage != null)
+                        {
+                            <div class="p-2 border-top">
+                                <div class="btn-group w-100 mb-2" role="group">
+                                    <button class="btn btn-sm btn-outline-secondary"
+                                            @onclick="() => MoveStageUp(SelectedStage)"
+                                            disabled="@(SelectedStage.Number == 1)">
+                                        ▲
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary"
+                                            @onclick="() => MoveStageDown(SelectedStage)"
+                                            disabled="@(SelectedStage.Number == SettingStages.Count)">
+                                        ▼
+                                    </button>
+                                </div>
+                                <button class="btn btn-sm btn-danger w-100"
+                                        @onclick="() => DeleteStage(SelectedStage)">
+                                    Удалить этап
+                                </button>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="p-3">
+                            <p class="text-muted small mb-0">Нет настроенных этапов. Нажмите "Добавить этап".</p>
                         </div>
                     }
                 </div>
-
-                @if (SelectedStage != null)
-                {
-                    <div class="btn-toolbar mb-3" role="toolbar">
-                        <div class="btn-group me-2" role="group">
-                            <button class="btn btn-sm btn-outline-secondary"
-                                    @onclick="() => MoveStageUp(SelectedStage)"
-                                    disabled="@(SelectedStage.Number == 1)">
-                                ▲ Вверх
-                            </button>
-                            <button class="btn btn-sm btn-outline-secondary"
-                                    @onclick="() => MoveStageDown(SelectedStage)"
-                                    disabled="@(SelectedStage.Number == SettingStages.Count)">
-                                ▼ Вниз
-                            </button>
-                        </div>
-                        <div class="btn-group" role="group">
-                            <button class="btn btn-sm btn-danger"
-                                    @onclick="() => DeleteStage(SelectedStage)">
-                                Удалить
-                            </button>
-                        </div>
-                    </div>
-                }
-            }
-            else
-            {
-                <p class="text-muted">Нет настроенных этапов. Нажмите "Добавить этап" для создания нового.</p>
-            }
+            </div>
         </div>
-    </div>
 
-    @* Форма редактирования выбранного этапа *@
-    @if (SelectedStage != null)
-    {
+        @* Форма редактирования выбранного этапа справа *@
+        <div class="col-md-9">
+            @if (SelectedStage != null)
+            {
         <div class="card">
             <div class="card-header">
                 <div class="d-flex justify-content-between align-items-center">
@@ -399,5 +396,7 @@
                 }
             </div>
         </div>
-    }
+            }
+        </div>
+    </div>
 </div>

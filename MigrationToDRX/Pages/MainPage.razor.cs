@@ -908,9 +908,16 @@ public partial class MainPage
     /// <summary>
     /// Выбор этапа для редактирования
     /// </summary>
-    private void SelectStage(SettingStage stage)
+    private async Task SelectStage(SettingStage stage)
     {
         SelectedStage = stage;
+
+        // Очищаем данные предыдущего этапа
+        PreviewRows = new();
+        TableColumns = new();
+        ColumnMappings = new();
+        DbService = null;
+        DbTables = new();
 
         // Загружаем настройки выбранного этапа в форму
         if (SelectedStage != null)
@@ -924,6 +931,9 @@ public partial class MainPage
             {
                 SelectedEntitySet = EntitySets.FirstOrDefault(e => e.Name == SelectedStage.SelectedEntitySetName);
                 SelectedStage.SelectedEntitySet = SelectedEntitySet;
+
+                // Вызываем OnSelectedEntitySetChanged чтобы заполнить EntityFields
+                OnSelectedEntitySetChanged(SelectedEntitySet);
             }
             else
             {
@@ -935,6 +945,38 @@ public partial class MainPage
             ForceUploadProcessedRows = SelectedStage.ForceUploadProcessedRows;
             StartFrom = SelectedStage.StartFrom;
             RowsToUpload = SelectedStage.RowsToUpload;
+            DbConnectionString = SelectedStage.ConnectionString;
+            SelectedTable = SelectedStage.SelectedTable;
+
+            // Сохраняем маппинг временно
+            var savedMappings = SelectedStage.ColumnMappings != null && SelectedStage.ColumnMappings.Any()
+                ? new Dictionary<string, string?>(SelectedStage.ColumnMappings)
+                : null;
+
+            // Если источник - БД, подключаемся и загружаем данные
+            if (SelectedStage.SourceType == SourceType.DatabaseMssql && !string.IsNullOrWhiteSpace(SelectedStage.ConnectionString))
+            {
+                DbService = new MssqlService(SelectedStage.ConnectionString);
+                await DbService.ConnectAsync();
+                DbTables = (await DbService.GetTablesAsync()).ToList();
+
+                // Загружаем данные из выбранной таблицы
+                if (!string.IsNullOrWhiteSpace(SelectedStage.SelectedTable))
+                {
+                    await OnDbTableChanged();
+                }
+            }
+
+            // Восстанавливаем ColumnMappings ПОСЛЕ загрузки данных
+            if (savedMappings != null)
+            {
+                ColumnMappings = savedMappings.ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => string.IsNullOrEmpty(kvp.Value)
+                        ? null
+                        : EntityFields.FirstOrDefault(f => f.Name == kvp.Value)
+                );
+            }
         }
 
         StateHasChanged();
@@ -960,6 +1002,14 @@ public partial class MainPage
         SelectedStage.ForceUploadProcessedRows = ForceUploadProcessedRows;
         SelectedStage.StartFrom = StartFrom;
         SelectedStage.RowsToUpload = RowsToUpload;
+        SelectedStage.ConnectionString = DbConnectionString;
+        SelectedStage.SelectedTable = SelectedTable;
+
+        // Сохраняем только имена полей из маппинга
+        SelectedStage.ColumnMappings = ColumnMappings.ToDictionary(
+            kvp => kvp.Key,
+            kvp => kvp.Value?.Name
+        );
 
         await SettingService.UpdateStages(SettingStages);
 
@@ -988,13 +1038,14 @@ public partial class MainPage
             UploadAllRows = true,
             StartFrom = 1,
             RowsToUpload = 100,
-            SearchCriteria = SearchEntityBy.Name
+            SearchCriteria = SearchEntityBy.Name,
+            ColumnMappings = new()
         };
 
         SettingStages.Add(newStage);
         await SettingService.UpdateStages(SettingStages);
         SelectedStage = newStage;
-        StateHasChanged();
+        SelectStage(newStage);
     }
 
     /// <summary>
