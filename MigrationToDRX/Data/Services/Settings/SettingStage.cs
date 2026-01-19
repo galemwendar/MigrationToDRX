@@ -97,4 +97,66 @@ public class SettingStage
     /// </summary>
     public string? SelectedCollectionPropertyName { get; set; }
 
+    /// <summary>
+    /// Статус выполнения этапа (не сериализуется)
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public StageStatus Status { get; set; } = StageStatus.Pending;
+
+    /// <summary>
+    /// Процент выполнения этапа (не сериализуется)
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public int ProgressPercent { get; set; } = 0;
+
+    /// <summary>
+    /// Время последнего выполнения этапа
+    /// </summary>
+    public DateTime? LastExecutionTime { get; set; }
+
+    /// <summary>
+    /// Результат последнего выполнения (текст ошибки или сообщение об успехе)
+    /// </summary>
+    public string? LastExecutionResult { get; set; }
+
+    /// <summary>
+    /// Количество обработанных строк при последнем выполнении
+    /// </summary>
+    public int? LastProcessedRows { get; set; }
+
+    /// <summary>
+    /// Количество успешных операций при последнем выполнении
+    /// </summary>
+    public int? LastSuccessfulRows { get; set; }
+
+    /// <summary>
+    /// Количество ошибок при последнем выполнении
+    /// </summary>
+    public int? LastErrorRows { get; set; }
+}
+
+/// <summary>
+/// Статус выполнения этапа
+/// </summary>
+public enum StageStatus
+{
+    /// <summary>
+    /// Ожидает выполнения
+    /// </summary>
+    Pending,
+
+    /// <summary>
+    /// В процессе выполнения
+    /// </summary>
+    InProgress,
+
+    /// <summary>
+    /// Завершен успешно
+    /// </summary>
+    Completed,
+
+    /// <summary>
+    /// Завершен с ошибкой
+    /// </summary>
+    Error
 }

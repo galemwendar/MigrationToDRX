@@ -4,6 +4,7 @@
 @using MigrationToDRX.Data.Services.Settings
 @using Radzen
 @using Radzen.Blazor
+@using static MigrationToDRX.Data.Services.Settings.StageStatus
 
 <RadzenDialog />
 
@@ -34,11 +35,61 @@
                                     <div class="d-flex align-items-center mb-1">
                                         <span class="badge bg-secondary me-2">@stage.Number</span>
                                         <strong>@stage.Name</strong>
+                                        @if (stage.Status == StageStatus.InProgress)
+                                        {
+                                            <span class="badge bg-primary ms-auto">В процессе</span>
+                                        }
+                                        else if (stage.Status == StageStatus.Completed)
+                                        {
+                                            <span class="badge bg-success ms-auto">✓ Завершен</span>
+                                        }
+                                        else if (stage.Status == StageStatus.Error)
+                                        {
+                                            <span class="badge bg-danger ms-auto">✗ Ошибка</span>
+                                        }
                                     </div>
                                     <small class="d-block text-truncate">@stage.Description</small>
                                     <small class="d-block">
                                         @stage.SourceType.GetDisplayName()
                                     </small>
+                                    @if (stage.Status == StageStatus.InProgress && stage.ProgressPercent > 0)
+                                    {
+                                        <div class="progress mt-2" style="height: 5px;">
+                                            <div class="progress-bar" role="progressbar"
+                                                 style="width: @(stage.ProgressPercent)%"
+                                                 aria-valuenow="@stage.ProgressPercent"
+                                                 aria-valuemin="0"
+                                                 aria-valuemax="100"></div>
+                                        </div>
+                                    }
+                                    @if (stage.LastExecutionTime.HasValue)
+                                    {
+                                        <div class="mt-2 pt-2 border-top">
+                                            <small class="text-muted d-block">
+                                                <strong>Последнее выполнение:</strong> @stage.LastExecutionTime.Value.ToString("dd.MM.yyyy HH:mm:ss")
+                                            </small>
+                                            @if (stage.LastProcessedRows.HasValue)
+                                            {
+                                                <small class="text-muted d-block">
+                                                    Обработано: @stage.LastProcessedRows
+                                                    @if (stage.LastSuccessfulRows.HasValue)
+                                                    {
+                                                        <span class="text-success"> (✓ @stage.LastSuccessfulRows)</span>
+                                                    }
+                                                    @if (stage.LastErrorRows.HasValue && stage.LastErrorRows > 0)
+                                                    {
+                                                        <span class="text-danger"> (✗ @stage.LastErrorRows)</span>
+                                                    }
+                                                </small>
+                                            }
+                                            @if (!string.IsNullOrEmpty(stage.LastExecutionResult))
+                                            {
+                                                <small class="text-muted d-block text-truncate" title="@stage.LastExecutionResult">
+                                                    @stage.LastExecutionResult
+                                                </small>
+                                            }
+                                        </div>
+                                    }
                                 </div>
                             }
                         </div>
@@ -72,6 +123,30 @@
                         </div>
                     }
                 </div>
+                @if (SettingStages.Any())
+                {
+                    <div class="card-footer">
+                        <div class="d-flex flex-column gap-2">
+                            <button class="btn btn-outline-secondary w-100"
+                                    @onclick="ValidateAllStages"
+                                    disabled="@(!SettingStages.Any() || isProceed)">
+                                Проверить все этапы
+                            </button>
+                            <button class="btn btn-primary w-100"
+                                    @onclick="ExecuteAllStages"
+                                    disabled="@(!SettingStages.Any() || isProceed)">
+                                Запустить все этапы
+                            </button>
+                            @if (isProceed)
+                            {
+                                <button class="btn btn-danger w-100"
+                                        @onclick="CancelOperation">
+                                    Прервать выполнение
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
             </div>
         </div>
 
@@ -303,29 +378,12 @@
                                 Прогресс выполнения операции
                             </p>
                             <RadzenProgressBar Value="@progress" Max="@maxRowsCount" Unit="@Unit" style="flex-grow: 1; min-width: 0;" />
-                            <button class="btn btn-danger ms-2" style="height: 2.5rem; flex-shrink: 0; width: auto;" @onclick="@CancelOperation">
-                                Прервать
-                            </button>
                         </div>
                     </div>
                 }
 
-                @* Кнопки валидации и отправки на сервер *@
-                <div class="mb-3 d-flex justify-content-between w-60">
-                    <div>
-                        <button class="btn btn-outline-secondary mx-1"
-                                @onclick="Validate"
-                                disabled="@(ColumnMappings.Any(m => m.Value != null) == false)">
-                            Проверить
-                        </button>
-
-                        <button class="btn btn-primary mx-1"
-                                @onclick="Upload"
-                                disabled="@(ColumnMappings.Any(m => m.Value != null) == false)">
-                            Отправить
-                        </button>
-                    </div>
-
+                @* Кнопка скачивания отчета *@
+                <div class="mb-3 d-flex justify-content-end w-60">
                     <button class="btn btn-outline-secondary mx-1"
                             @onclick="DownloadExcel"
                             disabled="@(ColumnMappings.Any(m => m.Value != null) == false)">
