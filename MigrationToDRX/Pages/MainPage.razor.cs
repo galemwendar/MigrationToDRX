@@ -12,6 +12,7 @@ using Radzen.Blazor;
 using MigrationToDRX.Data.Services.DbServices;
 using MigrationToDRX.Data.Models.ViewModels;
 using MigrationToDRX.Data.Services.Settings;
+using MigrationToDRX.Data.Services.Background;
 namespace MigrationToDRX.Pages;
 
 public partial class MainPage
@@ -208,6 +209,18 @@ public partial class MainPage
     /// </summary>
     [Inject]
     private SettingService SettingService { get; set; } = null!;
+
+    /// <summary>
+    /// Логгер
+    /// </summary>
+    [Inject]
+    private ILogger<MainPage> Logger { get; set; } = null!;
+
+    /// <summary>
+    /// Канал для передачи задач в фоновый сервис
+    /// </summary>
+    [Inject]
+    private MigrationChannel MigrationChannel { get; set; } = null!;
 
     /// <summary>
     /// Признак подключения к OData сервису
@@ -808,7 +821,7 @@ public partial class MainPage
         {
             switch (SelectedSourceType)
             {
-                case SourceType.DatabaseMssql: DbService = new MssqlService(DbConnectionString); break;
+                case SourceType.DatabaseMssql: DbService = new MssqlService(DbConnectionString, Logger); break;
                 default: return;
             }
 
@@ -986,7 +999,7 @@ public partial class MainPage
             // Если источник - БД, подключаемся и загружаем данные
             if (SelectedStage.SourceType == SourceType.DatabaseMssql && !string.IsNullOrWhiteSpace(SelectedStage.ConnectionString))
             {
-                DbService = new MssqlService(SelectedStage.ConnectionString);
+                DbService = new MssqlService(SelectedStage.ConnectionString, Logger);
                 await DbService.ConnectAsync();
                 DbTables = (await DbService.GetTablesAsync()).ToList();
 
@@ -1175,7 +1188,6 @@ public partial class MainPage
         // Сброс статусов всех этапов
         foreach (var s in SettingStages)
         {
-            s.Status = StageStatus.Pending;
             s.ProgressPercent = 0;
         }
 
@@ -1187,7 +1199,6 @@ public partial class MainPage
             var startTime = DateTime.Now;
             try
             {
-                stage.Status = StageStatus.InProgress;
                 StateHasChanged();
 
                 // Выбираем этап и загружаем его настройки
@@ -1199,13 +1210,11 @@ public partial class MainPage
 
                 if (ct.IsCancellationRequested)
                 {
-                    stage.Status = StageStatus.Pending;
                     stage.LastExecutionResult = "Валидация отменена пользователем";
                     break;
                 }
 
                 // Сохраняем результаты валидации
-                stage.Status = StageStatus.Completed;
                 stage.ProgressPercent = 100;
                 stage.LastExecutionTime = DateTime.Now;
                 stage.LastExecutionResult = "Валидация завершена успешно";
@@ -1215,14 +1224,12 @@ public partial class MainPage
             }
             catch (OperationCanceledException)
             {
-                stage.Status = StageStatus.Pending;
                 stage.LastExecutionTime = DateTime.Now;
                 stage.LastExecutionResult = "Валидация отменена";
                 break;
             }
             catch (Exception ex)
             {
-                stage.Status = StageStatus.Error;
                 stage.LastExecutionTime = DateTime.Now;
                 stage.LastExecutionResult = $"Ошибка: {ex.Message}";
                 StateHasChanged();
@@ -1254,118 +1261,55 @@ public partial class MainPage
     }
 
     /// <summary>
-    /// Выполнение всех этапов по порядку
+    /// Создание задачи в фоне.
     /// </summary>
     private async Task ExecuteAllStages()
     {
-        if (!SettingStages.Any()) return;
-
-        cancelRequested?.Cancel();
-        cancelRequested?.Dispose();
-        cancelRequested = new CancellationTokenSource();
-        var ct = cancelRequested.Token;
-
-        // Сброс статусов всех этапов
-        foreach (var s in SettingStages)
+        try
         {
-            s.Status = StageStatus.Pending;
-            s.ProgressPercent = 0;
+            if (!SettingStages.Any())
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Warning,
+                    Summary = "Предупреждение",
+                    Detail = "Нет настроенных этапов для выполнения",
+                    Duration = 4000
+                });
+                return;
+            }
+
+            // Создаем задачу с копией настроек этапов
+            var task = new MigrationTask
+            {
+                Stages = SettingStages.ToList()
+            };
+
+            // Отправляем задачу в канал для фонового выполнения
+            await MigrationChannel.Writer.WriteAsync(task);
+
+            Logger.LogInformation("ExecuteAllStages. Задача {TaskId} отправлена на выполнение с {StageCount} этапами",
+                task.Id, task.Stages.Count);
+
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Задача запущена",
+                Detail = $"Запущено выполнение {task.Stages.Count} этапов",
+                Duration = 4000
+            });
         }
-
-        isProceed = true;
-        StateHasChanged();
-
-        foreach (var stage in SettingStages.OrderBy(s => s.Number))
+        catch (Exception ex)
         {
-            var startTime = DateTime.Now;
-            try
+            Logger.LogError(ex, "ExecuteAllStages. Ошибка при запуске выполнения этапов");
+            NotificationService.Notify(new NotificationMessage
             {
-                stage.Status = StageStatus.InProgress;
-                StateHasChanged();
-
-                // Выбираем этап и загружаем его настройки
-                await SelectStage(stage);
-                await Task.Delay(100, ct); // Даем время на обновление UI
-
-                NotificationService.Notify(new NotificationMessage
-                {
-                    Summary = "Выполнение этапа",
-                    Detail = $"Запуск этапа \"{stage.Name}\"",
-                    Severity = NotificationSeverity.Info,
-                    Duration = 3000
-                });
-
-                // Запускаем выполнение этапа (не управляем isProceed внутри метода)
-                await Upload(setIsProceed: false);
-
-                if (ct.IsCancellationRequested)
-                {
-                    stage.Status = StageStatus.Pending;
-                    stage.LastExecutionResult = "Выполнение отменено пользователем";
-                    break;
-                }
-
-                // Подсчитываем статистику из PreviewRows
-                var resultColumnName = OdataOperationHelper.GetDisplayName<OperationResult>(nameof(OperationResult.Success));
-                var successCount = PreviewRows.Count(r => r.ContainsKey(resultColumnName) && r[resultColumnName] == "Да");
-                var errorCount = PreviewRows.Count(r => r.ContainsKey(resultColumnName) && r[resultColumnName] == "Нет");
-
-                stage.Status = StageStatus.Completed;
-                stage.ProgressPercent = 100;
-                stage.LastExecutionTime = DateTime.Now;
-                stage.LastExecutionResult = $"Выполнено успешно. Обработано: {successCount}, Ошибок: {errorCount}";
-                stage.LastProcessedRows = PreviewRows.Count;
-                stage.LastSuccessfulRows = successCount;
-                stage.LastErrorRows = errorCount;
-
-                StateHasChanged();
-
-                NotificationService.Notify(new NotificationMessage
-                {
-                    Summary = "Этап завершен",
-                    Detail = $"Этап \"{stage.Name}\" выполнен успешно. Обработано: {successCount}, Ошибок: {errorCount}",
-                    Severity = NotificationSeverity.Success,
-                    Duration = 3000
-                });
-            }
-            catch (OperationCanceledException)
-            {
-                stage.Status = StageStatus.Pending;
-                stage.LastExecutionTime = DateTime.Now;
-                stage.LastExecutionResult = "Выполнение отменено";
-                break;
-            }
-            catch (Exception ex)
-            {
-                stage.Status = StageStatus.Error;
-                stage.LastExecutionTime = DateTime.Now;
-                stage.LastExecutionResult = $"Ошибка: {ex.Message}";
-                StateHasChanged();
-
-                NotificationService.Notify(new NotificationMessage
-                {
-                    Summary = "Ошибка",
-                    Detail = $"Ошибка при выполнении этапа \"{stage.Name}\": {ex.Message}",
-                    Severity = NotificationSeverity.Error,
-                    Duration = 5000
-                });
-                break;
-            }
+                Severity = NotificationSeverity.Error,
+                Summary = "Ошибка",
+                Detail = "Не удалось запустить выполнение этапов",
+                Duration = 4000
+            });
         }
-
-        isProceed = false;
-        StateHasChanged();
-
-        // Сохраняем результаты в файл
-        await SettingService.UpdateStages(SettingStages);
-
-        NotificationService.Notify(new NotificationMessage
-        {
-            Summary = "Завершено",
-            Detail = "Выполнение всех этапов завершено",
-            Severity = NotificationSeverity.Success,
-            Duration = 3000
-        });
     }
 
     #endregion

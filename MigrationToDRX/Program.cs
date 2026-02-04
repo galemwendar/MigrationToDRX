@@ -10,6 +10,7 @@ using NLog;
 using NLog.Web;
 using MigrationToDRX.Data.Helpers;
 using MigrationToDRX.Data.Services.Settings;
+using MigrationToDRX.Data.Services.Background;
 
 
 try
@@ -25,7 +26,8 @@ try
     // Чтение настроек Kestrel из конфигурации
     var kestrelConfig = builder.Configuration.GetSection("Kestrel:Endpoints");
     builder.Logging.ClearProviders();
-    builder.Logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace);
+    builder.Logging.AddConsole(); // Добавляем Console провайдер для вывода логов в консоль
+    builder.Logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Debug);
     builder.Host.UseNLog();
     var httpUrl = kestrelConfig["Http:Url"];
     //var httpsUrl = kestrelConfig["Https:Url"];
@@ -34,7 +36,7 @@ try
     // Add services to the container.
     builder.Services.AddRazorPages();
     builder.Services.AddServerSideBlazor();
-    builder.Services.AddScoped<OdataClientService>();
+    builder.Services.AddSingleton<OdataClientService>(); // Singleton - подключение к OData один раз
     builder.Services.AddScoped<ODataEDocService>();
     builder.Services.AddScoped<EntityService>();
     builder.Services.AddScoped<EntityBuilderService>();
@@ -47,9 +49,14 @@ try
     builder.Services.AddScoped<ActionService>();
     builder.Services.AddScoped<OperationService>();
     builder.Services.AddScoped<SettingService>();
-    System.Console.WriteLine("Adding services...");
+
+    // Channel для передачи задач в фоновый сервис (Singleton)
+    builder.Services.AddSingleton<MigrationChannel>();
+    // Job создается в scope для каждой задачи
+    builder.Services.AddScoped<MigrationJob>();
+    builder.Services.AddHostedService<BackgroundMigrationService>();
+
     var app = builder.Build();
-    System.Console.WriteLine("Building...");
     // Configure the HTTP request pipeline.
     if (!app.Environment.IsDevelopment())
     {

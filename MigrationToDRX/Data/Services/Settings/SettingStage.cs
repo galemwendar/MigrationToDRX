@@ -134,29 +134,3 @@ public class SettingStage
     /// </summary>
     public int? LastErrorRows { get; set; }
 }
-
-/// <summary>
-/// Статус выполнения этапа
-/// </summary>
-public enum StageStatus
-{
-    /// <summary>
-    /// Ожидает выполнения
-    /// </summary>
-    Pending,
-
-    /// <summary>
-    /// В процессе выполнения
-    /// </summary>
-    InProgress,
-
-    /// <summary>
-    /// Завершен успешно
-    /// </summary>
-    Completed,
-
-    /// <summary>
-    /// Завершен с ошибкой
-    /// </summary>
-    Error
-}
