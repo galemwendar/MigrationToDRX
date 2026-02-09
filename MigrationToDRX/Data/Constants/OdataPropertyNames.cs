@@ -18,10 +18,15 @@ public static class OdataPropertyNames
     public const string Id = "Id";
 
     /// <summary>
+    /// Строка для поиска свойства "ExternalId"
+    /// </summary>
+    public const string ExternalId = "ExternalId";
+
+    /// <summary>
     /// Строка для поиска свойства "Путь до файла"
     /// </summary>
     public const string Path = "Путь до файла";
-    
+
     /// <summary>
     /// Строка для поиска свойства "accessRightsTypeGuid"
     /// </summary>
@@ -67,33 +72,33 @@ public static class OdataPropertyNames
     /// </summary>
     public const string Type = "type";
 
-    /// <summary> 
-    /// Строка для поиска Id шаблона 
+    /// <summary>
+    /// Строка для поиска Id шаблона
     /// </summary>
     public const string TemplateId = "templateId";
 
-    /// <summary> 
-    /// Строка для поиска имени связи 
+    /// <summary>
+    /// Строка для поиска имени связи
     /// </summary>
     public const string RelationName = "relationName";
 
-    /// <summary> 
+    /// <summary>
     /// Строка для поиска Id связываемого документа
     /// </summary>
     public const string BaseDocumentId = "baseDocumentId";
 
-    /// <summary> 
+    /// <summary>
     /// Строка для поиска имени папки
     /// </summary>
     public const string FolderName = "folderName";
 
-    /// <summary> 
+    /// <summary>
     /// Строка для поиска Id родительской папки
     /// </summary>
-    public const string  ParentFolderId = "parentFolderId";
+    public const string ParentFolderId = "parentFolderId";
 
-    /// <summary> 
-    /// Строка для поиска Id связи 
+    /// <summary>
+    /// Строка для поиска Id связи
     /// </summary>
     public const string RelationDocumentId = "relationDocumentId";
 

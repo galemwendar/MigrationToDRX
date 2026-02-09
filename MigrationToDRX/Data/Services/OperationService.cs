@@ -1,4 +1,5 @@
 using System;
+using Microsoft.Data.OData;
 using MigrationToDRX.Data.Constants;
 using MigrationToDRX.Data.Enums;
 using MigrationToDRX.Data.Helpers;
@@ -16,12 +17,20 @@ public class OperationService
 
     private readonly ODataEDocService _odataEdocService;
 
-    public OperationService(ActionService actionService, EntityService entityService, OdataClientService odataClientService, ODataEDocService odataEdocService)
+    private ILogger<OperationService> _logger;
+
+    public OperationService(ActionService actionService,
+        EntityService entityService,
+        OdataClientService odataClientService,
+        ODataEDocService odataEdocService,
+        ILogger<OperationService> logger
+    )
     {
         _actionService = actionService;
         _entityService = entityService;
         _odataClientService = odataClientService;
         _odataEdocService = odataEdocService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -52,9 +61,82 @@ public class OperationService
             OdataOperation.AddRelations => await AddRelationsAsync(dto, ct),
             OdataOperation.RenameVersionNote => await RenameVersionNoteAsync(dto, ct),
             OdataOperation.ImportCertificate => await ImportCertificateAsync(dto, ct),
+            OdataOperation.CreateOrUpdateEntity => await CreateOrUpdateEntityAsync(dto, ct),
 
             _ => throw new ArgumentException("Не удалось обработать сценарий")
         };
+    }
+
+    /// <summary>
+    /// Создает сущность в OData и возвращает результат выполнения операции
+    /// </summary>
+    private async Task<OperationResult> CreateOrUpdateEntityAsync(ProcessedEntityDto dto, CancellationToken ct)
+    {
+        try
+        {
+            var entity = await _entityService.BuildEntity(dto, ct);
+            var entityToSave = EntityHelper.FilterServiceFields(entity);
+
+            var externalEntityId = EntityHelper.GetFieldValueFromEntityDtoString(dto, OdataPropertyNames.ExternalId);
+
+            if (string.IsNullOrEmpty(externalEntityId))
+            {
+                throw new Exception($"Не удалось найти сущность {dto.EntitySetName} по ExternalId {externalEntityId}");
+            }
+
+            _logger.LogDebug("CreateOrUpdateEntityAsync. Поиск сущности в RX с ExternalId = {}", externalEntityId);
+
+            var searchEntity = await _odataClientService.GetEntityAsync(
+                dto.EntitySetName,
+                propertyName: "ExternalId",
+                filterType: typeof(string),
+                filter: externalEntityId,
+                ct);
+
+            if (searchEntity == null)
+            {
+                _logger.LogDebug("CreateOrUpdateEntityAsync. Сущность с ExternalId = {} не найдена. Создаем новую запись", externalEntityId);
+
+                // Создаем запись
+                var savedEntity = await _odataClientService.InsertEntityAsync(entityToSave, dto.EntitySetName, ct);
+
+                if (savedEntity != null)
+                {
+                    var newId = savedEntity.TryGetValue(OdataPropertyNames.Id, out var id) ? (long)id : 0;
+
+                    if (newId == 0)
+                    {
+                        return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось создать сущность");
+                    }
+                    else
+                    {
+                        return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName(), entityId: newId, entity: savedEntity);
+                    }
+                }
+
+                return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось создать сущность");
+            }
+            else
+            {
+                _logger.LogDebug("CreateOrUpdateEntityAsync. Сущность с ExternalId = {} найдена. Обновляем запись", externalEntityId);
+
+                var entityId = Convert.ToInt64(searchEntity["Id"]);
+                var updatedEntity = await _odataClientService.UpdateEntityAsync(entityToSave, dto.EntitySetName, entityId, ct);
+
+                if (updatedEntity != null)
+                {
+                    return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName(), entityId: entityId, entity: updatedEntity);
+                }
+                else
+                {
+                    return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Не удалось обновить сущность");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
+        }
     }
 
     /// <summary>
@@ -101,7 +183,7 @@ public class OperationService
             var entity = await _entityService.BuildEntity(dto, ct);
             var entityToSave = EntityHelper.FilterServiceFields(entity);
 
-            var entityId = EntityHelper.GetFieldValueFromEntityDto(dto, OdataPropertyNames.MainId);
+            var entityId = EntityHelper.GetFieldValueFromEntityDto(dto, OdataPropertyNames.ExternalId);
 
             if (entityId == 0)
             {
@@ -424,7 +506,7 @@ public class OperationService
         }
     }
 
-    /// <summary> 
+    /// <summary>
     /// Выполнить действие на сервере, если действие существует (IsBound = true) и возвращает void
     /// </summary>
     /// <param name="moduleName">Имя модуля</param>

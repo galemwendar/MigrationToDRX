@@ -18,6 +18,7 @@ public static class OdataOperationHelper
     private static readonly HashSet<StructuralPropertyDto> ServiceFields = new()
     {
         StructuralProperies.MainId,
+        StructuralProperies.ExternalId,
         StructuralProperies.Path,
         StructuralProperies.AccessRightTypeGuid,
         StructuralProperies.DocumentId,
@@ -51,6 +52,7 @@ public static class OdataOperationHelper
         OdataOperation.CreateDocumentWithVersion,
         OdataOperation.CreateEntity,
         OdataOperation.UpdateEntity,
+        OdataOperation.CreateOrUpdateEntity
     };
 
     /// <summary>
@@ -63,6 +65,7 @@ public static class OdataOperationHelper
         OdataOperation.AddVersionToExistedDocument,
         OdataOperation.CreateDocumentWithVersion,
         OdataOperation.CreateEntity,
+        OdataOperation.CreateOrUpdateEntity,
         OdataOperation.UpdateEntity,
         OdataOperation.CreateChildFolder,
         OdataOperation.ImportCertificate
@@ -239,7 +242,7 @@ public static class OdataOperationHelper
                 properties.AddFirst(StructuralProperies.BaseDocumentId);
                 properties.AddFirst(StructuralProperies.RelationDocumentId);
                 break;
-            
+
             case OdataOperation.RenameVersionNote:
                 properties.AddFirst(StructuralProperies.DocumentId);
                 properties.AddFirst(StructuralProperies.NumberVersionId);

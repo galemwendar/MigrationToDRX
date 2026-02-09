@@ -97,6 +97,11 @@ public enum OdataOperation
     [Display(Name = "Создание версии из шаблона")]
     CreateVersionFromTemplate = 15,
 
+    /// <summary>
+    /// Создание сущности
+    /// </summary>
+    [Display(Name = "Создание ИЛИ обновление сущности (документ/справочник/прочее)")]
+    CreateOrUpdateEntity = 16,
 
     #region Пакет разработки ExcelMigrator
 
@@ -117,6 +122,5 @@ public enum OdataOperation
     /// </summary>
     [Display(Name = "Импортировать сертификат пользователя")]
     ImportCertificate = 102,
-
     #endregion
 }

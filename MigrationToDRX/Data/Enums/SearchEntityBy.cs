@@ -18,4 +18,11 @@ public enum SearchEntityBy
     /// </summary>
     [Display(Name = "Идентификатор сущности")]
     Id = 2,
+
+
+    /// <summary>
+    /// Идентификатор сущности
+    /// </summary>
+    [Display(Name = "Внешний идентификатор")]
+    ExternalId = 3
 }

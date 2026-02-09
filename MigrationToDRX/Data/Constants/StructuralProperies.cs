@@ -4,16 +4,29 @@ namespace MigrationToDRX.Data.Constants;
 
 public static class StructuralProperies
 {
-        /// <summary>
+    /// <summary>
     /// Фейковое структурное поле MainId
     /// </summary>
-    /// <remarks>Является ключом для поиска сущности при обновлении 
+    /// <remarks>Является ключом для поиска сущности при обновлении
     /// или поиска свойства - коллекции
     /// </remarks>
     public static readonly StructuralPropertyDto MainId = new()
     {
         Name = OdataPropertyNames.MainId,
         Type = "Edm.Int64",
+        Nullable = false
+    };
+
+    /// <summary>
+    /// Фейковое структурное поле Путь до файла
+    /// </summary>
+    /// <remarks>Является ключом для поиска файла на машине клиента
+    ///  при добавлении или обновлении версии документа
+    /// </remarks>
+    public static readonly StructuralPropertyDto ExternalId = new()
+    {
+        Name = OdataPropertyNames.ExternalId,
+        Type = "Edm.String",
         Nullable = false
     };
 
@@ -120,7 +133,7 @@ public static class StructuralProperies
         Nullable = false
     };
 
-    /// <summary> 
+    /// <summary>
     /// Фейковое структурное поле templateId
     /// </summary>
     public static readonly StructuralPropertyDto TemplateId = new()
@@ -130,7 +143,7 @@ public static class StructuralProperies
         Nullable = false
     };
 
-    /// <summary> 
+    /// <summary>
     /// Фейковое структурное поле relationName
     /// </summary>
     public static readonly StructuralPropertyDto RelationName = new()
@@ -140,7 +153,7 @@ public static class StructuralProperies
         Nullable = false
     };
 
-    /// <summary> 
+    /// <summary>
     /// Фейковое структурное поле baseDocumentId
     /// </summary>
     public static readonly StructuralPropertyDto BaseDocumentId = new()
@@ -150,7 +163,7 @@ public static class StructuralProperies
         Nullable = false
     };
 
-    /// <summary> 
+    /// <summary>
     /// Фейковое структурное поле folderName
     /// </summary>
     public static readonly StructuralPropertyDto FolderName = new()
@@ -160,7 +173,7 @@ public static class StructuralProperies
         Nullable = false
     };
 
-    /// <summary> 
+    /// <summary>
     /// Фейковое структурное поле parentFolderId
     /// </summary>
     public static readonly StructuralPropertyDto ParentFolderId = new()
@@ -170,7 +183,7 @@ public static class StructuralProperies
         Nullable = false
     };
 
-    /// <summary> 
+    /// <summary>
     /// Фейковое структурное поле relationDocumentId
     /// </summary>
     public static readonly StructuralPropertyDto RelationDocumentId = new()
