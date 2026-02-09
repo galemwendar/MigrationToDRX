@@ -1421,6 +1421,9 @@ public partial class MainPage
             int successRows = 0;
             int errorRows = 0;
 
+            maxRowsCount = data.Count;
+            progress = 0;
+
             foreach (var row in data)
             {
                 if (ct.IsCancellationRequested)
@@ -1469,6 +1472,7 @@ public partial class MainPage
                 }
 
                 processedRows++;
+                progress = processedRows;
                 stage.ProgressPercent = data.Count > 0 ? (processedRows * 100) / data.Count : 100;
                 StateHasChanged();
             }

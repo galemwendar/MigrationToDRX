@@ -36,11 +36,11 @@
                                     <div class="d-flex align-items-center mb-1">
                                         <span class="badge bg-secondary me-2">@stage.Number</span>
                                         <strong>@stage.Name</strong>
-                                        @if (stage.Status == StageStatus.InProgress)
+                                        @if (stage.Status == StageStatus.InProgress || stage.Status == StageStatus.Running)
                                         {
                                             <span class="badge bg-primary ms-auto">В процессе</span>
                                         }
-                                        else if (stage.Status == StageStatus.Completed)
+                                        else if (stage.Status == StageStatus.Completed || stage.Status == StageStatus.Processed)
                                         {
                                             <span class="badge bg-success ms-auto">✓ Завершен</span>
                                         }
@@ -53,7 +53,7 @@
                                     <small class="d-block">
                                         @stage.SourceType.GetDisplayName()
                                     </small>
-                                    @if (stage.Status == StageStatus.InProgress && stage.ProgressPercent > 0)
+                                    @if (isProceed && stage.ProgressPercent > 0 && (stage.Status == StageStatus.InProgress || stage.Status == StageStatus.Running || stage == SelectedStage))
                                     {
                                         <div class="progress mt-2" style="height: 5px;">
                                             <div class="progress-bar" role="progressbar"
@@ -62,6 +62,7 @@
                                                  aria-valuemin="0"
                                                  aria-valuemax="100"></div>
                                         </div>
+                                        <small class="text-muted">@stage.ProgressPercent%</small>
                                     }
                                     @if (stage.LastExecutionTime.HasValue)
                                     {
