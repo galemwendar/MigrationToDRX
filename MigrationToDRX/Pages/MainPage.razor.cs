@@ -12,7 +12,6 @@ using Radzen.Blazor;
 using MigrationToDRX.Data.Services.DbServices;
 using MigrationToDRX.Data.Models.ViewModels;
 using MigrationToDRX.Data.Services.Settings;
-using MigrationToDRX.Data.Services.Background;
 namespace MigrationToDRX.Pages;
 
 public partial class MainPage
@@ -215,12 +214,6 @@ public partial class MainPage
     /// </summary>
     [Inject]
     private ILogger<MainPage> Logger { get; set; } = null!;
-
-    /// <summary>
-    /// Канал для передачи задач в фоновый сервис
-    /// </summary>
-    [Inject]
-    private MigrationChannel MigrationChannel { get; set; } = null!;
 
     /// <summary>
     /// Признак подключения к OData сервису
@@ -1261,54 +1254,230 @@ public partial class MainPage
     }
 
     /// <summary>
-    /// Создание задачи в фоне.
+    /// Последовательное выполнение всех этапов.
     /// </summary>
     private async Task ExecuteAllStages()
     {
-        try
+        if (!SettingStages.Any())
         {
-            if (!SettingStages.Any())
+            NotificationService.Notify(new NotificationMessage
             {
-                NotificationService.Notify(new NotificationMessage
-                {
-                    Severity = NotificationSeverity.Warning,
-                    Summary = "Предупреждение",
-                    Detail = "Нет настроенных этапов для выполнения",
-                    Duration = 4000
-                });
-                return;
+                Severity = NotificationSeverity.Warning,
+                Summary = "Предупреждение",
+                Detail = "Нет настроенных этапов для выполнения",
+                Duration = 4000
+            });
+            return;
+        }
+
+        cancelRequested?.Cancel();
+        cancelRequested?.Dispose();
+        cancelRequested = new CancellationTokenSource();
+        var ct = cancelRequested.Token;
+
+        // Сброс статусов всех этапов
+        foreach (var s in SettingStages)
+        {
+            s.ProgressPercent = 0;
+            s.Status = StageStatus.Ready;
+        }
+
+        isProceed = true;
+        StateHasChanged();
+
+        var entitySets = OdataClientService.GetEntitySets();
+
+        foreach (var stage in SettingStages.OrderBy(s => s.Number))
+        {
+            if (ct.IsCancellationRequested)
+            {
+                Logger.LogWarning("ExecuteAllStages. Выполнение отменено пользователем");
+                break;
             }
 
-            // Создаем задачу с копией настроек этапов
-            var task = new MigrationTask
+            try
             {
-                Stages = SettingStages.ToList()
-            };
+                stage.Status = StageStatus.Running;
+                StateHasChanged();
 
-            // Отправляем задачу в канал для фонового выполнения
-            await MigrationChannel.Writer.WriteAsync(task);
+                // Восстанавливаем IEdmEntitySet для этапа
+                if (!string.IsNullOrEmpty(stage.SelectedEntitySetName))
+                {
+                    stage.SelectedEntitySet = entitySets.FirstOrDefault(e => e.Name == stage.SelectedEntitySetName);
+                }
 
-            Logger.LogInformation("ExecuteAllStages. Задача {TaskId} отправлена на выполнение с {StageCount} этапами",
-                task.Id, task.Stages.Count);
+                await ProcessStageAsync(stage, ct);
 
-            NotificationService.Notify(new NotificationMessage
+                stage.Status = StageStatus.Processed;
+                stage.LastExecutionTime = DateTime.Now;
+                stage.LastExecutionResult = "Успешно";
+
+                Logger.LogInformation("ExecuteAllStages. Этап {StageName} успешно завершен", stage.Name);
+            }
+            catch (OperationCanceledException)
             {
-                Severity = NotificationSeverity.Success,
-                Summary = "Задача запущена",
-                Detail = $"Запущено выполнение {task.Stages.Count} этапов",
-                Duration = 4000
-            });
+                stage.LastExecutionTime = DateTime.Now;
+                stage.LastExecutionResult = "Выполнение отменено";
+                break;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "ExecuteAllStages. Обработка этапа {StageName} завершилась ошибкой", stage.Name);
+                stage.Status = StageStatus.Error;
+                stage.LastExecutionTime = DateTime.Now;
+                stage.LastExecutionResult = ex.Message;
+
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Ошибка",
+                    Detail = $"Ошибка при выполнении этапа \"{stage.Name}\": {ex.Message}",
+                    Duration = 5000
+                });
+
+                break;
+            }
+            finally
+            {
+                await SettingService.UpdateStages(SettingStages);
+                StateHasChanged();
+            }
         }
-        catch (Exception ex)
+
+        isProceed = false;
+        StateHasChanged();
+        await SettingService.UpdateStages(SettingStages);
+
+        NotificationService.Notify(new NotificationMessage
         {
-            Logger.LogError(ex, "ExecuteAllStages. Ошибка при запуске выполнения этапов");
-            NotificationService.Notify(new NotificationMessage
+            Summary = "Завершено",
+            Detail = "Выполнение всех этапов завершено",
+            Severity = NotificationSeverity.Success,
+            Duration = 3000
+        });
+    }
+
+    /// <summary>
+    /// Обработка одного этапа миграции.
+    /// </summary>
+    private async Task ProcessStageAsync(SettingStage stage, CancellationToken ct)
+    {
+        Logger.LogInformation("ProcessStageAsync. Начало обработки этапа {StageName}", stage.Name);
+
+        if (stage.SourceType == SourceType.DatabaseMssql)
+        {
+            await ProcessMssqlStageAsync(stage, ct);
+        }
+    }
+
+    /// <summary>
+    /// Обработка этапа миграции из MSSQL.
+    /// </summary>
+    private async Task ProcessMssqlStageAsync(SettingStage stage, CancellationToken ct)
+    {
+        Logger.LogInformation("ProcessMssqlStage. Начало обработки этапа {StageName}", stage.Name);
+
+        if (string.IsNullOrWhiteSpace(stage.ConnectionString))
+            throw new ArgumentNullException($"Не заданы настройки подключения в этапе {stage.Name}");
+
+        if (string.IsNullOrWhiteSpace(stage.SelectedTable))
+            throw new ArgumentNullException($"Не выбрана таблица из которой читаются данные в этапе {stage.Name}");
+
+        if (string.IsNullOrWhiteSpace(stage.SelectedEntitySetName))
+            throw new ArgumentNullException($"Не выбран EntitySet в этапе {stage.Name}");
+
+        using var dbService = new MssqlService(stage.ConnectionString, Logger);
+        await dbService.ConnectAsync();
+
+        const int partition = 1000;
+        var queryFilter = "Result is null";
+
+        while (true)
+        {
+            var data = await dbService.ReadTableAsync(stage.SelectedTable, filter: queryFilter, take: partition);
+            if (data.Count == 0)
             {
-                Severity = NotificationSeverity.Error,
-                Summary = "Ошибка",
-                Detail = "Не удалось запустить выполнение этапов",
-                Duration = 4000
-            });
+                Logger.LogInformation("ProcessMssqlStageAsync. Данные в таблице {} закончились. Этап завершен.", stage.SelectedTable);
+                break;
+            }
+
+            var entityDto = OdataClientService.GetEdmxEntityDto(stage.SelectedEntitySetName);
+            if (entityDto == null)
+                throw new InvalidOperationException($"Не удалось получить метаданные для EntitySet {stage.SelectedEntitySetName}");
+
+            var entityFields = EntityHelper.GetEntityFields(entityDto);
+            var savedMappings = stage.ColumnMappings != null && stage.ColumnMappings.Any()
+                ? new Dictionary<string, string?>(stage.ColumnMappings)
+                : new Dictionary<string, string?>();
+
+            var columnMappings = savedMappings.ToDictionary(
+                kvp => kvp.Key,
+                kvp => string.IsNullOrEmpty(kvp.Value)
+                    ? null
+                    : entityFields.FirstOrDefault(f => f.Name == kvp.Value)
+            );
+
+            int processedRows = 0;
+            int successRows = 0;
+            int errorRows = 0;
+
+            foreach (var row in data)
+            {
+                if (ct.IsCancellationRequested)
+                    break;
+
+                var rowAsStrings = row.ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => kvp.Value?.ToString() ?? string.Empty
+                );
+
+                var dto = new ProcessedEntityDto()
+                {
+                    ColumnMapping = columnMappings,
+                    Row = rowAsStrings,
+                    SearchCriteria = stage.SearchCriteria,
+                    EntitySetName = stage.SelectedEntitySetName ?? string.Empty,
+                    ChildEntitySetName = stage.SelectedCollectionPropertyName,
+                    IsCollection = !string.IsNullOrEmpty(stage.SelectedCollectionPropertyName),
+                    Operation = stage.Operation,
+                };
+
+                var externalId = row["Id"].ToString() ?? string.Empty;
+
+                try
+                {
+                    var result = await OperationService.ExecuteOperation(dto, ct);
+
+                    if (result.Success)
+                    {
+                        Logger.LogInformation("ProcessMssqlStage. Запись {} таблицы {} успешно загружена", externalId, stage.SelectedTable);
+                        successRows++;
+                        await dbService.UpdateDbMigrationResult(stage.SelectedTable, externalId, "Migrated", DateTime.UtcNow);
+                    }
+                    else
+                    {
+                        Logger.LogError("ProcessMssqlStage. Ошибка обработки строки {}. Сообщение: {}", externalId, result.ErrorMessage);
+                        errorRows++;
+                        await dbService.UpdateDbMigrationResult(stage.SelectedTable, externalId, "MigratedError", DateTime.UtcNow, result.ErrorMessage);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "ProcessMssqlStage. Ошибка обработки строки {}", externalId);
+                    errorRows++;
+                    await dbService.UpdateDbMigrationResult(stage.SelectedTable, externalId, "MigratedError", DateTime.UtcNow, ex.Message);
+                }
+
+                processedRows++;
+                stage.ProgressPercent = data.Count > 0 ? (processedRows * 100) / data.Count : 100;
+                StateHasChanged();
+            }
+
+            stage.LastProcessedRows = processedRows;
+            stage.LastSuccessfulRows = successRows;
+            stage.LastErrorRows = errorRows;
+
+
         }
     }
 

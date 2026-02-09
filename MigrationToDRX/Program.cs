@@ -10,8 +10,6 @@ using NLog;
 using NLog.Web;
 using MigrationToDRX.Data.Helpers;
 using MigrationToDRX.Data.Services.Settings;
-using MigrationToDRX.Data.Services.Background;
-
 
 try
 {
@@ -26,9 +24,7 @@ try
     // Чтение настроек Kestrel из конфигурации
     var kestrelConfig = builder.Configuration.GetSection("Kestrel:Endpoints");
     builder.Logging.ClearProviders();
-    builder.Logging.AddConsole(); // Добавляем Console провайдер для вывода логов в консоль
-    builder.Logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Debug);
-    builder.Host.UseNLog();
+    builder.Host.UseNLog(new NLogAspNetCoreOptions { RemoveLoggerFactoryFilter = false });
     var httpUrl = kestrelConfig["Http:Url"];
     //var httpsUrl = kestrelConfig["Https:Url"];
 
@@ -49,12 +45,6 @@ try
     builder.Services.AddScoped<ActionService>();
     builder.Services.AddScoped<OperationService>();
     builder.Services.AddScoped<SettingService>();
-
-    // Channel для передачи задач в фоновый сервис (Singleton)
-    builder.Services.AddSingleton<MigrationChannel>();
-    // Job создается в scope для каждой задачи
-    builder.Services.AddScoped<MigrationJob>();
-    builder.Services.AddHostedService<BackgroundMigrationService>();
 
     var app = builder.Build();
     // Configure the HTTP request pipeline.

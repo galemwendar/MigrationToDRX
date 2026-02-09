@@ -33,20 +33,31 @@ namespace MigrationToDRX.Data.Services.DbServices
         /// /// <param name="take">Взять N количество строк</param>
         /// /// <param name="offset">Пропустить N количество строк</param>
         /// <returns></returns>
-        public virtual async Task<List<Dictionary<string, object>>> ReadTableAsync(string tableName, string? filter = null, long? take = null, long? offset = null)
+        public virtual async Task<List<Dictionary<string, object>>> ReadTableAsync(string tableName, string? filter = null, long? take = null, long offset = 0)
         {
             var takeSubquery = take == null ? "" : $"fetch next {take} rows only";
-            var offsetSubquery = offset == null ? "" : $"offset {offset} rows";
+            var offsetSubquery = $"offset {offset} rows";
             var filterSubqyery = filter == null ? "" : $"where {filter}";
-            var query = $"SELECT * FROM {tableName} order by Id {filterSubqyery} {offsetSubquery} {takeSubquery}";
+            var query = $"SELECT * FROM {tableName} {filterSubqyery} order by Id {offsetSubquery} {takeSubquery}";
 
             _logger.LogDebug("DbService ReadTableAsync. Выполнение запроса {}", query);
 
-            var queryResult = await SqlConnection.QueryAsync($"SELECT * FROM {tableName};");
+            var queryResult = await SqlConnection.QueryAsync(query);
             return queryResult
                 .Cast<IDictionary<string, object>>()
                 .Select(x => x.ToDictionary(k => k.Key, k => k.Value))
                 .ToList();
+        }
+
+        public virtual async Task<int> GetRowsCountAsync(string tableName, string? filter = null)
+        {
+            var filterSubqyery = filter == null ? "" : $"where {filter}";
+            var query = $"SELECT Count(*) FROM {tableName} {filterSubqyery}";
+
+            _logger.LogDebug("DbService GetRowsCount. Выполнение запроса {}", query);
+
+            var queryResult = await SqlConnection.QueryAsync<int>(query);
+            return queryResult.FirstOrDefault();
         }
 
         /// <summary>
@@ -54,12 +65,12 @@ namespace MigrationToDRX.Data.Services.DbServices
         /// </summary>
         public async Task UpdateDbMigrationResult(string tablename, string externalId, string result, DateTime migrateDate, string? message = null)
         {
-            var messageParam = message != null ? $", MigrateMessage = '{message.Replace("'", "''")}'" : "";
-            var query = $"UPDATE {tablename} SET Result = '{result}', MigrateTime = '{migrateDate:yyyy-MM-dd HH:mm:ss}'{messageParam} WHERE Id = '{externalId.Replace("'", "''")}'";
+            var messageParam = message != null ? ", MigrateMessage = @Message" : "";
+            var query = $"UPDATE {tablename} SET Result = @Result, MigrateTime = @MigrateTime{messageParam} WHERE Id = @ExternalId";
 
             _logger.LogDebug("UpdateDbMigrationResult. Execute query {}", query);
 
-            await SqlConnection.ExecuteAsync(query);
+            await SqlConnection.ExecuteAsync(query, new { Result = result, MigrateTime = migrateDate, Message = message, ExternalId = externalId });
         }
 
         /// <summary>
