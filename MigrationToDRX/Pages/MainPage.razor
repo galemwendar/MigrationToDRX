@@ -152,14 +152,6 @@
             @if (SelectedStage != null)
             {
         <div class="card">
-            <div class="card-header">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h3>Настройка этапа: @SelectedStage.Name</h3>
-                    <button class="btn btn-success" @onclick="SaveStageSettings">
-                        Сохранить настройки этапа
-                    </button>
-                </div>
-            </div>
             <div class="card-body">
 
                 @* Название и описание этапа *@
@@ -286,6 +278,10 @@
                                 </RadzenDropDown>
                                 <RadzenRequiredValidator TValue="string" Required="true" Text="Сущность должна быть выбрана" />
                             </div>
+
+                            <button class="btn btn-success" @onclick="SaveStageSettings">
+                                Сохранить настройки этапа
+                            </button>
                         </div>
 
                         <div class="col col-md-5">

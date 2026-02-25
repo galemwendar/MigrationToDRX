@@ -1054,6 +1054,7 @@ public partial class MainPage
         );
 
         await SettingService.UpdateStages(SettingStages);
+        await SelectStage(SelectedStage);
 
         NotificationService.Notify(new NotificationMessage
         {
