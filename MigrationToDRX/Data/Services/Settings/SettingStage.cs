@@ -133,4 +133,7 @@ public class SettingStage
     /// Количество ошибок при последнем выполнении
     /// </summary>
     public int? LastErrorRows { get; set; }
+
+    /// Подзапрос фильтрации данных
+    public string? FilterSubquery { get; set; }
 }

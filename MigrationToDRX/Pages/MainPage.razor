@@ -129,11 +129,6 @@
                 {
                     <div class="card-footer">
                         <div class="d-flex flex-column gap-2">
-                            <button class="btn btn-outline-secondary w-100"
-                                    @onclick="ValidateAllStages"
-                                    disabled="@(!SettingStages.Any() || isProceed)">
-                                Проверить все этапы
-                            </button>
                             <button class="btn btn-primary w-100"
                                     @onclick="ExecuteAllStages"
                                     disabled="@(!SettingStages.Any() || isProceed)">
@@ -224,15 +219,22 @@
 
                             @if (IsDbConnectionSuccess)
                             {
-                                <label class="form-label">Таблица</label>
-                                <RadzenDropDown Data="@DbTables"
-                                                @bind-Value="SelectedTable"
-                                                Placeholder="Выберите таблицу из которой будут загружены данные..."
-                                                Style="width:100%"
-                                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                                                AllowFiltering="true"
-                                                Change="@OnDbTableChanged">
-                                </RadzenDropDown>
+                                <div class="col">
+                                    <label class="form-label">Таблица</label>
+                                    <RadzenDropDown Data="@DbTables"
+                                                    @bind-Value="SelectedTable"
+                                                    Placeholder="Выберите таблицу из которой будут загружены данные..."
+                                                    Style="width:100%"
+                                                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                                    AllowFiltering="true"
+                                                    Change="@OnDbTableChanged">
+                                    </RadzenDropDown>
+                                </div>
+
+                                <div class="col">
+                                    <label class="form-label">Подзапрос фильтрации</label>
+                                    <RadzenTextBox @bind-Value="@FilterSubquery" class="w-100" Placeholder="Подзапрос фильтрации" />
+                                </div>
                             }
                         }
                     </div>
@@ -258,7 +260,7 @@
                                 <RadzenCheckBox @bind-Value="EnableExtendedOperations"
                                                 TValue="bool"
                                                 Change="OnExtendedOperationsChanged" />
-                                <span>Пакет разработки от ЦВД <code>centrvd.MigrationToDRX</code></span>
+                                <span>Пакет разработки для DRX <code>MigrationToDRX</code></span>
                             </label>
                             <small class="text-muted">Включает дополнительные операции миграции</small>
                         </div>
@@ -285,6 +287,7 @@
                                 <RadzenRequiredValidator TValue="string" Required="true" Text="Сущность должна быть выбрана" />
                             </div>
                         </div>
+
                         <div class="col col-md-5">
                             @* Выбор ключа для всех связанных сущностей *@
                             <div class="mb-3">
@@ -326,70 +329,16 @@
                     </div>
                     <div class="col col-md-5">
                         <!-- 📊 Количество строк -->
-                        <div class="mb-3">
-                            <h5>Настройка обработки строк</h5>
 
-                            <div class="mb-2">
-                                <label class="d-flex align-items-center mb-1" style="gap:5px;">
-                                    <RadzenCheckBox @bind-Value="UploadAllRows" TValue="bool" />
-                                    Обработать все строки
-                                </label>
-                                <label class="d-flex align-items-center" style="gap:5px;">
-                                    <RadzenCheckBox @bind-Value="ForceUploadProcessedRows" TValue="bool" />
-                                    В том числе уже обработанные
-                                </label>
-                            </div>
-
-                            <div class="d-flex gap-4 mb-1">
-                                <div class="d-flex flex-column">
-                                    <label>Начальная строка:</label>
-                                    <RadzenNumeric @bind-Value="StartFrom"
-                                                   Min="1"
-                                                   Max="@PreviewRows.Count"
-                                                   Disabled="@UploadAllRows"
-                                                   Style="width:120px;" />
-                                </div>
-
-                                <div class="d-flex flex-column">
-                                    <label>Количество строк:</label>
-                                    <RadzenNumeric @bind-Value="RowsToUpload"
-                                                   Min="1"
-                                                   Max="@PreviewRows.Count"
-                                                   Disabled="@UploadAllRows"
-                                                   Style="width:120px;" />
-                                </div>
-                            </div>
-                            <small class="text-muted d-block mt-1">
-                                Эти настройки применяются только если "Обработать все строки" выключено.
-                            </small>
-                            @if(PreviewRows.Count > 0)
-                            {
-                                <div class="text-muted d-block mt-1" style="font-weight:bold">
-                                    В загруженном excel-файле @PreviewRows.Count строк(-и)
-                                </div>
-                            }
-                        </div>
                     </div>
                 </div>
-
-                @if (isProceed)
-                {
-                    <div class="row d-flex justify-content-between">
-                        <div class="d-flex align-items-center progress-row">
-                            <p>
-                                Прогресс выполнения операции
-                            </p>
-                            <RadzenProgressBar Value="@progress" Max="@maxRowsCount" Unit="@Unit" style="flex-grow: 1; min-width: 0;" />
-                        </div>
-                    </div>
-                }
 
                 @* Кнопка скачивания отчета *@
                 <div class="mb-3 d-flex justify-content-end w-60">
                     <button class="btn btn-outline-secondary mx-1"
                             @onclick="DownloadExcel"
                             disabled="@(ColumnMappings.Any(m => m.Value != null) == false)">
-                        Скачать excel-отчет
+                        Скачать протокол миграции
                     </button>
                 </div>
 

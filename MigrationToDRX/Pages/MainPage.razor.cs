@@ -116,6 +116,12 @@ public partial class MainPage
     protected Dictionary<string, EntityFieldDto?> ColumnMappings { get; set; } = new();
 
     /// <summary>
+    /// Подзапрос сортировки. Используется в БД
+    /// Используется для привязки данных к каждому DropDown в таблице.
+    /// </summary>
+    protected string? FilterSubquery { get; set; } = "";
+
+    /// <summary>
     /// Загружать все строки из Excel
     /// </summary>
     protected bool UploadAllRows { get; set; } = true;
@@ -479,9 +485,7 @@ public partial class MainPage
         PreviewRows = new();
         TableColumns = new();
 
-        // Если нет файла — очищаем связанные словари и списки
-
-        var rows = await DbService.ReadTableAsync(SelectedTable);
+        var rows = await DbService.ReadTableAsync(SelectedTable, filter: FilterSubquery);
 
         if (rows.Count == 0)
         {
@@ -983,6 +987,7 @@ public partial class MainPage
             RowsToUpload = SelectedStage.RowsToUpload;
             DbConnectionString = SelectedStage.ConnectionString;
             SelectedTable = SelectedStage.SelectedTable;
+            FilterSubquery = SelectedStage.FilterSubquery;
 
             // Сохраняем маппинг временно
             var savedMappings = SelectedStage.ColumnMappings != null && SelectedStage.ColumnMappings.Any()
@@ -1040,6 +1045,7 @@ public partial class MainPage
         SelectedStage.RowsToUpload = RowsToUpload;
         SelectedStage.ConnectionString = DbConnectionString;
         SelectedStage.SelectedTable = SelectedTable;
+        SelectedStage.FilterSubquery = FilterSubquery;
 
         // Сохраняем только имена полей из маппинга
         SelectedStage.ColumnMappings = ColumnMappings.ToDictionary(
@@ -1391,6 +1397,9 @@ public partial class MainPage
 
         const int partition = 1000;
         var queryFilter = "Result is null";
+
+        if (!string.IsNullOrWhiteSpace(stage.FilterSubquery))
+            queryFilter += $" and {stage.FilterSubquery}";
 
         while (true)
         {
