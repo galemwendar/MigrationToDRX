@@ -45,6 +45,7 @@ try
     builder.Services.AddScoped<ActionService>();
     builder.Services.AddScoped<OperationService>();
     builder.Services.AddScoped<SettingService>();
+    builder.Services.AddSingleton<SessionLogService>();
 
     var app = builder.Build();
     // Configure the HTTP request pipeline.

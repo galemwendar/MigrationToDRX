@@ -103,6 +103,12 @@ public enum OdataOperation
     [Display(Name = "Создание ИЛИ обновление сущности (документ/справочник/прочее)")]
     CreateOrUpdateEntity = 16,
 
+    /// <summary>
+    /// Создание версии документа по внешнему ключу или загрузка подписи
+    /// </summary>
+    [Display(Name = "Создание версии документа по внешнему ключу или загрузка подписи")]
+    CreateOrUpdateDocVersionOrLoadSignature = 17,
+
     #region Пакет разработки ExcelMigrator
 
     /// <summary>

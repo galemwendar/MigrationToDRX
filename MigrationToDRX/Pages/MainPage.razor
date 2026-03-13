@@ -129,6 +129,11 @@
                 {
                     <div class="card-footer">
                         <div class="d-flex flex-column gap-2">
+                            <button class="btn btn-success w-100"
+                                    @onclick="ExecuteSelectedStage"
+                                    disabled="@(SelectedStage == null || isProceed)">
+                                Запустить этап
+                            </button>
                             <button class="btn btn-primary w-100"
                                     @onclick="ExecuteAllStages"
                                     disabled="@(!SettingStages.Any() || isProceed)">

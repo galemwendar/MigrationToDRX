@@ -15,7 +15,7 @@ public class ODataEDocService
     private readonly FileService _fileService;
     private readonly ODataClient _client;
     private readonly Logger logger = LogManager.GetCurrentClassLogger();
-    
+
 
     /// <summary>
     /// Конструктор
@@ -26,6 +26,52 @@ public class ODataEDocService
         _odataClientService = odataClientService;
         _fileService = fileService;
         _client = _odataClientService.GetClient();
+    }
+
+    /// <summary>
+    /// Создать тело документа
+    /// </summary>
+    public async Task<IDictionary<string, object>?> FindEdocAndSetBodyByExternalIdAsync(string externalId, string filePath, CancellationToken ct, bool ForceUpdateBody = false)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        var eDoc = await _odataClientService.FindEdocByExternalIdAsync(externalId, ct) ??
+            throw new ArgumentException("Не удалось найти документ");
+
+        var extension = Path.GetExtension(filePath).Replace(".", "");
+
+        eDoc.TryGetValue(OdataPropertyNames.Id, out var docIdObj);
+
+        if (docIdObj == null)
+            throw new ArgumentException("Не удалось найти Id документа");
+
+        var docId = Convert.ToInt64(docIdObj);
+        //var version = GetLastVersion(extension, eDoc);
+        var targetApp = await _odataClientService.FindAssociatedApplication(extension, ct);
+
+        if (targetApp == null)
+        {
+            return null;
+        }
+
+        byte[] body;
+        try
+        {
+            body = await _fileService.ReadFileEvenIfOpenAsync(filePath);
+
+            if (body.Length == 0)
+            {
+                body = await File.ReadAllBytesAsync(filePath);
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Не удалось прочитать файл: {ex.Message}");
+        }
+
+        await _odataClientService.BatchCreateVersionWithBody(docId, "Первоначальная версия", targetApp, body, ct);
+
+        return eDoc;
     }
 
     /// <summary>

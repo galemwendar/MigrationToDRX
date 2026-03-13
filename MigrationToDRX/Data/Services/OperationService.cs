@@ -62,9 +62,48 @@ public class OperationService
             OdataOperation.RenameVersionNote => await RenameVersionNoteAsync(dto, ct),
             OdataOperation.ImportCertificate => await ImportCertificateAsync(dto, ct),
             OdataOperation.CreateOrUpdateEntity => await CreateOrUpdateEntityAsync(dto, ct),
+            OdataOperation.CreateOrUpdateDocVersionOrLoadSignature => await CreateOrUpdateDocVersionOrLoadSignature(dto, ct),
 
             _ => throw new ArgumentException("Не удалось обработать сценарий")
         };
+    }
+
+    /// <summary>
+    /// Создает сущность в OData и возвращает результат выполнения операции
+    /// </summary>
+    private async Task<OperationResult> CreateOrUpdateDocVersionOrLoadSignature(ProcessedEntityDto dto, CancellationToken ct)
+    {
+        var entity = await _entityService.BuildEntity(dto, ct);
+        var entityToSave = EntityHelper.FilterServiceFields(entity);
+
+        var externalEntityId = EntityHelper.GetFieldValueFromEntityDtoString(dto, OdataPropertyNames.ExternalId);
+        var filePath = EntityHelper.GetFieldValueFromEntityDtoString(dto, OdataPropertyNames.Path);
+
+        if (_entityService.ValidateFilePath(filePath) == false)
+            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Файл не найден или слишком большой");
+
+        if (string.IsNullOrEmpty(externalEntityId))
+            return new OperationResult(success: false,
+                operationName: dto.Operation.GetDisplayName(),
+                errorMessage: $"CreateOrUpdateDocVersionOrLoadSignature. Не удалось найти сущность {dto.EntitySetName} по ExternalId {externalEntityId}");
+
+        _logger.LogDebug("CreateOrUpdateDocVersionOrLoadSignature. Поиск сущности в RX с ExternalId = {}", externalEntityId);
+
+        var searchEntity = await _odataClientService.GetEntityAsync(
+            dto.EntitySetName,
+            propertyName: "ExternalId",
+            filterType: typeof(string),
+            filter: externalEntityId,
+            ct);
+
+        if (searchEntity == null)
+            return new OperationResult(success: false,
+                operationName: dto.Operation.GetDisplayName(),
+                errorMessage: $"CreateOrUpdateDocVersionOrLoadSignature. Не удалось найти сущность с ExternalId {externalEntityId} в DirectumRX");
+
+        var updatedEntity = await _odataEdocService.FindEdocAndSetBodyByExternalIdAsync(externalEntityId, filePath, ct);
+
+        return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName(), externalEntityId: externalEntityId, entity: updatedEntity);
     }
 
     /// <summary>
@@ -80,9 +119,7 @@ public class OperationService
             var externalEntityId = EntityHelper.GetFieldValueFromEntityDtoString(dto, OdataPropertyNames.ExternalId);
 
             if (string.IsNullOrEmpty(externalEntityId))
-            {
                 throw new Exception($"Не удалось найти сущность {dto.EntitySetName} по ExternalId {externalEntityId}");
-            }
 
             _logger.LogDebug("CreateOrUpdateEntityAsync. Поиск сущности в RX с ExternalId = {}", externalEntityId);
 

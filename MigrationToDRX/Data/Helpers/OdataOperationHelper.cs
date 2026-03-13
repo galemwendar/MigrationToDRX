@@ -52,7 +52,8 @@ public static class OdataOperationHelper
         OdataOperation.CreateDocumentWithVersion,
         OdataOperation.CreateEntity,
         OdataOperation.UpdateEntity,
-        OdataOperation.CreateOrUpdateEntity
+        OdataOperation.CreateOrUpdateEntity,
+        OdataOperation.CreateOrUpdateDocVersionOrLoadSignature
     };
 
     /// <summary>
@@ -66,6 +67,7 @@ public static class OdataOperationHelper
         OdataOperation.CreateDocumentWithVersion,
         OdataOperation.CreateEntity,
         OdataOperation.CreateOrUpdateEntity,
+        OdataOperation.CreateOrUpdateDocVersionOrLoadSignature,
         OdataOperation.UpdateEntity,
         OdataOperation.CreateChildFolder,
         OdataOperation.ImportCertificate
@@ -182,6 +184,10 @@ public static class OdataOperationHelper
 
             case OdataOperation.AddVersionToExistedDocument:
                 properties.AddFirstRange(new[] { StructuralProperies.MainId, StructuralProperies.Path });
+                break;
+
+            case OdataOperation.CreateOrUpdateDocVersionOrLoadSignature:
+                properties.AddFirstRange(new[] { StructuralProperies.ExternalId, StructuralProperies.Path });
                 break;
 
             case OdataOperation.AddEntityToCollection:

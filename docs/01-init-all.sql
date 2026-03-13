@@ -161,18 +161,19 @@ GO
 
 -- Таблица: Version (Версии документов)
 CREATE TABLE dbo.Version (
-    Id NVARCHAR(30) PRIMARY KEY,
-    Filepath NVARCHAR(3000) NOT NULL,
+    Id BIGINT PRIMARY KEY,
+    ExternalId NVARCHAR(30),
+    Filepath NVARCHAR(3000) NOT NULL UNIQUE,
     RxDocId NVARCHAR(30) NOT NULL,
     RxVersionId BIGINT,
     IsMain BIT NOT NULL,
     IsSignature BIT NOT NULL,
-    MainDocFilepath NVARCHAR(30),
+    MainDocFilepath NVARCHAR(3000),
     Result NVARCHAR(50) CHECK(Result IN ('Migrated', 'MigratedWithNotes', 'MigratedError')),
     MigrateTime DATETIME2,
     MigrateMessage NVARCHAR(MAX),
     CONSTRAINT FK_Version_Document FOREIGN KEY (RxDocId) REFERENCES dbo.Document(Id),
-    CONSTRAINT FK_Version_MainDoc FOREIGN KEY (MainDocFilepath) REFERENCES dbo.Version(Id)
+    CONSTRAINT FK_Version_MainDoc FOREIGN KEY (MainDocFilepath) REFERENCES dbo.Version(Filepath)
 );
 GO
 
@@ -183,10 +184,17 @@ EXEC sp_addextendedproperty
 GO
 
 EXEC sp_addextendedproperty
-    @name = N'MS_Description', @value = N'Составной ключ из нескольких полей - Орг единица:Ид документа:Номер документа',
+    @name = N'MS_Description', @value = N'Уникальный числовой идентификатор версии',
     @level0type = N'SCHEMA', @level0name = N'dbo',
     @level1type = N'TABLE', @level1name = N'Version',
     @level2type = N'COLUMN', @level2name = N'Id';
+GO
+
+EXEC sp_addextendedproperty
+    @name = N'MS_Description', @value = N'Внешний идентификатор версии из исходной системы',
+    @level0type = N'SCHEMA', @level0name = N'dbo',
+    @level1type = N'TABLE', @level1name = N'Version',
+    @level2type = N'COLUMN', @level2name = N'ExternalId';
 GO
 
 EXEC sp_addextendedproperty
@@ -455,19 +463,10 @@ PRINT N'Таблица Document заполнена: ' + CAST(@@ROWCOUNT AS NVARC
 GO
 
 -- 5. Заполнение таблицы Version
-INSERT INTO dbo.Version (Id, Filepath, RxDocId, RxVersionId, IsMain, IsSignature, MainDocFilepath) VALUES
-(N'OU001:DOC:2024-001:V1', N'\\fileserver\documents\2024\001\main.pdf', N'OU001:DOC:2024-001', NULL, 1, 0, NULL),
-(N'OU001:DOC:2024-002:V1', N'\\fileserver\documents\2024\002\main.pdf', N'OU001:DOC:2024-002', NULL, 1, 0, NULL),
-(N'OU001:DOC:2024-002:SIG', N'\\fileserver\documents\2024\002\signature.sig', N'OU001:DOC:2024-002', NULL, 0, 1, N'OU001:DOC:2024-002:V1'),
-(N'OU001:DOC:2024-003:V1', N'\\fileserver\documents\2024\003\main.pdf', N'OU001:DOC:2024-003', NULL, 1, 0, NULL),
-(N'OU001:DOC:2024-003:SIG', N'\\fileserver\documents\2024\003\signature.sig', N'OU001:DOC:2024-003', NULL, 0, 1, N'OU001:DOC:2024-003:V1'),
-(N'OU001:DOC:2024-004:V1', N'\\fileserver\documents\2024\004\main.docx', N'OU001:DOC:2024-004', NULL, 1, 0, NULL),
-(N'OU001:DOC:2024-005:V1', N'\\fileserver\documents\2024\005\main.pdf', N'OU001:DOC:2024-005', NULL, 1, 0, NULL),
-(N'OU001:DOC:2024-006:V1', N'\\fileserver\documents\2024\006\main.pdf', N'OU001:DOC:2024-006', NULL, 1, 0, NULL),
-(N'OU001:DOC:2024-007:V1', N'\\fileserver\documents\2024\007\report.xlsx', N'OU001:DOC:2024-007', NULL, 1, 0, NULL),
-(N'OU001:DOC:2024-008:V1', N'\\fileserver\documents\2024\008\main.pdf', N'OU001:DOC:2024-008', NULL, 1, 0, NULL),
-(N'OU001:DOC:2024-009:V1', N'\\fileserver\documents\2024\009\invoice.pdf', N'OU001:DOC:2024-009', NULL, 1, 0, NULL),
-(N'OU001:DOC:2024-010:V1', N'\\fileserver\documents\2024\010\letter.pdf', N'OU001:DOC:2024-010', NULL, 1, 0, NULL);
+INSERT INTO dbo.Version (Id, ExternalId, Filepath, RxDocId, RxVersionId, IsMain, IsSignature, MainDocFilepath) VALUES
+(1, N'OU001:DOC:2026-001', N'D:\Downloads\Выгрузка от 04.03.26 11_40_49\Версия документа.pdf', N'OU001:DOC:2026-001', NULL, 1, 0, NULL)
+--,
+--(2, N'OU001:DOC:2026-001', N'D:\Downloads\Выгрузка от 04.03.26 11_40_49\Подпись к документу.sig', N'OU001:DOC:2026-001', NULL, 0, 1, N'D:\Downloads\Выгрузка от 04.03.26 11_40_49\Версия документа.pdf');
 GO
 
 PRINT N'Таблица Version заполнена: ' + CAST(@@ROWCOUNT AS NVARCHAR);

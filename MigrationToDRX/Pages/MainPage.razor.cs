@@ -222,6 +222,12 @@ public partial class MainPage
     private ILogger<MainPage> Logger { get; set; } = null!;
 
     /// <summary>
+    /// Сервис для создания нового файла лога при каждом запуске всех этапов
+    /// </summary>
+    [Inject]
+    private SessionLogService SessionLogService { get; set; } = null!;
+
+    /// <summary>
     /// Признак подключения к OData сервису
     /// </summary>
     private bool IsConnected => OdataClientService.IsConnected;
@@ -706,12 +712,8 @@ public partial class MainPage
 
             try
             {
-                var result = await OperationService.ExecuteOperation(dto, ct);
-
-                if (result == null)
-                {
-                    throw new Exception("Не удалось провести операцию");
-                }
+                var result = await OperationService.ExecuteOperation(dto, ct)
+                    ?? throw new Exception("Не удалось провести операцию");
 
                 if (result.Success == false)
                 {
@@ -1277,6 +1279,10 @@ public partial class MainPage
             return;
         }
 
+        // Создаём новый файл лога для текущего запуска
+        SessionLogService.StartNewSession();
+        Logger.LogInformation("ExecuteAllStages. Запуск выполнения всех этапов");
+
         cancelRequested?.Cancel();
         cancelRequested?.Dispose();
         cancelRequested = new CancellationTokenSource();
@@ -1365,6 +1371,84 @@ public partial class MainPage
     }
 
     /// <summary>
+    /// Выполнение только выбранного этапа.
+    /// </summary>
+    private async Task ExecuteSelectedStage()
+    {
+        if (SelectedStage == null)
+            return;
+
+        SessionLogService.StartNewSession();
+        Logger.LogInformation("ExecuteSelectedStage. Запуск этапа {StageName}", SelectedStage.Name);
+
+        cancelRequested?.Cancel();
+        cancelRequested?.Dispose();
+        cancelRequested = new CancellationTokenSource();
+        var ct = cancelRequested.Token;
+
+        SelectedStage.ProgressPercent = 0;
+        SelectedStage.Status = StageStatus.Ready;
+
+        isProceed = true;
+        StateHasChanged();
+
+        var entitySets = OdataClientService.GetEntitySets();
+
+        try
+        {
+            SelectedStage.Status = StageStatus.Running;
+            StateHasChanged();
+
+            if (!string.IsNullOrEmpty(SelectedStage.SelectedEntitySetName))
+            {
+                SelectedStage.SelectedEntitySet = entitySets.FirstOrDefault(e => e.Name == SelectedStage.SelectedEntitySetName);
+            }
+
+            await ProcessStageAsync(SelectedStage, ct);
+
+            SelectedStage.Status = StageStatus.Processed;
+            SelectedStage.LastExecutionTime = DateTime.Now;
+            SelectedStage.LastExecutionResult = "Успешно";
+
+            Logger.LogInformation("ExecuteSelectedStage. Этап {StageName} успешно завершен", SelectedStage.Name);
+
+            NotificationService.Notify(new NotificationMessage
+            {
+                Summary = "Завершено",
+                Detail = $"Этап \"{SelectedStage.Name}\" выполнен успешно",
+                Severity = NotificationSeverity.Success,
+                Duration = 3000
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            SelectedStage.LastExecutionTime = DateTime.Now;
+            SelectedStage.LastExecutionResult = "Выполнение отменено";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "ExecuteSelectedStage. Этап {StageName} завершился ошибкой", SelectedStage.Name);
+            SelectedStage.Status = StageStatus.Error;
+            SelectedStage.LastExecutionTime = DateTime.Now;
+            SelectedStage.LastExecutionResult = ex.Message;
+
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Ошибка",
+                Detail = $"Ошибка при выполнении этапа \"{SelectedStage.Name}\": {ex.Message}",
+                Duration = 5000
+            });
+        }
+        finally
+        {
+            await SettingService.UpdateStages(SettingStages);
+            isProceed = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
     /// Обработка одного этапа миграции.
     /// </summary>
     private async Task ProcessStageAsync(SettingStage stage, CancellationToken ct)
@@ -1416,6 +1500,8 @@ public partial class MainPage
                 throw new InvalidOperationException($"Не удалось получить метаданные для EntitySet {stage.SelectedEntitySetName}");
 
             var entityFields = EntityHelper.GetEntityFields(entityDto);
+            OdataOperationHelper.AddPropertiesByOperation(stage.Operation, entityFields, new Dictionary<string, EntityFieldDto?>());
+
             var savedMappings = stage.ColumnMappings != null && stage.ColumnMappings.Any()
                 ? new Dictionary<string, string?>(stage.ColumnMappings)
                 : new Dictionary<string, string?>();

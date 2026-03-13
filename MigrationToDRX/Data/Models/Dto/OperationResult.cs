@@ -51,9 +51,9 @@ public class OperationResult
 
     public IEnumerable<IDictionary<string, object>>? Entities { get; set; }
 
-    public OperationResult(bool success, string operationName, long? entityId = null,
+    public OperationResult(bool success, string operationName, long? entityId = null, string? externalEntityId = null,
         IDictionary<string, object>? entity = null,
-        IEnumerable<IDictionary<string, object>>? entities = null, 
+        IEnumerable<IDictionary<string, object>>? entities = null,
         string? errorMessage = null)
     {
         Success = success;

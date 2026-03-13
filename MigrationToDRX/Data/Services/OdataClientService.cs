@@ -329,6 +329,22 @@ public class OdataClientService
     }
 
     /// <summary>
+    /// Получить документ по его externalId
+    /// </summary>
+    /// <param name="externalId">Идентификатор документа</param>
+    /// <returns>Документ</returns>
+    public async Task<IDictionary<string, object>> FindEdocByExternalIdAsync(string externalId, CancellationToken? ct)
+    {
+        ct?.ThrowIfCancellationRequested();
+
+        return await _client!
+            .For("IOfficialDocuments")
+            .Filter($@"ExternalId eq '{externalId}'")
+            .Expand("Versions($expand=AssociatedApplication,Body)")
+            .FindEntryAsync();
+    }
+
+    /// <summary>
     /// Получить документ по его Id
     /// </summary>
     /// <param name="eDocId">Идентификатор документа</param>
@@ -380,10 +396,10 @@ public class OdataClientService
 
         try
         {
-            return await _client!.For("IElectronicDocuments")
+            return await _client!.For("IOfficialDocuments")
                 .Key(eDocId)
                 .NavigateTo("Versions")
-                .Set(new { Note = note, Created = DateTime.Now, AssociatedApplication = associatedApp })
+                .Set(new { Id = -1, Number = 1, Note = note, Created = DateTime.Now, AssociatedApplication = associatedApp })
                 .InsertEntryAsync();
         }
         catch (Exception ex)
@@ -465,7 +481,7 @@ public class OdataClientService
     }
 
     /// <summary>
-    /// Добавить элемент в свойство-коллекцию сущности 
+    /// Добавить элемент в свойство-коллекцию сущности
     /// </summary>
     /// <param name="childEntity">Новый элемент свойства-коллекции</param>
     /// <param name="mainId">Сущность, для которой добавляется элемент</param>
@@ -739,7 +755,7 @@ public class OdataClientService
         }
     }
 
-        /// <summary>
+    /// <summary>
     /// Выполнить действие на сервере, если действие существует (IsBound = true)
     /// </summary>
     /// <param name="actionName">Имя действия</param>
@@ -772,6 +788,58 @@ public class OdataClientService
         catch (Exception ex)
         {
             throw new Exception(ex.Message, ex);
+        }
+    }
+
+    /// <summary>
+    /// Создать новую версию документа и загрузить тело одним batch-запросом
+    /// </summary>
+    /// <param name="eDocId">Идентификатор документа</param>
+    /// <param name="note">Описание версии</param>
+    /// <param name="associatedApp">Приложение, связанное с документом</param>
+    /// <param name="body">Тело документа</param>
+    public async Task BatchCreateVersionWithBody(long eDocId,
+        string note,
+        IDictionary<string, object> associatedApp,
+        byte[] body,
+        CancellationToken? ct)
+    {
+        ct?.ThrowIfCancellationRequested();
+
+        if (_client == null)
+        {
+            throw new InvalidOperationException("Odata клиент не инициализирован. Вызовите метод SetConnection");
+        }
+
+        try
+        {
+            var batch = new ODataBatch(_client);
+
+            batch += c => c.For("IOfficialDocuments")
+                .Key(eDocId)
+                .NavigateTo("Versions")
+                .Set(new { Id = -1, Number = 1, Note = note, AssociatedApplication = associatedApp })
+                .InsertEntryAsync(false);
+
+            batch += c => c.For("IOfficialDocuments")
+                .Key(eDocId)
+                .NavigateTo("Versions")
+                .Key(-1)
+                .NavigateTo("Body")
+                .Set(new { Value = Convert.ToBase64String(body) })
+                .UpdateEntryAsync(false);
+
+            await batch.ExecuteAsync();
+        }
+        catch (WebRequestException ex)
+        {
+            logger.Error(ex);
+            throw new ArgumentException(ex.Message + ex.Response);
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex);
+            throw;
         }
     }
 }
