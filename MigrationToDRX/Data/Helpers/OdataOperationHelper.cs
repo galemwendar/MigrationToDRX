@@ -187,7 +187,15 @@ public static class OdataOperationHelper
                 break;
 
             case OdataOperation.CreateOrUpdateDocVersionOrLoadSignature:
-                properties.AddFirstRange(new[] { StructuralProperies.ExternalId, StructuralProperies.Path });
+                properties.AddFirstRange(new[] 
+                { 
+                    StructuralProperies.ExternalId, 
+                    StructuralProperies.Path,
+                    StructuralProperies.IsMainDoc,
+                    StructuralProperies.IsSignature,
+                    StructuralProperies.MainDocFilepath,
+
+                });
                 break;
 
             case OdataOperation.AddEntityToCollection:

@@ -119,7 +119,7 @@ public partial class MainPage
     /// Подзапрос сортировки. Используется в БД
     /// Используется для привязки данных к каждому DropDown в таблице.
     /// </summary>
-    protected string? FilterSubquery { get; set; } = "";
+    protected string SqlQuery { get; set; } = "";
 
     /// <summary>
     /// Загружать все строки из Excel
@@ -245,6 +245,11 @@ public partial class MainPage
     protected List<SettingStage> SettingStages { get; set; } = new();
 
     /// <summary>
+    /// Идентификатор текущей миграции (глобальная настройка)
+    /// </summary>
+    protected int MigrationId { get; set; }
+
+    /// <summary>
     /// Выбранный этап для редактирования
     /// </summary>
     protected SettingStage? SelectedStage { get; set; }
@@ -315,7 +320,9 @@ public partial class MainPage
     /// </summary>
     private async Task LoadSettingStages()
     {
-        SettingStages = await SettingService.GetSettingStages();
+        var settings = await SettingService.GetSettings();
+        SettingStages = settings.Stages?.ToList() ?? new();
+        MigrationId = settings.MigrationId;
 
         // Восстанавливаем IEdmEntitySet для каждого этапа
         foreach (var stage in SettingStages)
@@ -449,6 +456,7 @@ public partial class MainPage
     /// </summary>
     private async Task OnDbTableChanged()
     {
+
         if (DbService is null)
         {
             await InvokeAsync(async () =>
@@ -491,7 +499,10 @@ public partial class MainPage
         PreviewRows = new();
         TableColumns = new();
 
-        var rows = await DbService.ReadTableAsync(SelectedTable, filter: FilterSubquery);
+        if (string.IsNullOrWhiteSpace(SqlQuery))
+            SqlQuery = DbService.GetSqlTemplate(SelectedTable);
+
+        var rows = await DbService.ReadTableAsync(SelectedTable, SqlQuery, MigrationId);
 
         if (rows.Count == 0)
         {
@@ -500,7 +511,8 @@ public partial class MainPage
             return;
         }
 
-        // Формируем список колонок из заголовков
+
+        //Формируем список колонок из заголовков
         TableColumns = rows.First().Keys.ToList();
         PreviewRows = rows
             .Select(row => TableColumns.ToDictionary(
@@ -989,7 +1001,7 @@ public partial class MainPage
             RowsToUpload = SelectedStage.RowsToUpload;
             DbConnectionString = SelectedStage.ConnectionString;
             SelectedTable = SelectedStage.SelectedTable;
-            FilterSubquery = SelectedStage.FilterSubquery;
+            SqlQuery = SelectedStage.SqlQuery;
 
             // Сохраняем маппинг временно
             var savedMappings = SelectedStage.ColumnMappings != null && SelectedStage.ColumnMappings.Any()
@@ -1026,6 +1038,18 @@ public partial class MainPage
     }
 
     /// <summary>
+    /// Сохранить все настройки приложения (этапы + MigrationId)
+    /// </summary>
+    private async Task SaveSettings()
+    {
+        await SettingService.UpdateSettings(new ApplicationSettings
+        {
+            Stages = SettingStages,
+            MigrationId = MigrationId
+        });
+    }
+
+    /// <summary>
     /// Сохранение настроек текущего этапа
     /// </summary>
     private async Task SaveStageSettings()
@@ -1047,7 +1071,7 @@ public partial class MainPage
         SelectedStage.RowsToUpload = RowsToUpload;
         SelectedStage.ConnectionString = DbConnectionString;
         SelectedStage.SelectedTable = SelectedTable;
-        SelectedStage.FilterSubquery = FilterSubquery;
+        SelectedStage.SqlQuery = SqlQuery;
 
         // Сохраняем только имена полей из маппинга
         SelectedStage.ColumnMappings = ColumnMappings.ToDictionary(
@@ -1055,7 +1079,7 @@ public partial class MainPage
             kvp => kvp.Value?.Name
         );
 
-        await SettingService.UpdateStages(SettingStages);
+        await SaveSettings();
         await SelectStage(SelectedStage);
 
         NotificationService.Notify(new NotificationMessage
@@ -1088,7 +1112,7 @@ public partial class MainPage
         };
 
         SettingStages.Add(newStage);
-        await SettingService.UpdateStages(SettingStages);
+        await SaveSettings();
         SelectedStage = newStage;
         SelectStage(newStage);
     }
@@ -1118,7 +1142,7 @@ public partial class MainPage
                 SelectedStage = SettingStages.FirstOrDefault();
             }
 
-            await SettingService.UpdateStages(SettingStages);
+            await SaveSettings();
             StateHasChanged();
         }
     }
@@ -1142,7 +1166,7 @@ public partial class MainPage
             SettingStages[index] = previousStage;
             SettingStages[index - 1] = stage;
 
-            await SettingService.UpdateStages(SettingStages);
+            await SaveSettings();
             StateHasChanged();
         }
     }
@@ -1166,7 +1190,7 @@ public partial class MainPage
             SettingStages[index] = nextStage;
             SettingStages[index + 1] = stage;
 
-            await SettingService.UpdateStages(SettingStages);
+            await SaveSettings();
             StateHasChanged();
         }
     }
@@ -1251,7 +1275,7 @@ public partial class MainPage
         StateHasChanged();
 
         // Сохраняем результаты в файл
-        await SettingService.UpdateStages(SettingStages);
+        await SaveSettings();
 
         NotificationService.Notify(new NotificationMessage
         {
@@ -1352,14 +1376,14 @@ public partial class MainPage
             }
             finally
             {
-                await SettingService.UpdateStages(SettingStages);
+                await SaveSettings();
                 StateHasChanged();
             }
         }
 
         isProceed = false;
         StateHasChanged();
-        await SettingService.UpdateStages(SettingStages);
+        await SaveSettings();
 
         NotificationService.Notify(new NotificationMessage
         {
@@ -1442,7 +1466,7 @@ public partial class MainPage
         }
         finally
         {
-            await SettingService.UpdateStages(SettingStages);
+            await SaveSettings();
             isProceed = false;
             StateHasChanged();
         }
@@ -1481,14 +1505,10 @@ public partial class MainPage
         await dbService.ConnectAsync();
 
         const int partition = 1000;
-        var queryFilter = "Result is null";
-
-        if (!string.IsNullOrWhiteSpace(stage.FilterSubquery))
-            queryFilter += $" and {stage.FilterSubquery}";
 
         while (true)
         {
-            var data = await dbService.ReadTableAsync(stage.SelectedTable, filter: queryFilter, take: partition);
+            var data = await dbService.ReadTableAsync(stage.SelectedTable, sqlQuery: stage.SqlQuery, migrationId: MigrationId, take: partition);
             if (data.Count == 0)
             {
                 Logger.LogInformation("ProcessMssqlStageAsync. Данные в таблице {} закончились. Этап завершен.", stage.SelectedTable);
@@ -1541,7 +1561,7 @@ public partial class MainPage
                     Operation = stage.Operation,
                 };
 
-                var externalId = row["Id"].ToString() ?? string.Empty;
+                var externalId = row["IdPaydox"].ToString() ?? string.Empty;
 
                 try
                 {

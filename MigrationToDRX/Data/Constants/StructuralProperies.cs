@@ -31,6 +31,45 @@ public static class StructuralProperies
     };
 
     /// <summary>
+    /// Фейковое структурное поле Признак основного документа
+    /// </summary>
+    /// <remarks>Является ключом для поиска файла на машине клиента
+    ///  при добавлении или обновлении версии документа
+    /// </remarks>
+    public static readonly StructuralPropertyDto IsMainDoc = new()
+    {
+        Name = OdataPropertyNames.IsMainDoc,
+        Type = "Edm.Bool",
+        Nullable = false
+    };
+
+    /// <summary>
+    /// Фейковое структурное поле Признак подписи
+    /// </summary>
+    /// <remarks>Является ключом для поиска файла на машине клиента
+    ///  при добавлении или обновлении версии документа
+    /// </remarks>
+    public static readonly StructuralPropertyDto IsSignature = new()
+    {
+        Name = OdataPropertyNames.IsSignature,
+        Type = "Edm.Bool",
+        Nullable = false
+    };
+
+    /// <summary>
+    /// Фейковое структурное поле Путь к основному документу
+    /// </summary>
+    /// <remarks>Является ключом для поиска файла на машине клиента
+    ///  при добавлении или обновлении версии документа
+    /// </remarks>
+    public static readonly StructuralPropertyDto MainDocFilepath = new()
+    {
+        Name = OdataPropertyNames.MainDocFilepath,
+        Type = "Edm.Bool",
+        Nullable = false
+    };
+
+    /// <summary>
     /// Фейковое структурное поле Путь до файла
     /// </summary>
     /// <remarks>Является ключом для поиска файла на машине клиента

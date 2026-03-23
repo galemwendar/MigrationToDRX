@@ -61,6 +61,26 @@ public static class EntityHelper
     }
 
     /// <summary>
+    /// Получает значение поля из EntityDto по имени служебного свойства
+    /// </summary>
+    public static bool GetFieldValueFromEntityDtoBoolean(ProcessedEntityDto dto, string fieldName)
+    {
+        var fieldKey = dto.ColumnMapping
+            .Where(kvp => kvp.Value is StructuralPropertyDto sf && sf.Name == fieldName)
+            .Select(kvp => kvp.Key)
+            .SingleOrDefault();
+
+        var value = string.Empty;
+
+        if (fieldKey != null && dto.Row.TryGetValue(fieldKey, out var raw) && !string.IsNullOrWhiteSpace(raw))
+        {
+            value = raw.Trim();
+        }
+
+        return value.ToLower() == "true";
+    }
+
+    /// <summary>
     /// Получает путь к файлу из EntityDto
     /// </summary>
     /// <param name="dto">Построенная сущность</param>

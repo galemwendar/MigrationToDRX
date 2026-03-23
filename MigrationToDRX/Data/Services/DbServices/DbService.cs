@@ -33,16 +33,12 @@ namespace MigrationToDRX.Data.Services.DbServices
         /// /// <param name="take">Взять N количество строк</param>
         /// /// <param name="offset">Пропустить N количество строк</param>
         /// <returns></returns>
-        public virtual async Task<List<Dictionary<string, object>>> ReadTableAsync(string tableName, string? filter = null, long? take = null, long offset = 0)
+        public virtual async Task<List<Dictionary<string, object>>> ReadTableAsync(string tableName, string sqlQuery, int migrationId, long? take = null, long offset = 0, string? order = null)
         {
-            var takeSubquery = take == null ? "" : $"fetch next {take} rows only";
-            var offsetSubquery = $"offset {offset} rows";
-            var filterSubqyery = filter == null ? "" : $"where {filter}";
-            var query = $"SELECT * FROM {tableName} {filterSubqyery} order by Id {offsetSubquery} {takeSubquery}";
+            sqlQuery = sqlQuery.Replace("@MigrationID", migrationId.ToString());
+            _logger.LogDebug("DbService ReadTableAsync. Выполнение запроса {}", sqlQuery);
 
-            _logger.LogDebug("DbService ReadTableAsync. Выполнение запроса {}", query);
-
-            var queryResult = await SqlConnection.QueryAsync(query);
+            var queryResult = await SqlConnection.QueryAsync(sqlQuery);
             return queryResult
                 .Cast<IDictionary<string, object>>()
                 .Select(x => x.ToDictionary(k => k.Key, k => k.Value))
@@ -66,7 +62,7 @@ namespace MigrationToDRX.Data.Services.DbServices
         public async Task UpdateDbMigrationResult(string tablename, string externalId, string result, DateTime migrateDate, string? message = null)
         {
             var messageParam = message != null ? ", MigrateMessage = @Message" : "";
-            var query = $"UPDATE {tablename} SET Result = @Result, MigrateTime = @MigrateTime{messageParam} WHERE Id = @ExternalId";
+            var query = $"UPDATE {tablename} SET Result = @Result, MigrateTime = @MigrateTime{messageParam} WHERE IdPaydox = @ExternalId";
 
             _logger.LogDebug("UpdateDbMigrationResult. Execute query {}", query);
 
@@ -90,5 +86,8 @@ namespace MigrationToDRX.Data.Services.DbServices
         {
             SqlConnection.Dispose();
         }
+
+        public virtual string GetSqlTemplate(string selectedTable) => $"SELECT * FROM {selectedTable}" + Environment.NewLine +
+        "WHERE MigrationID = @MigrationID AND Result is null ORDER BY Id";
     }
 }

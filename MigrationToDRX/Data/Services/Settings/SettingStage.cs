@@ -135,5 +135,5 @@ public class SettingStage
     public int? LastErrorRows { get; set; }
 
     /// Подзапрос фильтрации данных
-    public string? FilterSubquery { get; set; }
+    public string SqlQuery { get; set; } = "";
 }

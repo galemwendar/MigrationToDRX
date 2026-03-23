@@ -28,23 +28,109 @@ public class ODataEDocService
         _client = _odataClientService.GetClient();
     }
 
+    private async Task<byte[]> GetBodyByPath(string path)
+    {
+        byte[] body;
+        try
+        {
+            body = await _fileService.ReadFileEvenIfOpenAsync(path);
+
+            if (body.Length == 0)
+            {
+                body = await File.ReadAllBytesAsync(path);
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Не удалось прочитать файл: {ex.Message}");
+        }
+
+        return body;
+    }
+
     /// <summary>
     /// Создать тело документа
     /// </summary>
-    public async Task<IDictionary<string, object>?> FindEdocAndSetBodyByExternalIdAsync(string externalId, string filePath, CancellationToken ct, bool ForceUpdateBody = false)
+    public async Task<IDictionary<string, object>?> CreateAddendumByMainExternalIdAsync(string mainDocExternalId,
+        string filePath,
+        CancellationToken ct,
+        bool isSignature = false,
+        string? addendumFilePath = null)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        var needCreateAddendum = false;
+
+        var addendumDoc = await _odataClientService.FindEdocByNoteAsync(filePath, ct);
+
+        if (addendumDoc == null)
+            needCreateAddendum = true;
+
+        addendumDoc.TryGetValue(OdataPropertyNames.Id, out var addendumDocIdObj);
+
+        if (addendumDocIdObj == null)
+            needCreateAddendum = true;
+
+        var addendumDocId = Convert.ToInt64(addendumDocIdObj);
+
+        var mainDoc = await _odataClientService.FindEdocByExternalIdAsync(mainDocExternalId, ct) ??
+            throw new ArgumentException("Не удалось найти документ");
+
+        mainDoc.TryGetValue(OdataPropertyNames.Id, out var docIdObj);
+
+        if (docIdObj == null)
+            throw new ArgumentException("Не удалось найти Id документа");
+
+        var extension = Path.GetExtension(filePath).Replace(".", "");
+        var docId = Convert.ToInt64(docIdObj);
+        //var version = GetLastVersion(extension, eDoc);
+        var targetApp = await _odataClientService.FindAssociatedApplication(extension, ct)
+            ?? throw new ArgumentNullException($"Не найдено приложение обработчик для расширения {extension}");
+
+        byte[] body = await GetBodyByPath(filePath);
+
+        if (isSignature && !string.IsNullOrWhiteSpace(addendumFilePath))
+        {
+
+        }
+
+        if (!isSignature)
+        {
+            await _odataClientService.BatchCreateVersionWithBody(docId, "Первоначальная версия", targetApp, body, ct);
+        }
+        else
+        {
+            var dto = new Dictionary<string, object>
+            {
+                { "documentId", docId },
+                { "type", 1 },
+                { "signatureBase64", Convert.ToBase64String(body)}
+            };
+            await _odataClientService.ExecuteVoidBoundActionAsync(OdataNameSpaces.ExcelMigrator, OdataActionNames.ImportSignatureToDocumentAction, dto, ct);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Создать тело документа
+    /// </summary>
+    public async Task<IDictionary<string, object>?> FindEdocAndSetBodyByExternalIdAsync(string externalId,
+        string filePath, CancellationToken ct,
+        bool ForceUpdateBody = false,
+        bool isSignature = false)
     {
         ct.ThrowIfCancellationRequested();
 
         var eDoc = await _odataClientService.FindEdocByExternalIdAsync(externalId, ct) ??
             throw new ArgumentException("Не удалось найти документ");
 
-        var extension = Path.GetExtension(filePath).Replace(".", "");
-
         eDoc.TryGetValue(OdataPropertyNames.Id, out var docIdObj);
 
         if (docIdObj == null)
             throw new ArgumentException("Не удалось найти Id документа");
 
+        var extension = Path.GetExtension(filePath).Replace(".", "");
         var docId = Convert.ToInt64(docIdObj);
         //var version = GetLastVersion(extension, eDoc);
         var targetApp = await _odataClientService.FindAssociatedApplication(extension, ct);
@@ -54,22 +140,22 @@ public class ODataEDocService
             return null;
         }
 
-        byte[] body;
-        try
-        {
-            body = await _fileService.ReadFileEvenIfOpenAsync(filePath);
+        byte[] body = await GetBodyByPath(filePath);
 
-            if (body.Length == 0)
+        if (!isSignature)
+        {
+            await _odataClientService.BatchCreateVersionWithBody(docId, "Первоначальная версия", targetApp, body, ct);
+        }
+        else
+        {
+            var dto = new Dictionary<string, object>
             {
-                body = await File.ReadAllBytesAsync(filePath);
-            }
+                { "documentId", docId },
+                { "type", 1 },
+                { "signatureBase64", Convert.ToBase64String(body)}
+            };
+            await _odataClientService.ExecuteVoidBoundActionAsync(OdataNameSpaces.ExcelMigrator, OdataActionNames.ImportSignatureToDocumentAction, dto, ct);
         }
-        catch (Exception ex)
-        {
-            throw new Exception($"Не удалось прочитать файл: {ex.Message}");
-        }
-
-        await _odataClientService.BatchCreateVersionWithBody(docId, "Первоначальная версия", targetApp, body, ct);
 
         return eDoc;
     }

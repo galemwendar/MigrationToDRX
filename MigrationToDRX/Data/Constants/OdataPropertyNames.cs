@@ -23,6 +23,21 @@ public static class OdataPropertyNames
     public const string ExternalId = "ExternalId";
 
     /// <summary>
+    /// Строка для поиска свойства "IsMainDoc"
+    /// </summary>
+    public const string IsMainDoc = "IsMainDoc";
+
+    /// <summary>
+    /// Строка для поиска свойства "IsMainDoc"
+    /// </summary>
+    public const string IsSignature = "IsSignature";
+
+    /// <summary>
+    /// Строка для поиска свойства "IsMainDoc"
+    /// </summary>
+    public const string MainDocFilepath = "MainDocFilepath";
+
+    /// <summary>
     /// Строка для поиска свойства "Путь до файла"
     /// </summary>
     public const string Path = "Путь до файла";

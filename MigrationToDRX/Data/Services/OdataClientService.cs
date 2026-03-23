@@ -329,6 +329,22 @@ public class OdataClientService
     }
 
     /// <summary>
+    /// Получить документ по его note
+    /// </summary>
+    /// <param name="externalId">Идентификатор документа</param>
+    /// <returns>Документ</returns>
+    public async Task<IDictionary<string, object>> FindEdocByNoteAsync(string note, CancellationToken? ct)
+    {
+        ct?.ThrowIfCancellationRequested();
+
+        return await _client!
+            .For("IOfficialDocuments")
+            .Filter($@"Note eq '{note}'")
+            .Expand("Versions($expand=AssociatedApplication,Body)")
+            .FindEntryAsync();
+    }
+
+    /// <summary>
     /// Получить документ по его externalId
     /// </summary>
     /// <param name="externalId">Идентификатор документа</param>
@@ -827,8 +843,62 @@ public class OdataClientService
                 .Key(-1)
                 .NavigateTo("Body")
                 .Set(new { Value = Convert.ToBase64String(body) })
-                .UpdateEntryAsync(false);
+                .InsertEntryAsync(false);
 
+            await batch.ExecuteAsync();
+        }
+        catch (WebRequestException ex)
+        {
+            logger.Error(ex);
+            throw new ArgumentException(ex.Message + ex.Response);
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Создать новую версию документа и загрузить тело одним batch-запросом
+    /// </summary>
+    /// <param name="eDocId">Идентификатор документа</param>
+    /// <param name="note">Описание версии</param>
+    /// <param name="associatedApp">Приложение, связанное с документом</param>
+    /// <param name="body">Тело документа</param>
+    public async Task BatchCreateAddendaToDocument(
+        long mainDocId,
+        string note,
+        IDictionary<string, object> associatedApp,
+        byte[] body,
+        CancellationToken? ct)
+    {
+        ct?.ThrowIfCancellationRequested();
+
+        if (_client == null)
+        {
+            throw new InvalidOperationException("Odata клиент не инициализирован. Вызовите метод SetConnection");
+        }
+
+        try
+        {
+            var batch = new ODataBatch(_client);
+
+            /*
+                batch += c => c.For("IOfficialDocuments")
+                    .Key(eDocId)
+                    .NavigateTo("Versions")
+                    .Set(new { Id = -1, Number = 1, Note = note, AssociatedApplication = associatedApp })
+                    .InsertEntryAsync(false);
+
+                batch += c => c.For("IOfficialDocuments")
+                    .Key(eDocId)
+                    .NavigateTo("Versions")
+                    .Key(-1)
+                    .NavigateTo("Body")
+                    .Set(new { Value = Convert.ToBase64String(body) })
+                    .InsertEntryAsync(false);
+            */
             await batch.ExecuteAsync();
         }
         catch (WebRequestException ex)

@@ -73,9 +73,6 @@ public class OperationService
     /// </summary>
     private async Task<OperationResult> CreateOrUpdateDocVersionOrLoadSignature(ProcessedEntityDto dto, CancellationToken ct)
     {
-        var entity = await _entityService.BuildEntity(dto, ct);
-        var entityToSave = EntityHelper.FilterServiceFields(entity);
-
         var externalEntityId = EntityHelper.GetFieldValueFromEntityDtoString(dto, OdataPropertyNames.ExternalId);
         var filePath = EntityHelper.GetFieldValueFromEntityDtoString(dto, OdataPropertyNames.Path);
 
@@ -101,7 +98,11 @@ public class OperationService
                 operationName: dto.Operation.GetDisplayName(),
                 errorMessage: $"CreateOrUpdateDocVersionOrLoadSignature. Не удалось найти сущность с ExternalId {externalEntityId} в DirectumRX");
 
-        var updatedEntity = await _odataEdocService.FindEdocAndSetBodyByExternalIdAsync(externalEntityId, filePath, ct);
+
+        var mainDocFilepath = EntityHelper.GetFieldValueFromEntityDtoString(dto, OdataPropertyNames.MainDocFilepath);
+        var isSignature = EntityHelper.GetFieldValueFromEntityDtoBoolean(dto, OdataPropertyNames.IsSignature);
+        var isMainDoc = EntityHelper.GetFieldValueFromEntityDtoBoolean(dto, OdataPropertyNames.IsMainDoc);
+        var updatedEntity = await _odataEdocService.FindEdocAndSetBodyByExternalIdAsync(externalEntityId, filePath, ct, isSignature: isSignature);
 
         return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName(), externalEntityId: externalEntityId, entity: updatedEntity);
     }
