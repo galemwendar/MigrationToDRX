@@ -46,12 +46,13 @@ public static class OdataOperationHelper
     /// </summary>
     public static readonly HashSet<OdataOperation> OperationsRequiringEntitySelection = new()
     {
-        OdataOperation.AddEntityToCollection,
+        /* OdataOperation.AddEntityToCollection,
         OdataOperation.UpdateEntityInCollection,
         OdataOperation.AddVersionToExistedDocument,
         OdataOperation.CreateDocumentWithVersion,
         OdataOperation.CreateEntity,
         OdataOperation.UpdateEntity,
+        */
         OdataOperation.CreateOrUpdateEntity,
         OdataOperation.CreateOrUpdateDocVersionOrLoadSignature
     };
@@ -187,9 +188,9 @@ public static class OdataOperationHelper
                 break;
 
             case OdataOperation.CreateOrUpdateDocVersionOrLoadSignature:
-                properties.AddFirstRange(new[] 
-                { 
-                    StructuralProperies.ExternalId, 
+                properties.AddFirstRange(new[]
+                {
+                    StructuralProperies.ExternalId,
                     StructuralProperies.Path,
                     StructuralProperies.IsMainDoc,
                     StructuralProperies.IsSignature,

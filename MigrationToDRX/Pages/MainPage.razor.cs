@@ -247,7 +247,7 @@ public partial class MainPage
     /// <summary>
     /// Идентификатор текущей миграции (глобальная настройка)
     /// </summary>
-    protected int MigrationId { get; set; }
+    protected int IterationId { get; set; }
 
     /// <summary>
     /// Выбранный этап для редактирования
@@ -306,6 +306,8 @@ public partial class MainPage
         // получаем список операций для выбора
         OperationItems = Data.Helpers.EnumHelper.GetItems<OdataOperation>()
             .Where(op => !IsExtendedOperation(op.Value))
+            .Where(op => op.Value == OdataOperation.CreateOrUpdateEntity ||
+                op.Value == OdataOperation.CreateOrUpdateDocVersionOrLoadSignature)
             .ToList();
 
         // получаем список полей для поиска навигационных свойств
@@ -322,7 +324,7 @@ public partial class MainPage
     {
         var settings = await SettingService.GetSettings();
         SettingStages = settings.Stages?.ToList() ?? new();
-        MigrationId = settings.MigrationId;
+        IterationId = settings.IterationId;
 
         // Восстанавливаем IEdmEntitySet для каждого этапа
         foreach (var stage in SettingStages)
@@ -502,7 +504,7 @@ public partial class MainPage
         if (string.IsNullOrWhiteSpace(SqlQuery))
             SqlQuery = DbService.GetSqlTemplate(SelectedTable);
 
-        var rows = await DbService.ReadTableAsync(SelectedTable, SqlQuery, MigrationId);
+        var rows = await DbService.ReadTableAsync(SelectedTable, SqlQuery, IterationId, take: 50);
 
         if (rows.Count == 0)
         {
@@ -1038,14 +1040,14 @@ public partial class MainPage
     }
 
     /// <summary>
-    /// Сохранить все настройки приложения (этапы + MigrationId)
+    /// Сохранить все настройки приложения (этапы + IterationId)
     /// </summary>
     private async Task SaveSettings()
     {
         await SettingService.UpdateSettings(new ApplicationSettings
         {
             Stages = SettingStages,
-            MigrationId = MigrationId
+            IterationId = IterationId
         });
     }
 
@@ -1381,6 +1383,8 @@ public partial class MainPage
             }
         }
 
+        IterationId += 1;
+
         isProceed = false;
         StateHasChanged();
         await SaveSettings();
@@ -1504,41 +1508,49 @@ public partial class MainPage
         using var dbService = new MssqlService(stage.ConnectionString, Logger);
         await dbService.ConnectAsync();
 
-        const int partition = 1000;
+        const int partition = 10;
+
+        // Получаем общее количество строк для корректного прогресс-бара
+        var totalCount = await dbService.GetRowCountAsync(stage.SelectedTable, stage.SqlQuery, IterationId);
+        maxRowsCount = totalCount;
+        progress = 0;
+        stage.LastProcessedRows = 0;
+        stage.LastSuccessfulRows = 0;
+        stage.LastErrorRows = 0;
+        stage.ProgressPercent = 0;
+        await InvokeAsync(StateHasChanged);
+
+        // Подготовка метаданных (один раз, а не на каждую партию)
+        var entityDto = OdataClientService.GetEdmxEntityDto(stage.SelectedEntitySetName);
+        if (entityDto == null)
+            throw new InvalidOperationException($"Не удалось получить метаданные для EntitySet {stage.SelectedEntitySetName}");
+
+        var entityFields = EntityHelper.GetEntityFields(entityDto);
+        OdataOperationHelper.AddPropertiesByOperation(stage.Operation, entityFields, new Dictionary<string, EntityFieldDto?>());
+
+        var savedMappings = stage.ColumnMappings != null && stage.ColumnMappings.Any()
+            ? new Dictionary<string, string?>(stage.ColumnMappings)
+            : new Dictionary<string, string?>();
+
+        var columnMappings = savedMappings.ToDictionary(
+            kvp => kvp.Key,
+            kvp => string.IsNullOrEmpty(kvp.Value)
+                ? null
+                : entityFields.FirstOrDefault(f => f.Name == kvp.Value)
+        );
+
+        int processedRows = 0;
+        int successRows = 0;
+        int errorRows = 0;
 
         while (true)
         {
-            var data = await dbService.ReadTableAsync(stage.SelectedTable, sqlQuery: stage.SqlQuery, migrationId: MigrationId, take: partition);
+            var data = await dbService.ReadTableAsync(stage.SelectedTable, sqlQuery: stage.SqlQuery, migrationId: IterationId, take: partition);
             if (data.Count == 0)
             {
                 Logger.LogInformation("ProcessMssqlStageAsync. Данные в таблице {} закончились. Этап завершен.", stage.SelectedTable);
                 break;
             }
-
-            var entityDto = OdataClientService.GetEdmxEntityDto(stage.SelectedEntitySetName);
-            if (entityDto == null)
-                throw new InvalidOperationException($"Не удалось получить метаданные для EntitySet {stage.SelectedEntitySetName}");
-
-            var entityFields = EntityHelper.GetEntityFields(entityDto);
-            OdataOperationHelper.AddPropertiesByOperation(stage.Operation, entityFields, new Dictionary<string, EntityFieldDto?>());
-
-            var savedMappings = stage.ColumnMappings != null && stage.ColumnMappings.Any()
-                ? new Dictionary<string, string?>(stage.ColumnMappings)
-                : new Dictionary<string, string?>();
-
-            var columnMappings = savedMappings.ToDictionary(
-                kvp => kvp.Key,
-                kvp => string.IsNullOrEmpty(kvp.Value)
-                    ? null
-                    : entityFields.FirstOrDefault(f => f.Name == kvp.Value)
-            );
-
-            int processedRows = 0;
-            int successRows = 0;
-            int errorRows = 0;
-
-            maxRowsCount = data.Count;
-            progress = 0;
 
             foreach (var row in data)
             {
@@ -1561,7 +1573,7 @@ public partial class MainPage
                     Operation = stage.Operation,
                 };
 
-                var externalId = row["IdPaydox"].ToString() ?? string.Empty;
+                var externalId = row["PaydoxId"].ToString() ?? string.Empty;
 
                 try
                 {
@@ -1571,34 +1583,37 @@ public partial class MainPage
                     {
                         Logger.LogInformation("ProcessMssqlStage. Запись {} таблицы {} успешно загружена", externalId, stage.SelectedTable);
                         successRows++;
-                        await dbService.UpdateDbMigrationResult(stage.SelectedTable, externalId, "Migrated", DateTime.UtcNow);
+                        await dbService.UpdateDbMigrationResult(stage.SelectedTable, externalId, "Migrated", DateTime.UtcNow, IterationId, result.EntityId);
                     }
                     else
                     {
                         Logger.LogError("ProcessMssqlStage. Ошибка обработки строки {}. Сообщение: {}", externalId, result.ErrorMessage);
                         errorRows++;
-                        await dbService.UpdateDbMigrationResult(stage.SelectedTable, externalId, "MigratedError", DateTime.UtcNow, result.ErrorMessage);
+                        await dbService.UpdateDbMigrationResult(stage.SelectedTable, externalId, "MigratedError", DateTime.UtcNow, IterationId, result.EntityId, result.ErrorMessage);
                     }
                 }
                 catch (Exception ex)
                 {
                     Logger.LogError(ex, "ProcessMssqlStage. Ошибка обработки строки {}", externalId);
                     errorRows++;
-                    await dbService.UpdateDbMigrationResult(stage.SelectedTable, externalId, "MigratedError", DateTime.UtcNow, ex.Message);
+                    await dbService.UpdateDbMigrationResult(stage.SelectedTable, externalId, "MigratedError", DateTime.UtcNow, IterationId, null, ex.Message);
                 }
 
                 processedRows++;
                 progress = processedRows;
-                stage.ProgressPercent = data.Count > 0 ? (processedRows * 100) / data.Count : 100;
-                StateHasChanged();
+                stage.LastProcessedRows = processedRows;
+                stage.LastSuccessfulRows = successRows;
+                stage.LastErrorRows = errorRows;
+                stage.ProgressPercent = totalCount > 0 ? (processedRows * 100) / totalCount : 100;
+                await InvokeAsync(StateHasChanged);
             }
-
-            stage.LastProcessedRows = processedRows;
-            stage.LastSuccessfulRows = successRows;
-            stage.LastErrorRows = errorRows;
-
-
         }
+
+        // Финальное обновление (на случай если цикл завершился без записей в последней партии)
+        stage.LastProcessedRows = processedRows;
+        stage.LastSuccessfulRows = successRows;
+        stage.LastErrorRows = errorRows;
+        await InvokeAsync(StateHasChanged);
     }
 
     #endregion

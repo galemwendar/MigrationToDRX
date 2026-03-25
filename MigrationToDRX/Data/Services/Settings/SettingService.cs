@@ -27,14 +27,14 @@ public class SettingService
     {
         if (!_fileService.IsFileExists(_fileName))
         {
-            var empty = new ApplicationSettings { Stages = new List<SettingStage>(), MigrationId = 0 };
+            var empty = new ApplicationSettings { Stages = new List<SettingStage>(), IterationId = 0 };
             await UpdateSettings(empty);
             return empty;
         }
 
         var data = await _fileService.ReadFileEvenIfOpenAsync(_fileName);
         return JsonSerializer.Deserialize<ApplicationSettings>(data, _jsonOptions)
-               ?? new ApplicationSettings { Stages = new List<SettingStage>(), MigrationId = 0 };
+               ?? new ApplicationSettings { Stages = new List<SettingStage>(), IterationId = 0 };
     }
 
     /// <summary>

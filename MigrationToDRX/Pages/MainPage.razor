@@ -21,8 +21,8 @@
                 <div class="card-header">
                     <h5>Этапы миграции</h5>
                     <div class="mt-2">
-                        <label class="form-label mb-1">ID миграции</label>
-                        <RadzenNumeric @bind-Value="MigrationId" TValue="int" class="w-100" Min="0" Change="async _ => await SaveSettings()" />
+                        <label class="form-label mb-1">Номер итерации</label>
+                        <RadzenNumeric @bind-Value="IterationId" TValue="int" class="w-100" Min="0" Change="async _ => await SaveSettings()" />
                     </div>
                     <button class="btn btn-primary btn-sm w-100 mt-2" @onclick="AddNewStage">
                         Добавить этап
