@@ -64,4 +64,9 @@ public static class OdataActionNames
     /// Наименование действия для импорта сертификата пользователя в Odata
     /// </summary>
     public const string ImportCertificateAction = "ImportCertificate";
+
+    /// <summary>
+    /// Наименования действия для импорта сертификата пользователя промежуточной БД
+    /// </summary>
+    public const string ImportDocumentFromDb = "ImportDocument";
 }

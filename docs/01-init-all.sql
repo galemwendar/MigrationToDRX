@@ -11,10 +11,9 @@ USE [RusalIntermediate];
 GO
 CREATE TABLE [UsdExchangeRatesByYear] (
   [Id] bigint PRIMARY KEY IDENTITY(1, 1),
-  [PaydoxId] bigint NOT NULL,
+  [PaydoxId] nvarchar(150) NOT NULL,
   [Name] nvarchar(250) NOT NULL,
-  [MigrationId] nvarchar(50) NOT NULL,
-  [IterationId] int,
+  [MigrationId] int,
   [RxId] bigint,
   [RateCode] nvarchar(30) NOT NULL,
   [Date] datetime2 NOT NULL,
@@ -28,10 +27,9 @@ GO
 
 CREATE TABLE [UsdExchangeRatesByMonth] (
   [Id] bigint PRIMARY KEY IDENTITY(1, 1),
-  [PaydoxId] bigint NOT NULL,
+  [PaydoxId] nvarchar(150) NOT NULL,
   [Name] nvarchar(250) NOT NULL,
-  [MigrationId] nvarchar(50) NOT NULL,
-  [IterationId] int,
+  [MigrationId] int,
   [RxId] bigint,
   [RateCode] nvarchar(30) NOT NULL,
   [Date] datetime2 NOT NULL,
@@ -45,9 +43,8 @@ GO
 
 CREATE TABLE [CorporateApproval] (
   [Id] bigint PRIMARY KEY IDENTITY(1, 1),
-  [PaydoxId] bigint NOT NULL,
-  [MigrationId] nvarchar(50) NOT NULL,
-  [IterationId] int,
+  [PaydoxId] nvarchar(150) NOT NULL,
+  [MigrationId] int,
   [RxId] bigint,
   [GoverningBody] nvarchar(250) NOT NULL,
   [Description] nvarchar(500),
@@ -60,9 +57,8 @@ GO
 
 CREATE TABLE [OrganizationalAndLegalForm] (
   [Id] bigint PRIMARY KEY IDENTITY(1, 1),
-  [PaydoxId] bigint NOT NULL,
-  [MigrationId] nvarchar(50) NOT NULL,
-  [IterationId] int,
+  [PaydoxId] nvarchar(150) NOT NULL,
+  [MigrationId] int,
   [RxId] bigint,
   [FullName] nvarchar(250) NOT NULL,
   [Code] nvarchar(12) NOT NULL,
@@ -75,9 +71,8 @@ GO
 
 CREATE TABLE [ExpenseItem] (
   [Id] bigint PRIMARY KEY IDENTITY(1, 1),
-  [PaydoxId] bigint NOT NULL,
-  [MigrationId] nvarchar(50) NOT NULL,
-  [IterationId] int,
+  [PaydoxId] nvarchar(150) NOT NULL,
+  [MigrationId] int,
   [RxId] bigint,
   [Name] nvarchar(250) NOT NULL,
   [FullName] nvarchar(250) NOT NULL,
@@ -90,13 +85,12 @@ GO
 
 CREATE TABLE [TmcCode] (
   [Id] bigint PRIMARY KEY IDENTITY(1, 1),
-  [PaydoxId] bigint NOT NULL,
-  [MigrationId] nvarchar(50) NOT NULL,
-  [IterationId] int,
+  [PaydoxId] nvarchar(150) NOT NULL,
+  [MigrationId] int,
   [RxId] bigint,
   [Name] nvarchar(250) NOT NULL,
   [Code] nvarchar(12) NOT NULL,
-  [ParentTmcCode] nvarchar(30),
+  [ParentTmcCode] nvarchar(150),
   [State] nvarchar(15),
   [Result] nvarchar(50),
   [MigrateTime] datetime2,
@@ -106,13 +100,12 @@ GO
 
 CREATE TABLE [OkvedCode] (
   [Id] bigint PRIMARY KEY IDENTITY(1, 1),
-  [PaydoxId] bigint NOT NULL,
-  [MigrationId] nvarchar(50) NOT NULL,
-  [IterationId] int,
+  [PaydoxId] nvarchar(150) NOT NULL,
+  [MigrationId] int,
   [RxId] bigint,
   [Name] nvarchar(250) NOT NULL,
   [Code] nvarchar(12) NOT NULL,
-  [ParentOkvedCode] nvarchar(30),
+  [ParentOkvedCode] nvarchar(150),
   [State] nvarchar(15),
   [Result] nvarchar(50),
   [MigrateTime] datetime2,
@@ -122,13 +115,12 @@ GO
 
 CREATE TABLE [Division] (
   [Id] bigint PRIMARY KEY IDENTITY(1, 1),
-  [PaydoxId] bigint NOT NULL,
-  [MigrationId] nvarchar(50) NOT NULL,
-  [IterationId] int,
+  [PaydoxId] nvarchar(150) NOT NULL,
+  [MigrationId] int,
   [RxId] bigint,
   [Name] nvarchar(250) NOT NULL,
   [Code] nvarchar(12) NOT NULL,
-  [ParentDivision] nvarchar(30),
+  [ParentDivision] nvarchar(150),
   [Note] nvarchar(max),
   [State] nvarchar(15),
   [Result] nvarchar(50),
@@ -139,9 +131,8 @@ GO
 
 CREATE TABLE [PlanningAndBudgetUnit] (
   [Id] bigint PRIMARY KEY IDENTITY(1, 1),
-  [PaydoxId] bigint NOT NULL,
-  [MigrationId] nvarchar(50) NOT NULL,
-  [IterationId] int,
+  [PaydoxId] nvarchar(150) NOT NULL,
+  [MigrationId] int,
   [RxId] bigint,
   [Name] nvarchar(250) NOT NULL,
   [Code] nvarchar(12) NOT NULL,
@@ -154,9 +145,8 @@ GO
 
 CREATE TABLE [InvestmentActivity] (
   [Id] bigint PRIMARY KEY IDENTITY(1, 1),
-  [PaydoxId] bigint NOT NULL,
-  [MigrationId] nvarchar(50) NOT NULL,
-  [IterationId] int,
+  [PaydoxId] nvarchar(150) NOT NULL,
+  [MigrationId] int,
   [RxId] bigint,
   [Name] nvarchar(250) NOT NULL,
   [EngName] nvarchar(250),
@@ -172,9 +162,8 @@ GO
 
 CREATE TABLE [TaxAccreditationStatus] (
   [Id] bigint PRIMARY KEY IDENTITY(1, 1),
-  [PaydoxId] bigint NOT NULL,
-  [MigrationId] nvarchar(50) NOT NULL,
-  [IterationId] int,
+  [PaydoxId] nvarchar(150) NOT NULL,
+  [MigrationId] int,
   [RxId] bigint,
   [Name] nvarchar(64) NOT NULL,
   [EngName] nvarchar(64) NOT NULL,
@@ -187,9 +176,8 @@ GO
 
 CREATE TABLE [ComplianceAccreditationStatuse] (
   [Id] bigint PRIMARY KEY IDENTITY(1, 1),
-  [PaydoxId] bigint NOT NULL,
-  [MigrationId] nvarchar(50) NOT NULL,
-  [IterationId] int,
+  [PaydoxId] nvarchar(150) NOT NULL,
+  [MigrationId] int,
   [RxId] bigint,
   [Name] nvarchar(64) NOT NULL,
   [EngName] nvarchar(64) NOT NULL,
@@ -202,9 +190,8 @@ GO
 
 CREATE TABLE [DocumentKind] (
   [Id] bigint PRIMARY KEY IDENTITY(1, 1),
-  [PaydoxId] bigint NOT NULL,
-  [MigrationId] nvarchar(50) NOT NULL,
-  [IterationId] int,
+  [PaydoxId] nvarchar(150) NOT NULL,
+  [MigrationId] int,
   [RxId] bigint,
   [Name] nvarchar(250) NOT NULL,
   [AbbreviatedName] nvarchar(250) NOT NULL,
@@ -220,9 +207,8 @@ GO
 
 CREATE TABLE [Country] (
   [Id] bigint PRIMARY KEY IDENTITY(1, 1),
-  [PaydoxId] bigint NOT NULL,
-  [MigrationId] nvarchar(50) NOT NULL,
-  [IterationId] int,
+  [PaydoxId] nvarchar(150) NOT NULL,
+  [MigrationId] int,
   [RxId] bigint,
   [Name] nvarchar(250) NOT NULL,
   [Code] nvarchar(3),
@@ -234,11 +220,10 @@ GO
 
 CREATE TABLE [Document] (
   [Id] bigint PRIMARY KEY IDENTITY(1, 1),
-  [PaydoxId] bigint NOT NULL,
+  [PaydoxId] nvarchar(150) NOT NULL,
   [DocumentType] int NOT NULL,
   [DocumentKind] nvarchar(30) NOT NULL,
-  [MigrationId] nvarchar(50) NOT NULL,
-  [IterationId] int,
+  [MigrationId] int,
   [RxId] bigint,
   [Name] nvarchar(250) NOT NULL,
   [Subject] nvarchar(250),
@@ -250,11 +235,14 @@ GO
 
 CREATE TABLE [DocVersion] (
   [Id] bigint PRIMARY KEY IDENTITY(1, 1),
-  [PaydoxId] bigint NOT NULL,
-  [MigrationId] nvarchar(50) NOT NULL,
-  [IterationId] int,
+  [PaydoxId] nvarchar(150) NOT NULL,
+  [AddendumPaydoxId] nvarchar(190),
+  [MigrationId] int,
   [RxId] bigint,
   [Filepath] nvarchar(3000) UNIQUE NOT NULL,
+  [Name] nvarchar(250),
+  [RxDocId] bigint,
+  [RxVersionId] bigint,
   [IsMain] bit NOT NULL,
   [IsSignature] bit NOT NULL,
   [MainDocFilepath] nvarchar(3000),
@@ -1026,6 +1014,14 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
+@value = 'Идентификатор приложения, сгенерированный DRX',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'DocVersion',
+@level2type = N'Column', @level2name = 'AddendumPaydoxId';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
 @value = 'Идентификатор в системе PayDox',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'DocVersion',
@@ -1046,6 +1042,22 @@ EXEC sp_addextendedproperty
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'DocVersion',
 @level2type = N'Column', @level2name = 'Filepath';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Имя файла (приложения). Если это не основной документ, чтобы понимать как назвать карточку приложения',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'DocVersion',
+@level2type = N'Column', @level2name = 'Name';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Версия документа в RX',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'DocVersion',
+@level2type = N'Column', @level2name = 'RxVersionId';
 GO
 
 EXEC sp_addextendedproperty
@@ -1098,9 +1110,9 @@ BEGIN
         DECLARE @year INT = 2000 + (@i % 25)
         INSERT INTO [UsdExchangeRatesByYear] ([PaydoxId], [Name], [MigrationId], [RateCode], [Date], [RateValueToUsd], [State])
         VALUES (
-            @i,
+            LOWER(CAST(NEWID() AS NVARCHAR(36))),
             @rateCode + N' Rate ' + CAST(@year AS NVARCHAR),
-            N'ORG' + CAST((@i % 5) + 1 AS NVARCHAR) + N':' + CAST(@i AS NVARCHAR) + N':ID' + CAST(@i AS NVARCHAR),
+            NULL,
             @rateCode,
             DATEFROMPARTS(@year, 12, 31),
             ROUND(60 + (@i % 50) * 0.7, 2),
@@ -1126,9 +1138,9 @@ BEGIN
             ELSE 31 END
         INSERT INTO [UsdExchangeRatesByMonth] ([PaydoxId], [Name], [MigrationId], [RateCode], [Date], [RateValueToUsd], [State])
         VALUES (
-            @i,
+            LOWER(CAST(NEWID() AS NVARCHAR(36))),
             @rateCode2 + N' Rate ' + RIGHT('0' + CAST(@month AS NVARCHAR), 2) + N'.' + CAST(@year2 AS NVARCHAR),
-            N'ORG' + CAST((@i % 5) + 1 AS NVARCHAR) + N':' + CAST(@i AS NVARCHAR) + N':ID' + CAST(@i AS NVARCHAR),
+            NULL,
             @rateCode2,
             DATEFROMPARTS(@year2, @month, @lastDay),
             ROUND(CASE WHEN @rateCode2 = N'USD' THEN 75 + (@i % 30) * 0.8 ELSE 1.05 + (@i % 20) * 0.01 END, 2),
@@ -1150,8 +1162,8 @@ BEGIN
         DECLARE @body NVARCHAR(100) = TRIM(VALUE) FROM STRING_SPLIT(@bodies, '|') ORDER BY (SELECT NULL) OFFSET @bodyIdx - 1 ROWS FETCH NEXT 1 ROWS ONLY
         INSERT INTO [CorporateApproval] ([PaydoxId], [MigrationId], [GoverningBody], [Description], [State])
         VALUES (
-            @i,
-            N'ORG' + CAST((@i % 5) + 1 AS NVARCHAR) + N':' + CAST(@i AS NVARCHAR) + N':ID' + CAST(@i AS NVARCHAR),
+            LOWER(CAST(NEWID() AS NVARCHAR(36))),
+            NULL,
             @body,
             N'Approval item #' + CAST(@i AS NVARCHAR),
             CASE WHEN @i % 10 = 0 THEN N'Closed' ELSE N'Active' END
@@ -1169,8 +1181,8 @@ BEGIN
     BEGIN
         INSERT INTO [OrganizationalAndLegalForm] ([PaydoxId], [MigrationId], [FullName], [Code], [State])
         VALUES (
-            @i,
-            N'ORG' + CAST((@i % 5) + 1 AS NVARCHAR) + N':' + CAST(@i AS NVARCHAR) + N':ID' + CAST(@i AS NVARCHAR),
+            LOWER(CAST(NEWID() AS NVARCHAR(36))),
+            NULL,
             N'Организационно-правовая форма ' + CAST(@i AS NVARCHAR),
             N'ОПФ' + CAST(@i AS NVARCHAR),
             CASE WHEN @i % 10 = 0 THEN N'Closed' ELSE N'Active' END
@@ -1188,8 +1200,8 @@ BEGIN
     BEGIN
         INSERT INTO [ExpenseItem] ([PaydoxId], [MigrationId], [Name], [FullName], [State])
         VALUES (
-            @i,
-            N'ORG' + CAST((@i % 5) + 1 AS NVARCHAR) + N':' + CAST(@i AS NVARCHAR) + N':ID' + CAST(@i AS NVARCHAR),
+            LOWER(CAST(NEWID() AS NVARCHAR(36))),
+            NULL,
             N'Статья расходов ' + CAST(@i AS NVARCHAR),
             N'Полное наименование статьи расходов ' + CAST(@i AS NVARCHAR),
             CASE WHEN @i % 10 = 0 THEN N'Closed' ELSE N'Active' END
@@ -1205,14 +1217,14 @@ BEGIN
     DECLARE @i INT = 1
     WHILE @i <= 100
     BEGIN
-        DECLARE @parentTmc NVARCHAR(30) = CASE
+        DECLARE @parentTmc NVARCHAR(150) = CASE
             WHEN @i <= 10 THEN NULL
-            ELSE N'TMC_' + RIGHT('000' + CAST(((@i - 11) % 10) + 1 AS NVARCHAR), 3)
+            ELSE CAST(((@i - 11) % 10) + 1 AS NVARCHAR)
         END
         INSERT INTO [TmcCode] ([PaydoxId], [MigrationId], [Name], [Code], [ParentTmcCode], [State])
         VALUES (
-            @i,
-            N'ORG' + CAST((@i % 5) + 1 AS NVARCHAR) + N':' + CAST(@i AS NVARCHAR) + N':ID' + CAST(@i AS NVARCHAR),
+            LOWER(CAST(NEWID() AS NVARCHAR(36))),
+            NULL,
             N'ТМЦ ' + CAST(@i AS NVARCHAR),
             N'TMC' + CAST(@i AS NVARCHAR),
             @parentTmc,
@@ -1229,14 +1241,14 @@ BEGIN
     DECLARE @i INT = 1
     WHILE @i <= 100
     BEGIN
-        DECLARE @parentOkv NVARCHAR(30) = CASE
+        DECLARE @parentOkv NVARCHAR(150) = CASE
             WHEN @i <= 10 THEN NULL
-            ELSE N'OKV_' + RIGHT('000' + CAST(((@i - 11) % 10) + 1 AS NVARCHAR), 3)
+            ELSE CAST(((@i - 11) % 10) + 1 AS NVARCHAR)
         END
         INSERT INTO [OkvedCode] ([PaydoxId], [MigrationId], [Name], [Code], [ParentOkvedCode], [State])
         VALUES (
-            @i,
-            N'ORG' + CAST((@i % 5) + 1 AS NVARCHAR) + N':' + CAST(@i AS NVARCHAR) + N':ID' + CAST(@i AS NVARCHAR),
+            LOWER(CAST(NEWID() AS NVARCHAR(36))),
+            NULL,
             N'Код ОКВЭД ' + CAST(@i AS NVARCHAR),
             CAST(@i AS NVARCHAR) + '.' + CAST(@i % 9 AS NVARCHAR),
             @parentOkv,
@@ -1253,14 +1265,14 @@ BEGIN
     DECLARE @i INT = 1
     WHILE @i <= 100
     BEGIN
-        DECLARE @parentDiv NVARCHAR(30) = CASE
+        DECLARE @parentDiv NVARCHAR(150) = CASE
             WHEN @i <= 10 THEN NULL
-            ELSE N'DIV_' + RIGHT('000' + CAST(((@i - 11) % 10) + 1 AS NVARCHAR), 3)
+            ELSE CAST(((@i - 11) % 10) + 1 AS NVARCHAR)
         END
         INSERT INTO [Division] ([PaydoxId], [MigrationId], [Name], [Code], [ParentDivision], [Note], [State])
         VALUES (
-            @i,
-            N'ORG' + CAST((@i % 5) + 1 AS NVARCHAR) + N':' + CAST(@i AS NVARCHAR) + N':ID' + CAST(@i AS NVARCHAR),
+            LOWER(CAST(NEWID() AS NVARCHAR(36))),
+            NULL,
             N'Подразделение ' + CAST(@i AS NVARCHAR),
             N'DIV' + CAST(@i AS NVARCHAR),
             @parentDiv,
@@ -1280,8 +1292,8 @@ BEGIN
     BEGIN
         INSERT INTO [PlanningAndBudgetUnit] ([PaydoxId], [MigrationId], [Name], [Code], [State])
         VALUES (
-            @i,
-            N'ORG' + CAST((@i % 5) + 1 AS NVARCHAR) + N':' + CAST(@i AS NVARCHAR) + N':ID' + CAST(@i AS NVARCHAR),
+            LOWER(CAST(NEWID() AS NVARCHAR(36))),
+            NULL,
             N'Планово-бюджетная единица ' + CAST(@i AS NVARCHAR),
             N'PBU' + CAST(@i AS NVARCHAR),
             CASE WHEN @i % 10 = 0 THEN N'Closed' ELSE N'Active' END
@@ -1299,8 +1311,8 @@ BEGIN
     BEGIN
         INSERT INTO [InvestmentActivity] ([PaydoxId], [MigrationId], [Name], [EngName], [Code], [Year], [PlanningAndBudgetUnitCode], [State])
         VALUES (
-            @i,
-            N'ORG' + CAST((@i % 5) + 1 AS NVARCHAR) + N':' + CAST(@i AS NVARCHAR) + N':ID' + CAST(@i AS NVARCHAR),
+            LOWER(CAST(NEWID() AS NVARCHAR(36))),
+            NULL,
             N'Инвестиционное мероприятие ' + CAST(@i AS NVARCHAR),
             N'Investment Activity ' + CAST(@i AS NVARCHAR),
             N'INV' + CAST(@i AS NVARCHAR),
@@ -1321,8 +1333,8 @@ BEGIN
     BEGIN
         INSERT INTO [TaxAccreditationStatus] ([PaydoxId], [MigrationId], [Name], [EngName], [State])
         VALUES (
-            @i,
-            N'ORG' + CAST((@i % 5) + 1 AS NVARCHAR) + N':' + CAST(@i AS NVARCHAR) + N':ID' + CAST(@i AS NVARCHAR),
+            LOWER(CAST(NEWID() AS NVARCHAR(36))),
+            NULL,
             N'Статус налоговой аккредитации ' + CAST(@i AS NVARCHAR),
             N'Tax Accreditation Status ' + CAST(@i AS NVARCHAR),
             CASE WHEN @i % 10 = 0 THEN N'Closed' ELSE N'Active' END
@@ -1340,8 +1352,8 @@ BEGIN
     BEGIN
         INSERT INTO [ComplianceAccreditationStatuse] ([PaydoxId], [MigrationId], [Name], [EngName], [State])
         VALUES (
-            @i,
-            N'ORG' + CAST((@i % 5) + 1 AS NVARCHAR) + N':' + CAST(@i AS NVARCHAR) + N':ID' + CAST(@i AS NVARCHAR),
+            LOWER(CAST(NEWID() AS NVARCHAR(36))),
+            NULL,
             N'Статус комплаенс аккредитации ' + CAST(@i AS NVARCHAR),
             N'Compliance Accreditation Status ' + CAST(@i AS NVARCHAR),
             CASE WHEN @i % 10 = 0 THEN N'Closed' ELSE N'Active' END
@@ -1361,12 +1373,12 @@ BEGIN
     BEGIN
         INSERT INTO [DocumentKind] ([PaydoxId], [MigrationId], [Name], [AbbreviatedName], [Code], [DocumentTypeId], [DocumentFlow], [NumberingType])
         VALUES (
-            @i,
-            N'ORG' + CAST((@i % 5) + 1 AS NVARCHAR) + N':' + CAST(@i AS NVARCHAR) + N':ID' + CAST(@i AS NVARCHAR),
+            LOWER(CAST(NEWID() AS NVARCHAR(36))),
+            NULL,
             N'Вид документа ' + CAST(@i AS NVARCHAR),
             N'ВД' + CAST(@i AS NVARCHAR),
             N'DK' + CAST(@i AS NVARCHAR),
-            @i,
+            LOWER(CAST(NEWID() AS NVARCHAR(36))),
             CASE (@i % 4) WHEN 0 THEN N'Inner' WHEN 1 THEN N'Outgoing' WHEN 2 THEN N'Incoming' ELSE N'Contracts' END,
             CASE (@i % 3) WHEN 0 THEN N'Numerable' WHEN 1 THEN N'Registrable' ELSE N'NotNumerable' END
         )
@@ -1383,8 +1395,8 @@ BEGIN
     BEGIN
         INSERT INTO [Country] ([PaydoxId], [MigrationId], [Name], [Code])
         VALUES (
-            @i,
-            N'ORG' + CAST((@i % 5) + 1 AS NVARCHAR) + N':' + CAST(@i AS NVARCHAR) + N':ID' + CAST(@i AS NVARCHAR),
+            LOWER(CAST(NEWID() AS NVARCHAR(36))),
+            NULL,
             N'Страна ' + CAST(@i AS NVARCHAR),
             RIGHT('000' + CAST(@i AS NVARCHAR), 3)
         )
@@ -1402,8 +1414,8 @@ BEGIN
         DECLARE @typeIdx INT = (@i % 5) + 1
         INSERT INTO [Document] ([PaydoxId], [MigrationId], [DocumentType], [DocumentKind], [Name], [Subject])
         VALUES (
-            @i,
-            N'ORG' + CAST((@i % 5) + 1 AS NVARCHAR) + N':' + CAST(@i AS NVARCHAR) + N':ID' + CAST(@i AS NVARCHAR),
+            LOWER(CAST(NEWID() AS NVARCHAR(36))),
+            NULL,
             @typeIdx,
             N'DK_' + RIGHT('000' + CAST(4 AS NVARCHAR), 3),
             N'Документ ' + CAST(@i AS NVARCHAR),
@@ -1415,23 +1427,24 @@ END
 GO
 
 -- 16. DocVersion (по одной версии на каждый документ)
-IF NOT EXISTS (SELECT 1 FROM [DocVersion])
-BEGIN
-    DECLARE @i INT = 1
-    WHILE @i <= 100
-    BEGIN
-        INSERT INTO [DocVersion] ([PaydoxId], [MigrationId], [Filepath], [IsMain], [IsSignature], [MainDocFilepath])
+INSERT INTO [DocVersion] ([PaydoxId], [AddendumPaydoxId], [MigrationId], [Filepath], [IsMain], [IsSignature], [MainDocFilepath])
         VALUES (
-            @i,
-            N'ORG' + CAST((@i % 5) + 1 AS NVARCHAR) + N':' + CAST(@i AS NVARCHAR) + N':ID' + CAST(@i AS NVARCHAR),
-            N'\\server\docs\doc_' + RIGHT('000' + CAST(@i AS NVARCHAR), 3) + N'.pdf',
+            'Test',
+            NULL,
+            NULL,
+            N'D:\Downloads\Выгрузка от 04.03.26 11_40_49\Версия документа.pdf',
             1,
             0,
             NULL
-        )
-        SET @i = @i + 1
-    END
-END
-GO
+        ),
+        (
+            'Test',
+            NULL,
+            NULL,
+            N'D:\Downloads\Выгрузка от 04.03.26 11_40_49\Версия документа — копия.pdf',
+            0,
+            0,
+            NULL
+        );
 
 PRINT 'Test data load successfull'

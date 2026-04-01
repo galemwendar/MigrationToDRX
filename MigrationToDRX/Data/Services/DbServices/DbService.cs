@@ -90,21 +90,69 @@ namespace MigrationToDRX.Data.Services.DbServices
         /// <summary>
         /// Обновить состояние записи в БД
         /// </summary>
-        public async Task UpdateDbMigrationResult(string tablename, string externalId, string result, DateTime migrateDate, int inerationId, long? entityId, string? message = null)
+        public async Task UpdateDbMigrationResult(string tablename, 
+            string externalId, 
+            string result, 
+            DateTime migrateDate, 
+            int migrationId, 
+            long? entityId, 
+            string? message = null)
         {
             var messageParam = message != null ? ", MigrateMessage = @Message" : "";
-            var query = $"UPDATE {tablename} SET RxId = @RxId, IterationId = @IterationId, Result = @Result, MigrateTime = @MigrateTime {messageParam} WHERE PaydoxId = @ExternalId";
+            var query = $"UPDATE {tablename} SET RxId = @RxId, MigrationId = @MigrationId, Result = @Result, MigrateTime = @MigrateTime {messageParam} WHERE PaydoxId = @ExternalId";
 
             _logger.LogDebug("UpdateDbMigrationResult. Execute query {}", query);
 
             await SqlConnection.ExecuteAsync(query, new
             {
                 RxId = entityId,
-                IterationId = inerationId,
+                MigrationId = migrationId,
                 Result = result,
                 MigrateTime = migrateDate,
                 Message = message,
                 ExternalId = externalId
+            });
+        }
+
+        /// <summary>
+        /// Обновить состояние записи в БД
+        /// </summary>
+        public async Task UpdateImportVersionDbMigrationResult(string tablename,
+            long rowId,
+            long rxDocId,
+            long rxVersionId,
+            string addendumExternalId,
+            string result,
+            DateTime migrateDate,
+            int migrationId,
+            long? entityId,
+            string? message = null)
+        {
+            var messageParam = message != null ? ", MigrateMessage = @Message" : "";
+            var query = $"UPDATE {tablename} " +
+                $"SET RxId = @RxId, " +
+                $"MigrationId = @MigrationId, " +
+                $"Result = @Result, " +
+                $"MigrateTime = @MigrateTime, " +
+                $"RxDocId = @RxDocId, " +
+                $"RxVersionId = @RxVersionId, " +
+                $"AddendumPaydoxId = @AddendumPaydoxId " +
+                $"{messageParam} " +
+                $"WHERE Id = @RowId";
+
+            _logger.LogDebug("UpdateDbMigrationResult. Execute query {}", query);
+
+            await SqlConnection.ExecuteAsync(query, new
+            {
+                RxId = entityId,
+                MigrationId = migrationId,
+                Result = result,
+                MigrateTime = migrateDate,
+                Message = message,
+                RxDocId = rxDocId,
+                RxVersionId = rxVersionId,
+                AddendumPaydoxId = addendumExternalId,
+                RowId = rowId
             });
         }
 

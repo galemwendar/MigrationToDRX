@@ -46,15 +46,14 @@ public static class OdataOperationHelper
     /// </summary>
     public static readonly HashSet<OdataOperation> OperationsRequiringEntitySelection = new()
     {
-        /* OdataOperation.AddEntityToCollection,
+        OdataOperation.AddEntityToCollection,
         OdataOperation.UpdateEntityInCollection,
         OdataOperation.AddVersionToExistedDocument,
         OdataOperation.CreateDocumentWithVersion,
         OdataOperation.CreateEntity,
         OdataOperation.UpdateEntity,
-        */
         OdataOperation.CreateOrUpdateEntity,
-        OdataOperation.CreateOrUpdateDocVersionOrLoadSignature
+        //OdataOperation.CreateOrUpdateDocVersionOrLoadSignature
     };
 
     /// <summary>
@@ -195,7 +194,6 @@ public static class OdataOperationHelper
                     StructuralProperies.IsMainDoc,
                     StructuralProperies.IsSignature,
                     StructuralProperies.MainDocFilepath,
-
                 });
                 break;
 

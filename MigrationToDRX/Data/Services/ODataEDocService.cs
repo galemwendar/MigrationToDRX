@@ -51,74 +51,11 @@ public class ODataEDocService
     /// <summary>
     /// Создать тело документа
     /// </summary>
-    public async Task<IDictionary<string, object>?> CreateAddendumByMainExternalIdAsync(string mainDocExternalId,
-        string filePath,
-        CancellationToken ct,
-        bool isSignature = false,
-        string? addendumFilePath = null)
-    {
-        ct.ThrowIfCancellationRequested();
-
-        var needCreateAddendum = false;
-
-        var addendumDoc = await _odataClientService.FindEdocByNoteAsync(filePath, ct);
-
-        if (addendumDoc == null)
-            needCreateAddendum = true;
-
-        addendumDoc.TryGetValue(OdataPropertyNames.Id, out var addendumDocIdObj);
-
-        if (addendumDocIdObj == null)
-            needCreateAddendum = true;
-
-        var addendumDocId = Convert.ToInt64(addendumDocIdObj);
-
-        var mainDoc = await _odataClientService.FindEdocByExternalIdAsync(mainDocExternalId, ct) ??
-            throw new ArgumentException("Не удалось найти документ");
-
-        mainDoc.TryGetValue(OdataPropertyNames.Id, out var docIdObj);
-
-        if (docIdObj == null)
-            throw new ArgumentException("Не удалось найти Id документа");
-
-        var extension = Path.GetExtension(filePath).Replace(".", "");
-        var docId = Convert.ToInt64(docIdObj);
-        //var version = GetLastVersion(extension, eDoc);
-        var targetApp = await _odataClientService.FindAssociatedApplication(extension, ct)
-            ?? throw new ArgumentNullException($"Не найдено приложение обработчик для расширения {extension}");
-
-        byte[] body = await GetBodyByPath(filePath);
-
-        if (isSignature && !string.IsNullOrWhiteSpace(addendumFilePath))
-        {
-
-        }
-
-        if (!isSignature)
-        {
-            await _odataClientService.BatchCreateVersionWithBody(docId, "Первоначальная версия", targetApp, body, ct);
-        }
-        else
-        {
-            var dto = new Dictionary<string, object>
-            {
-                { "documentId", docId },
-                { "type", 1 },
-                { "signatureBase64", Convert.ToBase64String(body)}
-            };
-            await _odataClientService.ExecuteVoidBoundActionAsync(OdataNameSpaces.ExcelMigrator, OdataActionNames.ImportSignatureToDocumentAction, dto, ct);
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Создать тело документа
-    /// </summary>
     public async Task<IDictionary<string, object>?> FindEdocAndSetBodyByExternalIdAsync(string externalId,
-        string filePath, CancellationToken ct,
-        bool ForceUpdateBody = false,
-        bool isSignature = false)
+        string filePath,
+        bool isMain,
+        bool isSignature,
+        CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
 
@@ -144,7 +81,16 @@ public class ODataEDocService
 
         if (!isSignature)
         {
-            await _odataClientService.BatchCreateVersionWithBody(docId, "Первоначальная версия", targetApp, body, ct);
+            var dto = new Dictionary<string, object>
+            {
+                { "externalId", externalId },
+                { "extension", extension },
+                { "isMain", isMain },
+                { "versionContentBase64", Convert.ToBase64String(body)}
+            };
+
+            var result = await _odataClientService.ExecuteBoundActionAsSingleAsync<Dictionary<string, object>>(OdataNameSpaces.ExcelMigrator, OdataActionNames.ImportDocumentFromDb, dto, ct);
+            return result;
         }
         else
         {
@@ -154,7 +100,7 @@ public class ODataEDocService
                 { "type", 1 },
                 { "signatureBase64", Convert.ToBase64String(body)}
             };
-            await _odataClientService.ExecuteVoidBoundActionAsync(OdataNameSpaces.ExcelMigrator, OdataActionNames.ImportSignatureToDocumentAction, dto, ct);
+            await _odataClientService.ExecuteVoidBoundActionAsync(OdataNameSpaces.ExcelMigrator, OdataActionNames.ImportDocumentFromDb, dto, ct);
         }
 
         return eDoc;

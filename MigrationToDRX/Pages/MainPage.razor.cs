@@ -247,7 +247,7 @@ public partial class MainPage
     /// <summary>
     /// Идентификатор текущей миграции (глобальная настройка)
     /// </summary>
-    protected int IterationId { get; set; }
+    protected int MigrationId { get; set; }
 
     /// <summary>
     /// Выбранный этап для редактирования
@@ -305,9 +305,6 @@ public partial class MainPage
 
         // получаем список операций для выбора
         OperationItems = Data.Helpers.EnumHelper.GetItems<OdataOperation>()
-            .Where(op => !IsExtendedOperation(op.Value))
-            .Where(op => op.Value == OdataOperation.CreateOrUpdateEntity ||
-                op.Value == OdataOperation.CreateOrUpdateDocVersionOrLoadSignature)
             .ToList();
 
         // получаем список полей для поиска навигационных свойств
@@ -324,7 +321,7 @@ public partial class MainPage
     {
         var settings = await SettingService.GetSettings();
         SettingStages = settings.Stages?.ToList() ?? new();
-        IterationId = settings.IterationId;
+        MigrationId = settings.MigrationId;
 
         // Восстанавливаем IEdmEntitySet для каждого этапа
         foreach (var stage in SettingStages)
@@ -504,7 +501,7 @@ public partial class MainPage
         if (string.IsNullOrWhiteSpace(SqlQuery))
             SqlQuery = DbService.GetSqlTemplate(SelectedTable);
 
-        var rows = await DbService.ReadTableAsync(SelectedTable, SqlQuery, IterationId, take: 50);
+        var rows = await DbService.ReadTableAsync(SelectedTable, SqlQuery, MigrationId, take: 50);
 
         if (rows.Count == 0)
         {
@@ -808,6 +805,15 @@ public partial class MainPage
     /// Подключиться к БД по строке подключения
     /// </summary>
     /// <returns></returns>
+    private DbService CreateDbService(SettingStage stage)
+    {
+        return stage.SourceType switch
+        {
+            SourceType.DatabaseMssql => new MssqlService(stage.ConnectionString!, Logger),
+            _ => throw new NotSupportedException($"Тип источника {stage.SourceType} не поддерживается")
+        };
+    }
+
     private async Task ConnectToDatabase()
     {
         if (string.IsNullOrWhiteSpace(DbConnectionString))
@@ -956,7 +962,8 @@ public partial class MainPage
     {
         return operation == OdataOperation.ImportSignatureToDocument
             || operation == OdataOperation.RenameVersionNote
-            || operation == OdataOperation.ImportCertificate;
+            || operation == OdataOperation.ImportCertificate
+            || operation == OdataOperation.CreateOrUpdateDocVersionOrLoadSignature;
     }
 
     #region Управление этапами
@@ -979,8 +986,8 @@ public partial class MainPage
         if (SelectedStage != null)
         {
             SelectedSourceType = SelectedStage.SourceType;
-            SelectedOperation = SelectedStage.Operation;
             EnableExtendedOperations = SelectedStage.EnableExtendedOperations;
+            SelectedOperation = SelectedStage.Operation;
 
             // Восстанавливаем IEdmEntitySet из сохраненного имени
             if (!string.IsNullOrEmpty(SelectedStage.SelectedEntitySetName))
@@ -1024,6 +1031,8 @@ public partial class MainPage
                 }
             }
 
+            OdataOperationHelper.AddPropertiesByOperation(SelectedOperation, EntityFields, ColumnMappings);
+
             // Восстанавливаем ColumnMappings ПОСЛЕ загрузки данных
             if (savedMappings != null)
             {
@@ -1040,14 +1049,14 @@ public partial class MainPage
     }
 
     /// <summary>
-    /// Сохранить все настройки приложения (этапы + IterationId)
+    /// Сохранить все настройки приложения (этапы + MigrationId)
     /// </summary>
     private async Task SaveSettings()
     {
         await SettingService.UpdateSettings(new ApplicationSettings
         {
             Stages = SettingStages,
-            IterationId = IterationId
+            MigrationId = MigrationId
         });
     }
 
@@ -1305,6 +1314,76 @@ public partial class MainPage
             return;
         }
 
+        // Подсчёт записей по всем этапам для подтверждения
+        var stageCounts = new List<(string Name, int Count)>();
+        var totalCount = 0;
+        foreach (var stage in SettingStages.OrderBy(s => s.Number))
+        {
+            if (string.IsNullOrEmpty(stage.SelectedTable) || string.IsNullOrEmpty(stage.SqlQuery)
+                || string.IsNullOrWhiteSpace(stage.ConnectionString))
+                continue;
+
+            try
+            {
+                using var dbService = CreateDbService(stage);
+                await dbService.ConnectAsync();
+                var count = await dbService.GetRowCountAsync(stage.SelectedTable, stage.SqlQuery, MigrationId);
+                stageCounts.Add((stage.Name, count));
+                totalCount += count;
+            }
+            catch
+            {
+                stageCounts.Add((stage.Name, -1));
+            }
+        }
+
+        var rows = string.Join("", stageCounts.Select(s =>
+            s.Count >= 0
+                ? $"<tr><td style='padding:4px 8px'>{s.Name}</td><td style='text-align:right;padding:4px 8px'>{s.Count:N0}</td></tr>"
+                : $"<tr><td style='padding:4px 8px'>{s.Name}</td><td style='text-align:right;padding:4px 8px;color:red'>ошибка</td></tr>"));
+
+        var html = $@"
+            <table style='width:100%;border-collapse:collapse'>
+                <thead><tr style='border-bottom:2px solid #ccc'>
+                    <th style='text-align:left;padding:4px 8px'>Этап</th>
+                    <th style='text-align:right;padding:4px 8px'>Записей</th>
+                </tr></thead>
+                <tbody>{rows}
+                    <tr style='border-top:2px solid #ccc;font-weight:bold'>
+                        <td style='padding:6px 8px'>Итого</td>
+                        <td style='text-align:right;padding:6px 8px'>{totalCount:N0}</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p style='margin-top:12px'>Итерация: <b>{MigrationId}</b></p>";
+
+        var confirmed = await DialogService.OpenAsync("Подтверждение запуска", ds => builder =>
+        {
+            builder.OpenElement(0, "div");
+            builder.AddMarkupContent(1, html);
+
+            builder.OpenElement(2, "div");
+            builder.AddAttribute(3, "style", "display:flex;justify-content:flex-end;gap:8px;margin-top:16px");
+
+            builder.OpenComponent<Radzen.Blazor.RadzenButton>(4);
+            builder.AddAttribute(5, "Text", "Отмена");
+            builder.AddAttribute(6, "ButtonStyle", ButtonStyle.Light);
+            builder.AddAttribute(7, "Click", EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(this, () => ds.Close(false)));
+            builder.CloseComponent();
+
+            builder.OpenComponent<Radzen.Blazor.RadzenButton>(8);
+            builder.AddAttribute(9, "Text", "Запустить");
+            builder.AddAttribute(10, "ButtonStyle", ButtonStyle.Primary);
+            builder.AddAttribute(11, "Click", EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(this, () => ds.Close(true)));
+            builder.CloseComponent();
+
+            builder.CloseElement();
+            builder.CloseElement();
+        }, new DialogOptions { Width = "450px" });
+
+        if (confirmed is not true)
+            return;
+
         // Создаём новый файл лога для текущего запуска
         SessionLogService.StartNewSession();
         Logger.LogInformation("ExecuteAllStages. Запуск выполнения всех этапов");
@@ -1383,7 +1462,7 @@ public partial class MainPage
             }
         }
 
-        IterationId += 1;
+        MigrationId += 1;
 
         isProceed = false;
         StateHasChanged();
@@ -1502,7 +1581,7 @@ public partial class MainPage
         if (string.IsNullOrWhiteSpace(stage.SelectedTable))
             throw new ArgumentNullException($"Не выбрана таблица из которой читаются данные в этапе {stage.Name}");
 
-        if (string.IsNullOrWhiteSpace(stage.SelectedEntitySetName))
+        if (string.IsNullOrWhiteSpace(stage.SelectedEntitySetName) && !stage.EnableExtendedOperations)
             throw new ArgumentNullException($"Не выбран EntitySet в этапе {stage.Name}");
 
         using var dbService = new MssqlService(stage.ConnectionString, Logger);
@@ -1511,7 +1590,7 @@ public partial class MainPage
         const int partition = 10;
 
         // Получаем общее количество строк для корректного прогресс-бара
-        var totalCount = await dbService.GetRowCountAsync(stage.SelectedTable, stage.SqlQuery, IterationId);
+        var totalCount = await dbService.GetRowCountAsync(stage.SelectedTable, stage.SqlQuery, MigrationId);
         maxRowsCount = totalCount;
         progress = 0;
         stage.LastProcessedRows = 0;
@@ -1521,9 +1600,14 @@ public partial class MainPage
         await InvokeAsync(StateHasChanged);
 
         // Подготовка метаданных (один раз, а не на каждую партию)
-        var entityDto = OdataClientService.GetEdmxEntityDto(stage.SelectedEntitySetName);
-        if (entityDto == null)
-            throw new InvalidOperationException($"Не удалось получить метаданные для EntitySet {stage.SelectedEntitySetName}");
+        // Для расширенных операций EntitySet может не быть указан — используем пустой список полей
+        EdmxEntityDto? entityDto = null;
+        if (!string.IsNullOrEmpty(stage.SelectedEntitySetName))
+        {
+            entityDto = OdataClientService.GetEdmxEntityDto(stage.SelectedEntitySetName);
+            if (entityDto == null)
+                throw new InvalidOperationException($"Не удалось получить метаданные для EntitySet {stage.SelectedEntitySetName}");
+        }
 
         var entityFields = EntityHelper.GetEntityFields(entityDto);
         OdataOperationHelper.AddPropertiesByOperation(stage.Operation, entityFields, new Dictionary<string, EntityFieldDto?>());
@@ -1545,7 +1629,7 @@ public partial class MainPage
 
         while (true)
         {
-            var data = await dbService.ReadTableAsync(stage.SelectedTable, sqlQuery: stage.SqlQuery, migrationId: IterationId, take: partition);
+            var data = await dbService.ReadTableAsync(stage.SelectedTable, sqlQuery: stage.SqlQuery, migrationId: MigrationId, take: partition);
             if (data.Count == 0)
             {
                 Logger.LogInformation("ProcessMssqlStageAsync. Данные в таблице {} закончились. Этап завершен.", stage.SelectedTable);
@@ -1583,20 +1667,43 @@ public partial class MainPage
                     {
                         Logger.LogInformation("ProcessMssqlStage. Запись {} таблицы {} успешно загружена", externalId, stage.SelectedTable);
                         successRows++;
-                        await dbService.UpdateDbMigrationResult(stage.SelectedTable, externalId, "Migrated", DateTime.UtcNow, IterationId, result.EntityId);
+
+                        if (stage.Operation == OdataOperation.CreateOrUpdateDocVersionOrLoadSignature)
+                        {
+                            if (result.Entity == null)
+                                throw new ArgumentNullException("Ответ CreateOrUpdateDocVersionOrLoadSignature вернул пустой объект");
+
+                            var rxDoxId = Convert.ToInt64(result.Entity["DocId"]);
+                            var versionId = Convert.ToInt64(result.Entity?["VersionId"]);
+                            var paydoxId = result.Entity?["PaydoxId"].ToString() ?? string.Empty;
+
+                            await dbService.UpdateImportVersionDbMigrationResult(stage.SelectedTable,
+                                Convert.ToInt64(row["Id"]),
+                                rxDoxId,
+                                versionId,
+                                paydoxId,
+                                "Migrated", 
+                                DateTime.UtcNow, 
+                                MigrationId, 
+                                result.EntityId);
+                        }
+                        else
+                        {
+                            await dbService.UpdateDbMigrationResult(stage.SelectedTable, externalId, "Migrated", DateTime.UtcNow, MigrationId, result.EntityId);
+                        }
                     }
                     else
                     {
                         Logger.LogError("ProcessMssqlStage. Ошибка обработки строки {}. Сообщение: {}", externalId, result.ErrorMessage);
                         errorRows++;
-                        await dbService.UpdateDbMigrationResult(stage.SelectedTable, externalId, "MigratedError", DateTime.UtcNow, IterationId, result.EntityId, result.ErrorMessage);
+                        await dbService.UpdateDbMigrationResult(stage.SelectedTable, externalId, "MigratedError", DateTime.UtcNow, MigrationId, result.EntityId, result.ErrorMessage);
                     }
                 }
                 catch (Exception ex)
                 {
                     Logger.LogError(ex, "ProcessMssqlStage. Ошибка обработки строки {}", externalId);
                     errorRows++;
-                    await dbService.UpdateDbMigrationResult(stage.SelectedTable, externalId, "MigratedError", DateTime.UtcNow, IterationId, null, ex.Message);
+                    await dbService.UpdateDbMigrationResult(stage.SelectedTable, externalId, "MigratedError", DateTime.UtcNow, MigrationId, null, ex.Message);
                 }
 
                 processedRows++;

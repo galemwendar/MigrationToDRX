@@ -75,6 +75,9 @@ public class OperationService
     {
         var externalEntityId = EntityHelper.GetFieldValueFromEntityDtoString(dto, OdataPropertyNames.ExternalId);
         var filePath = EntityHelper.GetFieldValueFromEntityDtoString(dto, OdataPropertyNames.Path);
+        var isSignature = EntityHelper.GetFieldValueFromEntityDtoBoolean(dto, OdataPropertyNames.IsSignature);
+        var isMainDoc = EntityHelper.GetFieldValueFromEntityDtoBoolean(dto, OdataPropertyNames.IsMainDoc);
+        var mainDocFilePath = EntityHelper.GetFieldValueFromEntityDtoString(dto, OdataPropertyNames.MainDocFilepath);
 
         if (_entityService.ValidateFilePath(filePath) == false)
             return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: "Файл не найден или слишком большой");
@@ -86,12 +89,7 @@ public class OperationService
 
         _logger.LogDebug("CreateOrUpdateDocVersionOrLoadSignature. Поиск сущности в RX с ExternalId = {}", externalEntityId);
 
-        var searchEntity = await _odataClientService.GetEntityAsync(
-            dto.EntitySetName,
-            propertyName: "ExternalId",
-            filterType: typeof(string),
-            filter: externalEntityId,
-            ct);
+        var searchEntity = await _odataClientService.FindEdocByExternalIdAsync(externalEntityId, ct);
 
         if (searchEntity == null)
             return new OperationResult(success: false,
@@ -99,13 +97,11 @@ public class OperationService
                 errorMessage: $"CreateOrUpdateDocVersionOrLoadSignature. Не удалось найти сущность с ExternalId {externalEntityId} в DirectumRX");
 
 
-        var mainDocFilepath = EntityHelper.GetFieldValueFromEntityDtoString(dto, OdataPropertyNames.MainDocFilepath);
-        var isSignature = EntityHelper.GetFieldValueFromEntityDtoBoolean(dto, OdataPropertyNames.IsSignature);
-        var isMainDoc = EntityHelper.GetFieldValueFromEntityDtoBoolean(dto, OdataPropertyNames.IsMainDoc);
-        var updatedEntity = await _odataEdocService.FindEdocAndSetBodyByExternalIdAsync(externalEntityId, filePath, ct, isSignature: isSignature);
+        var updatedEntity = await _odataEdocService.FindEdocAndSetBodyByExternalIdAsync(externalEntityId, filePath, isMainDoc, isSignature, ct);
 
         return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName(), externalEntityId: externalEntityId, entity: updatedEntity);
     }
+
 
     /// <summary>
     /// Создает сущность в OData и возвращает результат выполнения операции

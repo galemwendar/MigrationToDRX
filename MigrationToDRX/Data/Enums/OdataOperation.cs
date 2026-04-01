@@ -114,7 +114,7 @@ public enum OdataOperation
     /// <summary>
     /// Импорт подписи на документ
     /// </summary>
-    [Display(Name = "Импортировать подпись на документ")]
+    [Display(Name = "Импортировать подпись на документ (Excel)")]
     ImportSignatureToDocument = 100,
 
     /// <summary>
