@@ -12,7 +12,21 @@ GO
 CREATE TABLE [UsdExchangeRatesByYear] (
   [Id] bigint PRIMARY KEY IDENTITY(1, 1),
   [PaydoxId] nvarchar(150) NOT NULL,
-  [Name] nvarchar(250) NOT NULL,
+  [MigrationId] int,
+  [RxId] bigint,
+  [RateCode] nvarchar(30) NOT NULL,
+  [Year] datetime2 NOT NULL,
+  [RateValueToUsd] float NOT NULL,
+  [State] nvarchar(15),
+  [Result] nvarchar(50),
+  [MigrateTime] datetime2,
+  [MigrateMessage] nvarchar(max)
+)
+GO
+
+CREATE TABLE [UsdExchangeRatesByMonth] (
+  [Id] bigint PRIMARY KEY IDENTITY(1, 1),
+  [PaydoxId] nvarchar(150) NOT NULL,
   [MigrationId] int,
   [RxId] bigint,
   [RateCode] nvarchar(30) NOT NULL,
@@ -25,15 +39,15 @@ CREATE TABLE [UsdExchangeRatesByYear] (
 )
 GO
 
-CREATE TABLE [UsdExchangeRatesByMonth] (
+CREATE TABLE [Currency] (
   [Id] bigint PRIMARY KEY IDENTITY(1, 1),
   [PaydoxId] nvarchar(150) NOT NULL,
-  [Name] nvarchar(250) NOT NULL,
   [MigrationId] int,
   [RxId] bigint,
-  [RateCode] nvarchar(30) NOT NULL,
-  [Date] datetime2 NOT NULL,
-  [RateValueToUsd] float NOT NULL,
+  [Name] nvarchar(250) NOT NULL,
+  [ShortName] nvarchar(250) NOT NULL,
+  [LetterCode] nvarchar(250) NOT NULL,
+  [NumberCode] nvarchar(3) NOT NULL,
   [State] nvarchar(15),
   [Result] nvarchar(50),
   [MigrateTime] datetime2,
@@ -69,19 +83,7 @@ CREATE TABLE [OrganizationalAndLegalForm] (
 )
 GO
 
-CREATE TABLE [ExpenseItem] (
-  [Id] bigint PRIMARY KEY IDENTITY(1, 1),
-  [PaydoxId] nvarchar(150) NOT NULL,
-  [MigrationId] int,
-  [RxId] bigint,
-  [Name] nvarchar(250) NOT NULL,
-  [FullName] nvarchar(250) NOT NULL,
-  [State] nvarchar(15),
-  [Result] nvarchar(50),
-  [MigrateTime] datetime2,
-  [MigrateMessage] nvarchar(max)
-)
-GO
+-- Таблица ExpenseItem исключена из схемы (закомментирована в dbdiagram)
 
 CREATE TABLE [TmcCode] (
   [Id] bigint PRIMARY KEY IDENTITY(1, 1),
@@ -151,36 +153,8 @@ CREATE TABLE [InvestmentActivity] (
   [Name] nvarchar(250) NOT NULL,
   [EngName] nvarchar(250),
   [Code] nvarchar(12) NOT NULL,
-  [Year] nvarchar(4) NOT NULL,
-  [PlanningAndBudgetUnitCode] nvarchar(30) NOT NULL,
-  [State] nvarchar(15),
-  [Result] nvarchar(50),
-  [MigrateTime] datetime2,
-  [MigrateMessage] nvarchar(max)
-)
-GO
-
-CREATE TABLE [TaxAccreditationStatus] (
-  [Id] bigint PRIMARY KEY IDENTITY(1, 1),
-  [PaydoxId] nvarchar(150) NOT NULL,
-  [MigrationId] int,
-  [RxId] bigint,
-  [Name] nvarchar(64) NOT NULL,
-  [EngName] nvarchar(64) NOT NULL,
-  [State] nvarchar(15),
-  [Result] nvarchar(50),
-  [MigrateTime] datetime2,
-  [MigrateMessage] nvarchar(max)
-)
-GO
-
-CREATE TABLE [ComplianceAccreditationStatuse] (
-  [Id] bigint PRIMARY KEY IDENTITY(1, 1),
-  [PaydoxId] nvarchar(150) NOT NULL,
-  [MigrationId] int,
-  [RxId] bigint,
-  [Name] nvarchar(64) NOT NULL,
-  [EngName] nvarchar(64) NOT NULL,
+  [Year] datetime2 NOT NULL,
+  [PlanningAndBudgetUnitCode] nvarchar(150) NOT NULL,
   [State] nvarchar(15),
   [Result] nvarchar(50),
   [MigrateTime] datetime2,
@@ -195,7 +169,7 @@ CREATE TABLE [DocumentKind] (
   [RxId] bigint,
   [Name] nvarchar(250) NOT NULL,
   [AbbreviatedName] nvarchar(250) NOT NULL,
-  [Code] nvarchar(12) NOT NULL,
+  [Code] nvarchar(12),
   [DocumentTypeId] bigint NOT NULL,
   [DocumentFlow] nvarchar(15),
   [NumberingType] nvarchar(15),
@@ -211,7 +185,51 @@ CREATE TABLE [Country] (
   [MigrationId] int,
   [RxId] bigint,
   [Name] nvarchar(250) NOT NULL,
-  [Code] nvarchar(3),
+  [Code] nvarchar(3) NOT NULL,
+  [Result] nvarchar(50),
+  [MigrateTime] datetime2,
+  [MigrateMessage] nvarchar(max)
+)
+GO
+
+CREATE TABLE [Company] (
+  [Id] bigint PRIMARY KEY IDENTITY(1, 1),
+  [MigrationId] int,
+  [RxId] bigint,
+  [RopId] nvarchar(64) NOT NULL,
+  [Name] nvarchar(250) NOT NULL,
+  [CodeCountryPaydoxId] nvarchar(150) NOT NULL,
+  [CountryPaydoxId] nvarchar(150) NOT NULL,
+  [Note] nvarchar(500),
+  [Result] nvarchar(50),
+  [MigrateTime] datetime2,
+  [MigrateMessage] nvarchar(max)
+)
+GO
+
+CREATE TABLE [Department] (
+  [Id] bigint PRIMARY KEY IDENTITY(1, 1),
+  [RopId] nvarchar(64) NOT NULL,
+  [MigrationId] int,
+  [RxId] bigint,
+  [Name] nvarchar(250) NOT NULL,
+  [Result] nvarchar(50),
+  [MigrateTime] datetime2,
+  [MigrateMessage] nvarchar(max)
+)
+GO
+
+CREATE TABLE [Employee] (
+  [Id] bigint PRIMARY KEY IDENTITY(1, 1),
+  [PaydoxId] nvarchar(150) NOT NULL,
+  [MigrationId] int,
+  [RxId] bigint,
+  [FirstName] nvarchar(250) NOT NULL,
+  [LastName] nvarchar(250) NOT NULL,
+  [BusinessUnitRopId] nvarchar(150) NOT NULL,
+  [BusinessUnitName] nvarchar(250) NOT NULL,
+  [DepartmentRopId] nvarchar(150) NOT NULL,
+  [DepartmentName] nvarchar(250) NOT NULL,
   [Result] nvarchar(50),
   [MigrateTime] datetime2,
   [MigrateMessage] nvarchar(max)
@@ -239,13 +257,13 @@ CREATE TABLE [DocVersion] (
   [AddendumPaydoxId] nvarchar(190),
   [MigrationId] int,
   [RxId] bigint,
-  [Filepath] nvarchar(3000) UNIQUE NOT NULL,
+  [Filepath] nvarchar(850) UNIQUE NOT NULL,
   [Name] nvarchar(250),
   [RxDocId] bigint,
   [RxVersionId] bigint,
   [IsMain] bit NOT NULL,
   [IsSignature] bit NOT NULL,
-  [MainDocFilepath] nvarchar(3000),
+  [MainDocFilepath] nvarchar(850),
   [Result] nvarchar(50),
   [MigrateTime] datetime2,
   [MigrateMessage] nvarchar(max)
@@ -269,7 +287,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Идентификатор в системе PayDox',
+@value = 'Идентификатор номера итерации миграции',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'UsdExchangeRatesByYear',
 @level2type = N'Column', @level2name = 'MigrationId';
@@ -285,7 +303,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Active | Closed',
+@value = 'Состояние: Active | Closed',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'UsdExchangeRatesByYear',
 @level2type = N'Column', @level2name = 'State';
@@ -293,7 +311,47 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Migrated | MigratedWithNotes | MigratedError',
+@value = 'Код валюты',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'UsdExchangeRatesByYear',
+@level2type = N'Column', @level2name = 'RateCode';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Год',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'UsdExchangeRatesByYear',
+@level2type = N'Column', @level2name = 'Year';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Значение курса к USD',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'UsdExchangeRatesByYear',
+@level2type = N'Column', @level2name = 'RateValueToUsd';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Дата миграции',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'UsdExchangeRatesByYear',
+@level2type = N'Column', @level2name = 'MigrateTime';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Сообщение при миграции (обычно в случае ошибки)',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'UsdExchangeRatesByYear',
+@level2type = N'Column', @level2name = 'MigrateMessage';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Результат миграции: Migrated | MigratedWithNotes | MigratedError',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'UsdExchangeRatesByYear',
 @level2type = N'Column', @level2name = 'Result';
@@ -316,7 +374,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Идентификатор в системе PayDox',
+@value = 'Идентификатор номера итерации миграции',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'UsdExchangeRatesByMonth',
 @level2type = N'Column', @level2name = 'MigrationId';
@@ -332,7 +390,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Active | Closed',
+@value = 'Состояние: Active | Closed',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'UsdExchangeRatesByMonth',
 @level2type = N'Column', @level2name = 'State';
@@ -340,7 +398,47 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Migrated | MigratedWithNotes | MigratedError',
+@value = 'Код валюты',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'UsdExchangeRatesByMonth',
+@level2type = N'Column', @level2name = 'RateCode';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Дата',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'UsdExchangeRatesByMonth',
+@level2type = N'Column', @level2name = 'Date';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Значение курса к USD',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'UsdExchangeRatesByMonth',
+@level2type = N'Column', @level2name = 'RateValueToUsd';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Дата миграции',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'UsdExchangeRatesByMonth',
+@level2type = N'Column', @level2name = 'MigrateTime';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Сообщение при миграции (обычно в случае ошибки)',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'UsdExchangeRatesByMonth',
+@level2type = N'Column', @level2name = 'MigrateMessage';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Результат миграции: Migrated | MigratedWithNotes | MigratedError',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'UsdExchangeRatesByMonth',
 @level2type = N'Column', @level2name = 'Result';
@@ -363,7 +461,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Идентификатор в системе PayDox',
+@value = 'Идентификатор номера итерации миграции',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'CorporateApproval',
 @level2type = N'Column', @level2name = 'MigrationId';
@@ -379,7 +477,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Active | Closed',
+@value = 'Состояние: Active | Closed',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'CorporateApproval',
 @level2type = N'Column', @level2name = 'State';
@@ -387,7 +485,39 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Migrated | MigratedWithNotes | MigratedError',
+@value = 'Орган управления',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'CorporateApproval',
+@level2type = N'Column', @level2name = 'GoverningBody';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Описание',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'CorporateApproval',
+@level2type = N'Column', @level2name = 'Description';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Дата миграции',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'CorporateApproval',
+@level2type = N'Column', @level2name = 'MigrateTime';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Сообщение при миграции (обычно в случае ошибки)',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'CorporateApproval',
+@level2type = N'Column', @level2name = 'MigrateMessage';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Результат миграции: Migrated | MigratedWithNotes | MigratedError',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'CorporateApproval',
 @level2type = N'Column', @level2name = 'Result';
@@ -410,7 +540,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Идентификатор в системе PayDox',
+@value = 'Идентификатор номера итерации миграции',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'OrganizationalAndLegalForm',
 @level2type = N'Column', @level2name = 'MigrationId';
@@ -426,7 +556,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Active | Closed',
+@value = 'Состояние: Active | Closed',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'OrganizationalAndLegalForm',
 @level2type = N'Column', @level2name = 'State';
@@ -434,64 +564,41 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Migrated | MigratedWithNotes | MigratedError',
+@value = 'Полное наименование ОПФ',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'OrganizationalAndLegalForm',
-@level2type = N'Column', @level2name = 'Result';
-GO
-
-EXEC sp_addextendedproperty
-@name = N'Table_Description',
-@value = 'Справочник [Статьи расходов]',
-@level0type = N'Schema', @level0name = 'dbo',
-@level1type = N'Table',  @level1name = 'ExpenseItem';
-GO
-
-EXEC sp_addextendedproperty
-@name = N'Column_Description',
-@value = 'Идентификатор в системе PayDox',
-@level0type = N'Schema', @level0name = 'dbo',
-@level1type = N'Table',  @level1name = 'ExpenseItem',
-@level2type = N'Column', @level2name = 'PaydoxId';
-GO
-
-EXEC sp_addextendedproperty
-@name = N'Column_Description',
-@value = 'Идентификатор в системе PayDox',
-@level0type = N'Schema', @level0name = 'dbo',
-@level1type = N'Table',  @level1name = 'ExpenseItem',
-@level2type = N'Column', @level2name = 'MigrationId';
-GO
-
-EXEC sp_addextendedproperty
-@name = N'Column_Description',
-@value = 'Идентификатор в системе DRX',
-@level0type = N'Schema', @level0name = 'dbo',
-@level1type = N'Table',  @level1name = 'ExpenseItem',
-@level2type = N'Column', @level2name = 'RxId';
-GO
-
-EXEC sp_addextendedproperty
-@name = N'Column_Description',
-@value = 'Укрупненное название статьи расхода',
-@level0type = N'Schema', @level0name = 'dbo',
-@level1type = N'Table',  @level1name = 'ExpenseItem',
 @level2type = N'Column', @level2name = 'FullName';
 GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Active | Closed',
+@value = 'Код ОПФ',
 @level0type = N'Schema', @level0name = 'dbo',
-@level1type = N'Table',  @level1name = 'ExpenseItem',
-@level2type = N'Column', @level2name = 'State';
+@level1type = N'Table',  @level1name = 'OrganizationalAndLegalForm',
+@level2type = N'Column', @level2name = 'Code';
 GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Migrated | MigratedWithNotes | MigratedError',
+@value = 'Дата миграции',
 @level0type = N'Schema', @level0name = 'dbo',
-@level1type = N'Table',  @level1name = 'ExpenseItem',
+@level1type = N'Table',  @level1name = 'OrganizationalAndLegalForm',
+@level2type = N'Column', @level2name = 'MigrateTime';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Сообщение при миграции (обычно в случае ошибки)',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'OrganizationalAndLegalForm',
+@level2type = N'Column', @level2name = 'MigrateMessage';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Результат миграции: Migrated | MigratedWithNotes | MigratedError',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'OrganizationalAndLegalForm',
 @level2type = N'Column', @level2name = 'Result';
 GO
 
@@ -512,7 +619,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Идентификатор в системе PayDox',
+@value = 'Идентификатор номера итерации миграции',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'TmcCode',
 @level2type = N'Column', @level2name = 'MigrationId';
@@ -528,7 +635,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Идентификатор в системе PayDox',
+@value = 'Идентификатор в системе PayDox на Код ТМЦ высшестоящего уровня',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'TmcCode',
 @level2type = N'Column', @level2name = 'ParentTmcCode';
@@ -536,7 +643,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Active | Closed',
+@value = 'Состояние: Active | Closed',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'TmcCode',
 @level2type = N'Column', @level2name = 'State';
@@ -544,7 +651,39 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Migrated | MigratedWithNotes | MigratedError',
+@value = 'Наименование',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'TmcCode',
+@level2type = N'Column', @level2name = 'Name';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Код ТМЦ',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'TmcCode',
+@level2type = N'Column', @level2name = 'Code';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Дата миграции',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'TmcCode',
+@level2type = N'Column', @level2name = 'MigrateTime';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Сообщение при миграции (обычно в случае ошибки)',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'TmcCode',
+@level2type = N'Column', @level2name = 'MigrateMessage';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Результат миграции: Migrated | MigratedWithNotes | MigratedError',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'TmcCode',
 @level2type = N'Column', @level2name = 'Result';
@@ -567,7 +706,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Идентификатор в системе PayDox',
+@value = 'Идентификатор номера итерации миграции',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'OkvedCode',
 @level2type = N'Column', @level2name = 'MigrationId';
@@ -583,7 +722,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Идентификатор в системе PayDox',
+@value = 'Идентификатор в системе PayDox на Код ОКВЭД высшестоящего уровня',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'OkvedCode',
 @level2type = N'Column', @level2name = 'ParentOkvedCode';
@@ -591,7 +730,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Active | Closed',
+@value = 'Состояние: Active | Closed',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'OkvedCode',
 @level2type = N'Column', @level2name = 'State';
@@ -599,7 +738,39 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Migrated | MigratedWithNotes | MigratedError',
+@value = 'Наименование',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'OkvedCode',
+@level2type = N'Column', @level2name = 'Name';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Код ОКВЭД',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'OkvedCode',
+@level2type = N'Column', @level2name = 'Code';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Дата миграции',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'OkvedCode',
+@level2type = N'Column', @level2name = 'MigrateTime';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Сообщение при миграции (обычно в случае ошибки)',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'OkvedCode',
+@level2type = N'Column', @level2name = 'MigrateMessage';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Результат миграции: Migrated | MigratedWithNotes | MigratedError',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'OkvedCode',
 @level2type = N'Column', @level2name = 'Result';
@@ -622,7 +793,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Идентификатор в системе PayDox',
+@value = 'Идентификатор номера итерации миграции',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'Division',
 @level2type = N'Column', @level2name = 'MigrationId';
@@ -638,7 +809,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Идентификатор в системе PayDox',
+@value = 'Идентификатор в системе PayDox на ведущий дивизион',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'Division',
 @level2type = N'Column', @level2name = 'ParentDivision';
@@ -646,7 +817,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Active | Closed',
+@value = 'Состояние: Active | Closed',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'Division',
 @level2type = N'Column', @level2name = 'State';
@@ -654,7 +825,47 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Migrated | MigratedWithNotes | MigratedError',
+@value = 'Наименование',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Division',
+@level2type = N'Column', @level2name = 'Name';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Код',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Division',
+@level2type = N'Column', @level2name = 'Code';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Примечание',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Division',
+@level2type = N'Column', @level2name = 'Note';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Дата миграции',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Division',
+@level2type = N'Column', @level2name = 'MigrateTime';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Сообщение при миграции (обычно в случае ошибки)',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Division',
+@level2type = N'Column', @level2name = 'MigrateMessage';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Результат миграции: Migrated | MigratedWithNotes | MigratedError',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'Division',
 @level2type = N'Column', @level2name = 'Result';
@@ -677,7 +888,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Идентификатор в системе PayDox',
+@value = 'Идентификатор номера итерации миграции',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'PlanningAndBudgetUnit',
 @level2type = N'Column', @level2name = 'MigrationId';
@@ -693,7 +904,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Active | Closed',
+@value = 'Состояние: Active | Closed',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'PlanningAndBudgetUnit',
 @level2type = N'Column', @level2name = 'State';
@@ -701,7 +912,39 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Migrated | MigratedWithNotes | MigratedError',
+@value = 'Наименование',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'PlanningAndBudgetUnit',
+@level2type = N'Column', @level2name = 'Name';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Код',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'PlanningAndBudgetUnit',
+@level2type = N'Column', @level2name = 'Code';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Дата миграции',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'PlanningAndBudgetUnit',
+@level2type = N'Column', @level2name = 'MigrateTime';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Сообщение при миграции (обычно в случае ошибки)',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'PlanningAndBudgetUnit',
+@level2type = N'Column', @level2name = 'MigrateMessage';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Результат миграции: Migrated | MigratedWithNotes | MigratedError',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'PlanningAndBudgetUnit',
 @level2type = N'Column', @level2name = 'Result';
@@ -724,7 +967,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Идентификатор в системе PayDox',
+@value = 'Идентификатор номера итерации миграции',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'InvestmentActivity',
 @level2type = N'Column', @level2name = 'MigrationId';
@@ -748,7 +991,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Active | Closed',
+@value = 'Состояние: Active | Closed',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'InvestmentActivity',
 @level2type = N'Column', @level2name = 'State';
@@ -756,103 +999,57 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Migrated | MigratedWithNotes | MigratedError',
+@value = 'Мероприятие',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'InvestmentActivity',
-@level2type = N'Column', @level2name = 'Result';
-GO
-
-EXEC sp_addextendedproperty
-@name = N'Table_Description',
-@value = 'Справочник [Статусы налоговой аккредитации]',
-@level0type = N'Schema', @level0name = 'dbo',
-@level1type = N'Table',  @level1name = 'TaxAccreditationStatus';
+@level2type = N'Column', @level2name = 'Name';
 GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Идентификатор в системе PayDox',
+@value = 'Наименование на английском языке',
 @level0type = N'Schema', @level0name = 'dbo',
-@level1type = N'Table',  @level1name = 'TaxAccreditationStatus',
-@level2type = N'Column', @level2name = 'PaydoxId';
+@level1type = N'Table',  @level1name = 'InvestmentActivity',
+@level2type = N'Column', @level2name = 'EngName';
 GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Идентификатор в системе PayDox',
+@value = 'Код ИМ',
 @level0type = N'Schema', @level0name = 'dbo',
-@level1type = N'Table',  @level1name = 'TaxAccreditationStatus',
-@level2type = N'Column', @level2name = 'MigrationId';
+@level1type = N'Table',  @level1name = 'InvestmentActivity',
+@level2type = N'Column', @level2name = 'Code';
 GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Идентификатор в системе DRX',
+@value = 'Год',
 @level0type = N'Schema', @level0name = 'dbo',
-@level1type = N'Table',  @level1name = 'TaxAccreditationStatus',
-@level2type = N'Column', @level2name = 'RxId';
+@level1type = N'Table',  @level1name = 'InvestmentActivity',
+@level2type = N'Column', @level2name = 'Year';
 GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Active | Closed',
+@value = 'Дата миграции',
 @level0type = N'Schema', @level0name = 'dbo',
-@level1type = N'Table',  @level1name = 'TaxAccreditationStatus',
-@level2type = N'Column', @level2name = 'State';
+@level1type = N'Table',  @level1name = 'InvestmentActivity',
+@level2type = N'Column', @level2name = 'MigrateTime';
 GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Migrated | MigratedWithNotes | MigratedError',
+@value = 'Сообщение при миграции (обычно в случае ошибки)',
 @level0type = N'Schema', @level0name = 'dbo',
-@level1type = N'Table',  @level1name = 'TaxAccreditationStatus',
-@level2type = N'Column', @level2name = 'Result';
-GO
-
-EXEC sp_addextendedproperty
-@name = N'Table_Description',
-@value = 'Справочник [Справочник «Статусы комплаенс аккредитации]',
-@level0type = N'Schema', @level0name = 'dbo',
-@level1type = N'Table',  @level1name = 'ComplianceAccreditationStatuse';
+@level1type = N'Table',  @level1name = 'InvestmentActivity',
+@level2type = N'Column', @level2name = 'MigrateMessage';
 GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Идентификатор в системе PayDox',
+@value = 'Результат миграции: Migrated | MigratedWithNotes | MigratedError',
 @level0type = N'Schema', @level0name = 'dbo',
-@level1type = N'Table',  @level1name = 'ComplianceAccreditationStatuse',
-@level2type = N'Column', @level2name = 'PaydoxId';
-GO
-
-EXEC sp_addextendedproperty
-@name = N'Column_Description',
-@value = 'Идентификатор в системе PayDox',
-@level0type = N'Schema', @level0name = 'dbo',
-@level1type = N'Table',  @level1name = 'ComplianceAccreditationStatuse',
-@level2type = N'Column', @level2name = 'MigrationId';
-GO
-
-EXEC sp_addextendedproperty
-@name = N'Column_Description',
-@value = 'Идентификатор в системе DRX',
-@level0type = N'Schema', @level0name = 'dbo',
-@level1type = N'Table',  @level1name = 'ComplianceAccreditationStatuse',
-@level2type = N'Column', @level2name = 'RxId';
-GO
-
-EXEC sp_addextendedproperty
-@name = N'Column_Description',
-@value = 'Active | Closed',
-@level0type = N'Schema', @level0name = 'dbo',
-@level1type = N'Table',  @level1name = 'ComplianceAccreditationStatuse',
-@level2type = N'Column', @level2name = 'State';
-GO
-
-EXEC sp_addextendedproperty
-@name = N'Column_Description',
-@value = 'Migrated | MigratedWithNotes | MigratedError',
-@level0type = N'Schema', @level0name = 'dbo',
-@level1type = N'Table',  @level1name = 'ComplianceAccreditationStatuse',
+@level1type = N'Table',  @level1name = 'InvestmentActivity',
 @level2type = N'Column', @level2name = 'Result';
 GO
 
@@ -873,7 +1070,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Идентификатор в системе PayDox',
+@value = 'Идентификатор номера итерации миграции',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'DocumentKind',
 @level2type = N'Column', @level2name = 'MigrationId';
@@ -885,6 +1082,38 @@ EXEC sp_addextendedproperty
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'DocumentKind',
 @level2type = N'Column', @level2name = 'RxId';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Наименование',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'DocumentKind',
+@level2type = N'Column', @level2name = 'Name';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Сокращенное имя',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'DocumentKind',
+@level2type = N'Column', @level2name = 'AbbreviatedName';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Код',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'DocumentKind',
+@level2type = N'Column', @level2name = 'Code';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'ИД Типа документа в DRX',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'DocumentKind',
+@level2type = N'Column', @level2name = 'DocumentTypeId';
 GO
 
 EXEC sp_addextendedproperty
@@ -905,7 +1134,23 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Migrated | MigratedWithNotes | MigratedError',
+@value = 'Дата миграции',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'DocumentKind',
+@level2type = N'Column', @level2name = 'MigrateTime';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Сообщение при миграции (обычно в случае ошибки)',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'DocumentKind',
+@level2type = N'Column', @level2name = 'MigrateMessage';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Результат миграции: Migrated | MigratedWithNotes | MigratedError',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'DocumentKind',
 @level2type = N'Column', @level2name = 'Result';
@@ -928,7 +1173,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Идентификатор в системе PayDox',
+@value = 'Идентификатор номера итерации миграции',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'Country',
 @level2type = N'Column', @level2name = 'MigrationId';
@@ -944,9 +1189,389 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Migrated | MigratedWithNotes | MigratedError',
+@value = 'Наименование',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'Country',
+@level2type = N'Column', @level2name = 'Name';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Код',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Country',
+@level2type = N'Column', @level2name = 'Code';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Дата миграции',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Country',
+@level2type = N'Column', @level2name = 'MigrateTime';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Сообщение при миграции (обычно в случае ошибки)',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Country',
+@level2type = N'Column', @level2name = 'MigrateMessage';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Результат миграции: Migrated | MigratedWithNotes | MigratedError',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Country',
+@level2type = N'Column', @level2name = 'Result';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Table_Description',
+@value = 'Справочник [Валюты]',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Currency';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Идентификатор в системе PayDox',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Currency',
+@level2type = N'Column', @level2name = 'PaydoxId';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Идентификатор номера итерации миграции',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Currency',
+@level2type = N'Column', @level2name = 'MigrationId';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Идентификатор в системе DRX',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Currency',
+@level2type = N'Column', @level2name = 'RxId';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Наименование',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Currency',
+@level2type = N'Column', @level2name = 'Name';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Сокращенное наименование',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Currency',
+@level2type = N'Column', @level2name = 'ShortName';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Буквенный код',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Currency',
+@level2type = N'Column', @level2name = 'LetterCode';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Цифровой код',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Currency',
+@level2type = N'Column', @level2name = 'NumberCode';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Состояние: Active | Closed',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Currency',
+@level2type = N'Column', @level2name = 'State';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Дата миграции',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Currency',
+@level2type = N'Column', @level2name = 'MigrateTime';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Сообщение при миграции (обычно в случае ошибки)',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Currency',
+@level2type = N'Column', @level2name = 'MigrateMessage';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Результат миграции: Migrated | MigratedWithNotes | MigratedError',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Currency',
+@level2type = N'Column', @level2name = 'Result';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Table_Description',
+@value = 'Справочник [Организации]',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Company';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'РОП ИД, переносим в ExternalId поле',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Company',
+@level2type = N'Column', @level2name = 'RopId';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Идентификатор номера итерации миграции',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Company',
+@level2type = N'Column', @level2name = 'MigrationId';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Идентификатор в системе DRX',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Company',
+@level2type = N'Column', @level2name = 'RxId';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Идентификатор Paydox Кода страны',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Company',
+@level2type = N'Column', @level2name = 'CodeCountryPaydoxId';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Идентификатор Paydox Страны',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Company',
+@level2type = N'Column', @level2name = 'CountryPaydoxId';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = N'Примечание со значением "Создана автоматически при миграции данных"',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Company',
+@level2type = N'Column', @level2name = 'Note';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Наименование',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Company',
+@level2type = N'Column', @level2name = 'Name';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Дата миграции',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Company',
+@level2type = N'Column', @level2name = 'MigrateTime';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Сообщение при миграции (обычно в случае ошибки)',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Company',
+@level2type = N'Column', @level2name = 'MigrateMessage';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Результат миграции: Migrated | MigratedWithNotes | MigratedError',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Company',
+@level2type = N'Column', @level2name = 'Result';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Table_Description',
+@value = 'Справочник [Подразделения]',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Department';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'РОП ИД, переносим в ExternalId поле',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Department',
+@level2type = N'Column', @level2name = 'RopId';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Идентификатор номера итерации миграции',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Department',
+@level2type = N'Column', @level2name = 'MigrationId';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Идентификатор в системе DRX',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Department',
+@level2type = N'Column', @level2name = 'RxId';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Наименование',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Department',
+@level2type = N'Column', @level2name = 'Name';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Дата миграции',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Department',
+@level2type = N'Column', @level2name = 'MigrateTime';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Сообщение при миграции (обычно в случае ошибки)',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Department',
+@level2type = N'Column', @level2name = 'MigrateMessage';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Результат миграции: Migrated | MigratedWithNotes | MigratedError',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Department',
+@level2type = N'Column', @level2name = 'Result';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Table_Description',
+@value = 'Справочник [Сотрудники]',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Employee';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Идентификатор в системе PayDox',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Employee',
+@level2type = N'Column', @level2name = 'PaydoxId';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Идентификатор номера итерации миграции',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Employee',
+@level2type = N'Column', @level2name = 'MigrationId';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Идентификатор в системе DRX',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Employee',
+@level2type = N'Column', @level2name = 'RxId';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Имя',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Employee',
+@level2type = N'Column', @level2name = 'FirstName';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Фамилия',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Employee',
+@level2type = N'Column', @level2name = 'LastName';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Идентификатор в системе РОП Нашей организации',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Employee',
+@level2type = N'Column', @level2name = 'BusinessUnitRopId';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Имя Нашей организации, для создания закрытой НОР в случае, если не нашли по BusinessUnitRopId',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Employee',
+@level2type = N'Column', @level2name = 'BusinessUnitName';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Идентификатор в системе РОП Подразделения',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Employee',
+@level2type = N'Column', @level2name = 'DepartmentRopId';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Имя Подразделения, для создания закрытой записи Подразделения в случае, если не нашли по DepartmentRopId',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Employee',
+@level2type = N'Column', @level2name = 'DepartmentName';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Дата миграции',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Employee',
+@level2type = N'Column', @level2name = 'MigrateTime';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Сообщение при миграции (обычно в случае ошибки)',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Employee',
+@level2type = N'Column', @level2name = 'MigrateMessage';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Результат миграции: Migrated | MigratedWithNotes | MigratedError',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Employee',
 @level2type = N'Column', @level2name = 'Result';
 GO
 
@@ -975,7 +1600,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Идентификатор в системе PayDox',
+@value = 'Идентификатор номера итерации миграции',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'Document',
 @level2type = N'Column', @level2name = 'MigrationId';
@@ -991,7 +1616,23 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Migrated | MigratedWithNotes | MigratedError',
+@value = 'Дата миграции',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Document',
+@level2type = N'Column', @level2name = 'MigrateTime';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Сообщение при миграции (обычно в случае ошибки)',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'Document',
+@level2type = N'Column', @level2name = 'MigrateMessage';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Результат миграции: Migrated | MigratedWithNotes | MigratedError',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'Document',
 @level2type = N'Column', @level2name = 'Result';
@@ -1022,7 +1663,7 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Идентификатор в системе PayDox',
+@value = 'Идентификатор номера итерации миграции',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'DocVersion',
 @level2type = N'Column', @level2name = 'MigrationId';
@@ -1086,7 +1727,31 @@ GO
 
 EXEC sp_addextendedproperty
 @name = N'Column_Description',
-@value = 'Migrated | MigratedWithNotes | MigratedError',
+@value = 'Идентификатор документа в системе DRX',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'DocVersion',
+@level2type = N'Column', @level2name = 'RxDocId';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Дата миграции',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'DocVersion',
+@level2type = N'Column', @level2name = 'MigrateTime';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Сообщение при миграции (обычно в случае ошибки)',
+@level0type = N'Schema', @level0name = 'dbo',
+@level1type = N'Table',  @level1name = 'DocVersion',
+@level2type = N'Column', @level2name = 'MigrateMessage';
+GO
+
+EXEC sp_addextendedproperty
+@name = N'Column_Description',
+@value = 'Результат миграции: Migrated | MigratedWithNotes | MigratedError',
 @level0type = N'Schema', @level0name = 'dbo',
 @level1type = N'Table',  @level1name = 'DocVersion',
 @level2type = N'Column', @level2name = 'Result';
@@ -1108,13 +1773,12 @@ BEGIN
     BEGIN
         DECLARE @rateCode NVARCHAR(10) = CASE WHEN @i % 2 = 0 THEN N'EUR' ELSE N'USD' END
         DECLARE @year INT = 2000 + (@i % 25)
-        INSERT INTO [UsdExchangeRatesByYear] ([PaydoxId], [Name], [MigrationId], [RateCode], [Date], [RateValueToUsd], [State])
+        INSERT INTO [UsdExchangeRatesByYear] ([PaydoxId], [MigrationId], [RateCode], [Year], [RateValueToUsd], [State])
         VALUES (
             LOWER(CAST(NEWID() AS NVARCHAR(36))),
-            @rateCode + N' Rate ' + CAST(@year AS NVARCHAR),
             NULL,
             @rateCode,
-            DATEFROMPARTS(@year, 12, 31),
+            DATEFROMPARTS(@year, 1, 1),
             ROUND(60 + (@i % 50) * 0.7, 2),
             CASE WHEN @i % 10 = 0 THEN N'Closed' ELSE N'Active' END
         )
@@ -1136,10 +1800,9 @@ BEGIN
             WHEN 2 THEN CASE WHEN @year2 % 4 = 0 THEN 29 ELSE 28 END
             WHEN 4 THEN 30 WHEN 6 THEN 30 WHEN 9 THEN 30 WHEN 11 THEN 30
             ELSE 31 END
-        INSERT INTO [UsdExchangeRatesByMonth] ([PaydoxId], [Name], [MigrationId], [RateCode], [Date], [RateValueToUsd], [State])
+        INSERT INTO [UsdExchangeRatesByMonth] ([PaydoxId], [MigrationId], [RateCode], [Date], [RateValueToUsd], [State])
         VALUES (
             LOWER(CAST(NEWID() AS NVARCHAR(36))),
-            @rateCode2 + N' Rate ' + RIGHT('0' + CAST(@month AS NVARCHAR), 2) + N'.' + CAST(@year2 AS NVARCHAR),
             NULL,
             @rateCode2,
             DATEFROMPARTS(@year2, @month, @lastDay),
@@ -1159,7 +1822,13 @@ BEGIN
     WHILE @i <= 100
     BEGIN
         DECLARE @bodyIdx INT = ((@i - 1) % 5) + 1
-        DECLARE @body NVARCHAR(100) = TRIM(VALUE) FROM STRING_SPLIT(@bodies, '|') ORDER BY (SELECT NULL) OFFSET @bodyIdx - 1 ROWS FETCH NEXT 1 ROWS ONLY
+        DECLARE @body NVARCHAR(100) = CASE @bodyIdx
+            WHEN 1 THEN N'Board of Directors'
+            WHEN 2 THEN N'Audit Committee'
+            WHEN 3 THEN N'Remuneration Committee'
+            WHEN 4 THEN N'Strategy Committee'
+            ELSE N'Risk Committee'
+        END
         INSERT INTO [CorporateApproval] ([PaydoxId], [MigrationId], [GoverningBody], [Description], [State])
         VALUES (
             LOWER(CAST(NEWID() AS NVARCHAR(36))),
@@ -1192,18 +1861,20 @@ BEGIN
 END
 GO
 
--- 5. ExpenseItem
-IF NOT EXISTS (SELECT 1 FROM [ExpenseItem])
+-- 5. Currency
+IF NOT EXISTS (SELECT 1 FROM [Currency])
 BEGIN
     DECLARE @i INT = 1
-    WHILE @i <= 100
+    WHILE @i <= 20
     BEGIN
-        INSERT INTO [ExpenseItem] ([PaydoxId], [MigrationId], [Name], [FullName], [State])
+        INSERT INTO [Currency] ([PaydoxId], [MigrationId], [Name], [ShortName], [LetterCode], [NumberCode], [State])
         VALUES (
             LOWER(CAST(NEWID() AS NVARCHAR(36))),
             NULL,
-            N'Статья расходов ' + CAST(@i AS NVARCHAR),
-            N'Полное наименование статьи расходов ' + CAST(@i AS NVARCHAR),
+            N'Валюта ' + CAST(@i AS NVARCHAR),
+            N'Вал' + CAST(@i AS NVARCHAR),
+            N'C' + RIGHT('00' + CAST(@i AS NVARCHAR), 2) + 'R',
+            RIGHT('000' + CAST(@i AS NVARCHAR), 3),
             CASE WHEN @i % 10 = 0 THEN N'Closed' ELSE N'Active' END
         )
         SET @i = @i + 1
@@ -1316,7 +1987,7 @@ BEGIN
             N'Инвестиционное мероприятие ' + CAST(@i AS NVARCHAR),
             N'Investment Activity ' + CAST(@i AS NVARCHAR),
             N'INV' + CAST(@i AS NVARCHAR),
-            CAST(2020 + (@i % 5) AS NVARCHAR(4)),
+            DATEFROMPARTS(2020 + (@i % 5), 1, 1),
             N'PBU_' + RIGHT('000' + CAST((@i % 100) + 1 AS NVARCHAR), 3),
             CASE WHEN @i % 10 = 0 THEN N'Closed' ELSE N'Active' END
         )
@@ -1325,45 +1996,66 @@ BEGIN
 END
 GO
 
--- 11. TaxAccreditationStatus
-IF NOT EXISTS (SELECT 1 FROM [TaxAccreditationStatus])
+-- 11. Company
+IF NOT EXISTS (SELECT 1 FROM [Company])
 BEGIN
     DECLARE @i INT = 1
-    WHILE @i <= 100
+    WHILE @i <= 50
     BEGIN
-        INSERT INTO [TaxAccreditationStatus] ([PaydoxId], [MigrationId], [Name], [EngName], [State])
+        INSERT INTO [Company] ([MigrationId], [RopId], [Name], [CodeCountryPaydoxId], [CountryPaydoxId], [Note])
         VALUES (
-            LOWER(CAST(NEWID() AS NVARCHAR(36))),
             NULL,
-            N'Статус налоговой аккредитации ' + CAST(@i AS NVARCHAR),
-            N'Tax Accreditation Status ' + CAST(@i AS NVARCHAR),
-            CASE WHEN @i % 10 = 0 THEN N'Closed' ELSE N'Active' END
+            N'ROP_' + RIGHT('000' + CAST(@i AS NVARCHAR), 3),
+            N'Организация ' + CAST(@i AS NVARCHAR),
+            LOWER(CAST(NEWID() AS NVARCHAR(36))),
+            LOWER(CAST(NEWID() AS NVARCHAR(36))),
+            N'Создана автоматически при миграции данных'
         )
         SET @i = @i + 1
     END
 END
 GO
 
--- 12. ComplianceAccreditationStatuse
-IF NOT EXISTS (SELECT 1 FROM [ComplianceAccreditationStatuse])
+-- 12. Department
+IF NOT EXISTS (SELECT 1 FROM [Department])
 BEGIN
     DECLARE @i INT = 1
-    WHILE @i <= 100
+    WHILE @i <= 50
     BEGIN
-        INSERT INTO [ComplianceAccreditationStatuse] ([PaydoxId], [MigrationId], [Name], [EngName], [State])
+        INSERT INTO [Department] ([RopId], [MigrationId], [Name])
         VALUES (
-            LOWER(CAST(NEWID() AS NVARCHAR(36))),
+            N'DEP_' + RIGHT('000' + CAST(@i AS NVARCHAR), 3),
             NULL,
-            N'Статус комплаенс аккредитации ' + CAST(@i AS NVARCHAR),
-            N'Compliance Accreditation Status ' + CAST(@i AS NVARCHAR),
-            CASE WHEN @i % 10 = 0 THEN N'Closed' ELSE N'Active' END
+            N'Подразделение ' + CAST(@i AS NVARCHAR)
         )
         SET @i = @i + 1
     END
 END
 GO
 
--- 13. DocumentKind
+-- 13. Employee
+IF NOT EXISTS (SELECT 1 FROM [Employee])
+BEGIN
+    DECLARE @i INT = 1
+    WHILE @i <= 100
+    BEGIN
+        INSERT INTO [Employee] ([PaydoxId], [MigrationId], [FirstName], [LastName], [BusinessUnitRopId], [BusinessUnitName], [DepartmentRopId], [DepartmentName])
+        VALUES (
+            LOWER(CAST(NEWID() AS NVARCHAR(36))),
+            NULL,
+            N'Имя' + CAST(@i AS NVARCHAR),
+            N'Фамилия' + CAST(@i AS NVARCHAR),
+            N'ROP_' + RIGHT('000' + CAST((@i % 50) + 1 AS NVARCHAR), 3),
+            N'Организация ' + CAST((@i % 50) + 1 AS NVARCHAR),
+            N'DEP_' + RIGHT('000' + CAST((@i % 50) + 1 AS NVARCHAR), 3),
+            N'Подразделение ' + CAST((@i % 50) + 1 AS NVARCHAR)
+        )
+        SET @i = @i + 1
+    END
+END
+GO
+
+-- 14. DocumentKind
 IF NOT EXISTS (SELECT 1 FROM [DocumentKind])
 BEGIN
     DECLARE @i INT = 1
@@ -1378,7 +2070,7 @@ BEGIN
             N'Вид документа ' + CAST(@i AS NVARCHAR),
             N'ВД' + CAST(@i AS NVARCHAR),
             N'DK' + CAST(@i AS NVARCHAR),
-            LOWER(CAST(NEWID() AS NVARCHAR(36))),
+            CAST(@i AS bigint),
             CASE (@i % 4) WHEN 0 THEN N'Inner' WHEN 1 THEN N'Outgoing' WHEN 2 THEN N'Incoming' ELSE N'Contracts' END,
             CASE (@i % 3) WHEN 0 THEN N'Numerable' WHEN 1 THEN N'Registrable' ELSE N'NotNumerable' END
         )
@@ -1387,7 +2079,7 @@ BEGIN
 END
 GO
 
--- 14. Country
+-- 15. Country
 IF NOT EXISTS (SELECT 1 FROM [Country])
 BEGIN
     DECLARE @i INT = 1
@@ -1405,7 +2097,7 @@ BEGIN
 END
 GO
 
--- 15. Document (ссылается на DocumentKind)
+-- 16. Document (ссылается на DocumentKind)
 IF NOT EXISTS (SELECT 1 FROM [Document])
 BEGIN
     DECLARE @i INT = 1
@@ -1426,7 +2118,7 @@ BEGIN
 END
 GO
 
--- 16. DocVersion (по одной версии на каждый документ)
+-- 17. DocVersion (по одной версии на каждый документ)
 INSERT INTO [DocVersion] ([PaydoxId], [AddendumPaydoxId], [MigrationId], [Filepath], [IsMain], [IsSignature], [MainDocFilepath])
         VALUES (
             'Test',
@@ -1445,6 +2137,24 @@ INSERT INTO [DocVersion] ([PaydoxId], [AddendumPaydoxId], [MigrationId], [Filepa
             0,
             0,
             NULL
+        ),
+        (
+            'Test',
+            NULL,
+            NULL,
+            N'D:\Downloads\Выгрузка от 04.03.26 11_40_49\Подпись к документу.sig',
+            1,
+            1,
+            N'D:\Downloads\Выгрузка от 04.03.26 11_40_49\Версия документа — копия.pdf'
+        ),
+        (
+            'Test',
+            NULL,
+            NULL,
+            N'D:\Downloads\Выгрузка от 04.03.26 11_40_49\Подпись к документу - копия.sig',
+            0,
+            1,
+            N'D:\Downloads\Выгрузка от 04.03.26 11_40_49\Версия документа — копия.pdf'
         );
 
 PRINT 'Test data load successfull'
