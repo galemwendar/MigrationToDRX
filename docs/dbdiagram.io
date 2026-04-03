@@ -32,7 +32,7 @@ Table UsdExchangeRatesByMonth [note: "Справочник [Курсы валю�
 }
 
 // Справочник «Валюты»
-Table Currency [note: "Справочник [Курсы валют к USD (месячный)]"] {
+Table Currency [note: "Справочник [Валюты]"] {
   Id bigint [pk, increment]
   PaydoxId  nvarchar(150)  [not null, note: "Идентификатор в системе PayDox"]
   MigrationId int [ note: "Идентификатор номера итерации миграци"]
@@ -247,23 +247,327 @@ Table InvestmentActivity [note: "Справочник [Инвестиционн�
 Table Document [note: "Таблица [Документы]"] {
   Id bigint       [pk, increment]
   PaydoxId  nvarchar(150)  [not null, note: "Идентификатор в системе PayDox"]
-  DocumentType    int             [not null]
+  MigrationId int [ note: "Идентификатор номера итерации миграции"]
+
+  DocumentType    int             [not null, note: "Тип документа"]
+  DocumentDate    int             [note: "Дата документа"]
+  RegNumber       nvarchar(250)   [note: "Рег №"]
   DocumentKind    nvarchar(30)    [not null, note: "Идентификатор в системе PayDox"]
-  MigrationId int [ note: "Идентификатор в системе PayDox"]
+  IsMixedKindTransaction bit [note: "Сделка смешанных видов"]
+  ContractNature nvarchar(15) [not null, note: "Характер договора. Варианты: Incomerusal, Expenserusal, Reciprocalrusal, Gratuitorusal, NoPaymentrusal"]
+  Name            nvarchar(250)   [not null, note: "Заголовок"]
+  ShortDescription nvarchar(850) [note: "Краткое описание"]
+  MainDocExternalId nvarchar(150) [note: "Основной договор"]
+  BusinessUnitExternalId nvarchar(150) [note: "Внешний ИД орг. единицы (наша организация"]
+  InitiatorDepartmentExternalId nvarchar(150) [note: "Внешний ИД подразделения инициатора"]
+  ExecutorDepartmentExternalId nvarchar(150) [note: "Внешний ИД подразделения исполнителя"]
+  ResponsibleForExecutionExternalId nvarchar(150) [note: "Внешний ИД ответственного за исполнение"]
+  LegalEntityExternalId nvarchar(150) [note: "Внешний ИД юр. лица"]
+  LegalEntityBranchExternalId nvarchar(150) [note: "Филиал юр. лица"]
+  SignatoryExternalId nvarchar(150) [note: "Внешний ИД подписанта"]
+  LegalEntityRoleInTransactionExternalId nvarchar(150) [note: "Внешний ИД (НД) Роль Юр. лица в сделке"]
+  IsDebtObligationsOhdCompliant bit [note: "(НД) Сделка соответствует ОХД с т.з. долговых финансовых обязательств"]
+  IsLegalEntityOhdCompliant bit [note: "(НД) Сделка соответствует ОХД Юр.лица"]
+  DealResultCustomerDepartmentExternalId bit [note: "Внешний ИД (НД) Подразделение-заказчик результата по Сделке"]
+  UseDdvs bit [note: "Использовать ДДВС"]
+  ValidFrom datetime2 [note: "Действует с"]
+  ValidTo datetime2 [note: "Действует по"]
+  CurrencyExternalId nvarchar(150) [note: "Код Валюты"]
+  DocumentAmoutStandart float [note: "Сумма документа (с учетом процентов и проч. расходов)"]
+  AtMonthlyRateUsd nvarchar(250) [note: "По ежемесячному курсу, USD"]
+  AtAnnualRateUsd nvarchar(250) [note: "По годовому курсу, USD"]
+  AmoutVat float [note: "Сумма НДС"]
+  AmoutWithoutVat float [note: "Сумма без НДС"]
+  PaymentCurrency nvarchar(250) [note: "(НД) Валюта платежа"]
+  PaymentMethod nvarchar(15) [note: "(НД) Средство платежа/условия расчетов: MutualOffset, ExternalSec, InternalSec, Cash, UncoveredLoc, AssetExchange"]
+  PaymentOrderForOnerousTransaction nvarchar(15) [note: "(НД) Порядок оплаты по возмездным сделкам: FullPrepay, DeferredPay"]
+  IsSingleSupplierPurchase bit [note: "Данная сделка является ЗАКУПКОЙ У ЕДИНСТВЕННОГО ПОСТАВЩИКА"]
+  IsTransactionInterconnected bit [note: "(НД) Сделка взаимосвязана с другими сделками"]
+  TransactionAmountWithInterconnExcludCurrent float [note: "(НД) Сумма по Сделке с учётом взаимосвязанных Сделок, без учета текущей"]
+  BookValueOfTransferredAsset float [note: "(НД) Балансовая стоимость имущества/имущественных прав, передаваемых по Сделке"]
+  IsServicesPerformedOnLegalEntityTerritory bit [note: "(НД) Работы / Услуги осуществляются на территории Участника Группы, указанного в поле «Юр.лицо»"]
+  PaperNumber nvarchar(250) [note: "Номер на бумаге"]
+  NoneOfTheAboveValue bit [note: "(НД) 25.1000 Ни одно значение вышеперечисленное"]
+  ApplicableLasw nvarchar(30) [note: "(НД) Применимое право: ForeignLawExclFormerUSSR, LawOfFormerUSSRepublic, RussianLaw"]
+  SizeTestResult nvarchar(30) [note: "(НД) Результат Test Size: AtLeastOneReaches5Percent, NoneReaches5Percent"]
+  AccessLevel nvarchar(30) [note: "Уровень доступа"]
+
+  // Для отборов
+  Curator nvarchar(150) [note: "Внешний ИД Куратора отбора"]
+  SelectionMethod nvarchar(30) [note: "Метод отбора"]
+  PublishedSelection bit [note: "Опубликованный отбор"]
+  PublishedOnETP bit [note: "Размещено на ЭТП"]
+  DateStart datetime2 [note: "Дата начала работ/услуг/поставки по заявке"]
+  DateEnd datetime2 [note: "Дата окончания работ/услуг/поставки по заявке"]
+  EveryMonthlyCourse float [note: "По ежемесячному курсу, USD"]
+  EveryYearCourse float [note: "По годовому курсу, USD"]
+  SavengsPercent float [note: "Экономия в процентах"]
+  //
+
   RxId            bigint          [note: "Идентификатор в системе DRX"]
-  Name            nvarchar(250)   [not null]
   Subject         nvarchar(250)
-  Result          nvarchar(50)    [note: "Migrated | MigratedWithNotes | MigratedError"]
-  MigrateTime     datetime2
-  MigrateMessage  nvarchar(max)
+  Result       nvarchar(50)  [note: "Результат миграции: Migrated | MigratedWithNotes | MigratedError"]
+  MigrateTime  datetime2 [note: "Дата миграции"]
+  MigrateMessage nvarchar(max) [note: "Сообщение при миграции (обычно в случае ошибки)"]
+}
+
+// Таблица-коллекция «Виды документов для смешанных сделок»
+Table MixedDocumentKindCollection [note: "Таблица-коллекция [Виды документов для смешанных сделок]"]{
+  Id bigint       [pk, increment]
+  DocPaydoxId   nvarchar(150) [not null, note: "PaydoxId документа"]
+  DocumentKindExternalId bigint [not null, note: "Вид документа"]
+  Result       nvarchar(50)  [note: "Результат миграции: Migrated | MigratedWithNotes | MigratedError"]
+  MigrateTime  datetime2 [note: "Дата миграции"]
+  MigrateMessage nvarchar(max) [note: "Сообщение при миграции (обычно в случае ошибки)"]
+}
+
+// Таблица-коллекция «Виды документов для смешанных сделок»
+Table CounterpartiesCollection [note: "Таблица-коллекция [Контрагент]"]{
+  Id bigint       [pk, increment]
+  DocPaydoxId   nvarchar(150) [not null, note: "PaydoxId документа"]
+  Name nvarchar(250) [not null, note: "Заголовок"]
+  BranchExternalId nvarchar(150) [not null, note: "Внешний ИД Филиала контрагента"]
+  RoleInTransactionExternalId nvarchar(150) [not null, note: "Внешний ИД (НД) Роль контрагента в сделке"]
+  SignerExternalId nvarchar(150) [note: "Подписант"]
+  AdditionalInfo nvarchar(1000) [note: "Дополнительная информация"]
+  IsMajorDealForCounterparty bit [note: "(НД) Роль Контрагента в сделке"]
+  IsCounterpartyOhdCompliant bit [note: "Сделка соответствует ОХД Контрагента"]
+  AuthorityConnection nvarchar(15) [note: "(НД) Связь с органами власти: NoRFAuthority, RFAuthorityBody, RFAuthoritySub, ForeignAuthorit"]
+  Result       nvarchar(50)  [note: "Результат миграции: Migrated | MigratedWithNotes | MigratedError"]
+  MigrateTime  datetime2 [note: "Дата миграции"]
+  MigrateMessage nvarchar(max) [note: "Сообщение при миграции (обычно в случае ошибки)"]
+}
+
+// Таблица «(НД) Страны заключения/исполнения Сделки. Страны происхождения оборудования/ТМЦ/объекта прав»
+Table CountriesOfConclusionExecutionAndOriginCollection [note: "Таблица-коллекция [(НД) Страны заключения/исполнения Сделки. Страны происхождения оборудования/ТМЦ/объекта прав]"] {
+  Id bigint [pk, increment]
+  MigrationId int [note: "Идентификатор номера итерации миграции"]
+  DocPaydoxId nvarchar(150) [not null, note: "PaydoxId документа"]
+  CountriesOfConclusionExecutionAndOrigin nvarchar(150) [note: "(НД) Страны заключения/исполнения Сделки. Страны происхождения оборудования/ТМЦ/объекта прав"]
+  Result       nvarchar(50)  [note: "Результат миграции: Migrated | MigratedWithNotes | MigratedError"]
+  MigrateTime  datetime2 [note: "Дата миграции"]
+  MigrateMessage nvarchar(max) [note: "Сообщение при миграции (обычно в случае ошибки)"]
+}
+
+// Таблица-коллекция «(НД) Доставка и логистика»
+Table DeliveryAndLogisticCollection [note: "Таблица-коллекция [Доставка и логистика]"]{
+  Id bigint       [pk, increment]
+  MigrationId int [ note: "Идентификатор номера итерации миграции"]
+  DocPaydoxId   nvarchar(150) [not null, note: "PaydoxId документа"]
+  DealFeatureExternalId nvarchar(150) [note: "Внешний ИД справочника Особенность сделки"]
+  Result       nvarchar(50)  [note: "Результат миграции: Migrated | MigratedWithNotes | MigratedError"]
+  MigrateTime  datetime2 [note: "Дата миграции"]
+  MigrateMessage nvarchar(max) [note: "Сообщение при миграции (обычно в случае ошибки)"]
+}
+
+// Таблица-коллекция «(НД) Строительство, проектирование и экспертиза»
+Table ConstructionDesignExpertiserCollection [note: "Таблица-коллекция [(НД) Строительство, проектирование и экспертиза]"]{
+  Id bigint       [pk, increment]
+  MigrationId int [ note: "Идентификатор номера итерации миграции"]
+  DocPaydoxId   nvarchar(150) [not null, note: "PaydoxId документа"]
+  DealFeatureExternalId nvarchar(150) [note: "Внешний ИД справочника Особенность сделки"]
+  Result       nvarchar(50)  [note: "Результат миграции: Migrated | MigratedWithNotes | MigratedError"]
+  MigrateTime  datetime2 [note: "Дата миграции"]
+  MigrateMessage nvarchar(max) [note: "Сообщение при миграции (обычно в случае ошибки)"]
+}
+
+// Таблица-коллекция «(НД) Иностранный элемент»
+Table ForeignElementCollection [note: "Таблица-коллекция [(НД) Иностранный элемент]"]{
+  Id bigint       [pk, increment]
+  MigrationId int [ note: "Идентификатор номера итерации миграции"]
+  DocPaydoxId   nvarchar(150) [not null, note: "PaydoxId документа"]
+  DealFeatureExternalId nvarchar(150) [note: "Внешний ИД справочника Особенность сделки"]
+  Result       nvarchar(50)  [note: "Результат миграции: Migrated | MigratedWithNotes | MigratedError"]
+  MigrateTime  datetime2 [note: "Дата миграции"]
+  MigrateMessage nvarchar(max) [note: "Сообщение при миграции (обычно в случае ошибки)"]
+}
+
+// Таблица-коллекция «(НД) Особенности дополнений в договоры»
+Table FeaturesOfContractAddendaCollection [note: "Таблица-коллекция [(НД) Особенности дополнений в договоры]"]{
+  Id bigint       [pk, increment]
+  MigrationId int [ note: "Идентификатор номера итерации миграции"]
+  DocPaydoxId   nvarchar(150) [not null, note: "PaydoxId документа"]
+  DealFeatureExternalId nvarchar(150) [note: "Внешний ИД справочника Особенность сделки"]
+  Result       nvarchar(50)  [note: "Результат миграции: Migrated | MigratedWithNotes | MigratedError"]
+  MigrateTime  datetime2 [note: "Дата миграции"]
+  MigrateMessage nvarchar(max) [note: "Сообщение при миграции (обычно в случае ошибки)"]
+}
+
+// Таблица-коллекция «(НД) Прочие особенности сделки»
+Table OtherDealCollection [note: "Таблица-коллекция [(НД) Прочие особенности сделки]"]{
+  Id bigint       [pk, increment]
+  MigrationId int [ note: "Идентификатор номера итерации миграции"]
+  DocPaydoxId   nvarchar(150) [not null, note: "PaydoxId документа"]
+  DealFeatureExternalId nvarchar(150) [note: "Внешний ИД справочника Особенность сделки"]
+  Result       nvarchar(50)  [note: "Результат миграции: Migrated | MigratedWithNotes | MigratedError"]
+  MigrateTime  datetime2 [note: "Дата миграции"]
+  MigrateMessage nvarchar(max) [note: "Сообщение при миграции (обычно в случае ошибки)"]
+}
+
+// Таблица-коллекция «(НД) Соответствие правилам долговых финансовых обязательств Группы»
+Table GroupDebtRulesComplianceCollection [note: "Таблица-коллекция [(НД) Соответствие правилам долговых финансовых обязательств Группы]"]{
+  Id bigint       [pk, increment]
+  MigrationId int [ note: "Идентификатор номера итерации миграции"]
+  DocPaydoxId   nvarchar(150) [not null, note: "PaydoxId документа"]
+  GroupDebtRulesCompliance nvarchar(150) [note: "Внешний ИД справочника (НД) Соответствие правилам долговых финансовых обязательств Группы"]
+  Result       nvarchar(50)  [note: "Результат миграции: Migrated | MigratedWithNotes | MigratedError"]
+  MigrateTime  datetime2 [note: "Дата миграции"]
+  MigrateMessage nvarchar(max) [note: "Сообщение при миграции (обычно в случае ошибки)"]
+}
+
+// Таблица-коллекция «(НД) Оценка по правилам долговых финансовых обязательств Группы »
+Table GroupDebtRulesAssessmentCollection [note: "Таблица-коллекция [(НД) Оценка по правилам долговых финансовых обязательств Группы]"]{
+  Id bigint       [pk, increment]
+  MigrationId int [ note: "Идентификатор номера итерации миграции"]
+  DocPaydoxId   nvarchar(150) [not null, note: "PaydoxId документа"]
+  GroupDebtRulesAssesment nvarchar(150) [note: "Внешний ИД справочника (НД) Соответствие правилам долговых финансовых обязательств Группы"]
+  Result       nvarchar(50)  [note: "Результат миграции: Migrated | MigratedWithNotes | MigratedError"]
+  MigrateTime  datetime2 [note: "Дата миграции"]
+  MigrateMessage nvarchar(max) [note: "Сообщение при миграции (обычно в случае ошибки)"]
+}
+
+// Таблица-коллекция «(НД) Оценка по антимонопольным правилам»
+Table AntimonopolyRulesAssessmentCollection [note: "Таблица-коллекция [(НД) Оценка по антимонопольным правилам]"]{
+  Id bigint       [pk, increment]
+  MigrationId int [ note: "Идентификатор номера итерации миграции"]
+  DocPaydoxId   nvarchar(150) [not null, note: "PaydoxId документа"]
+  AntimonopolyRulesAssessment nvarchar(150) [note: "Внешний ИД справочника (НД) Соответствие правилам долговых финансовых обязательств Группы"]
+  Result       nvarchar(50)  [note: "Результат миграции: Migrated | MigratedWithNotes | MigratedError"]
+  MigrateTime  datetime2 [note: "Дата миграции"]
+  MigrateMessage nvarchar(max) [note: "Сообщение при миграции (обычно в случае ошибки)"]
+}
+
+// Таблица-коллекция «Победители»
+Table WinnersCollection [note: "Таблица-коллекция [Победители]"]{
+  Id bigint       [pk, increment]
+  MigrationId int [ note: "Идентификатор номера итерации миграции"]
+  DocPaydoxId   nvarchar(150) [not null, note: "PaydoxId документа"]
+  Name nvarchar(250) [note: "Наименование"]
+  Amount float [note: "Сумма"]
+  CurrencyExternalId nvarchar(150) [note: "Внешний ИД справочника Валюта"]
+  Advance float [note: "Аванс"]
+  BankGuarantee float [note: "Банковская гарантия"]
+  Result       nvarchar(50)  [note: "Результат миграции: Migrated | MigratedWithNotes | MigratedError"]
+  MigrateTime  datetime2 [note: "Дата миграции"]
+  MigrateMessage nvarchar(max) [note: "Сообщение при миграции (обычно в случае ошибки)"]
+}
+
+// Таблица-коллекция «Резервисты»
+Table ReserversCollection [note: "Таблица-коллекция [Резервисты]"]{
+  Id bigint       [pk, increment]
+  MigrationId int [ note: "Идентификатор номера итерации миграции"]
+  DocPaydoxId   nvarchar(150) [not null, note: "PaydoxId документа"]
+  Name nvarchar(250) [note: "Наименование"]
+  Amount float [note: "Сумма"]
+  CurrencyExternalId nvarchar(150) [note: "Внешний ИД справочника Валюта"]
+  Advance float [note: "Аванс"]
+  BankGarant float [note: "Банковская гарантия"]
+  QueueNumber bigint [note: "Номер очереди"]
+  Result       nvarchar(50)  [note: "Результат миграции: Migrated | MigratedWithNotes | MigratedError"]
+  MigrateTime  datetime2 [note: "Дата миграции"]
+  MigrateMessage nvarchar(max) [note: "Сообщение при миграции (обычно в случае ошибки)"]
+}
+
+// Таблица-коллекция «Решение»
+Table SolutionCollection [note: "Таблица-коллекция [Решение]"]{
+  Id bigint       [pk, increment]
+  MigrationId int [ note: "Идентификатор номера итерации миграции"]
+  DocPaydoxId   nvarchar(150) [not null, note: "PaydoxId документа"]
+  SolutionProject nvarchar(1000) [note: "Проект решения"]
+  Note nvarchar(1000) [note: "Примечание"]
+  Result       nvarchar(50)  [note: "Результат миграции: Migrated | MigratedWithNotes | MigratedError"]
+  MigrateTime  datetime2 [note: "Дата миграции"]
+  MigrateMessage nvarchar(max) [note: "Сообщение при миграции (обычно в случае ошибки)"]
+}
+
+// Таблица-коллекция «Предприятия-заказчики»
+Table CustomerEnterprisesCollection [note: "Таблица-коллекция [Предприятие заказчики]"]{
+  Id bigint       [pk, increment]
+  MigrationId int [ note: "Идентификатор номера итерации миграции"]
+  DocPaydoxId   nvarchar(150) [not null, note: "PaydoxId документа"]
+  CompanyExternalId nvarchar(150) [note: "Наименование - Внешний ИД справочника Организации"]
+  Result       nvarchar(50)  [note: "Результат миграции: Migrated | MigratedWithNotes | MigratedError"]
+  MigrateTime  datetime2 [note: "Дата миграции"]
+  MigrateMessage nvarchar(max) [note: "Сообщение при миграции (обычно в случае ошибки)"]
+}
+
+// Таблица-коллекция «Участники»
+Table ParticipantsCollection [note: "Таблица-коллекция [Участники]"]{
+  Id bigint       [pk, increment]
+  MigrationId int [ note: "Идентификатор номера итерации миграции"]
+  DocPaydoxId   nvarchar(150) [not null, note: "PaydoxId документа"]
+  CompanyExternalId nvarchar(150) [note: "Наименование - Внешний ИД справочника Организации"]
+  Result       nvarchar(50)  [note: "Результат миграции: Migrated | MigratedWithNotes | MigratedError"]
+  MigrateTime  datetime2 [note: "Дата миграции"]
+  MigrateMessage nvarchar(max) [note: "Сообщение при миграции (обычно в случае ошибки)"]
+}
+
+// Таблица-коллекция «Коды ТМЦ»
+Table TmcCodesCollection [note: "Таблица-коллекция [Коды ТМЦ]"]{
+  Id bigint       [pk, increment]
+  MigrationId int [ note: "Идентификатор номера итерации миграции"]
+  DocPaydoxId   nvarchar(150) [not null, note: "PaydoxId документа"]
+  TmcPaydoxId nvarchar(150) [note: "Наименование - Внешний ИД справочника Коды ТМЦ"]
+  Code nvarchar(30) [note: "Код"]
+  Result       nvarchar(50)  [note: "Результат миграции: Migrated | MigratedWithNotes | MigratedError"]
+  MigrateTime  datetime2 [note: "Дата миграции"]
+  MigrateMessage nvarchar(max) [note: "Сообщение при миграции (обычно в случае ошибки)"]
+}
+
+// Таблица-коллекция «Коды ОКВЭД»
+Table OkvedCodesCollection [note: "Таблица-коллекция [Коды ОКВЭД]"]{
+  Id bigint       [pk, increment]
+  MigrationId int [ note: "Идентификатор номера итерации миграции"]
+  DocPaydoxId   nvarchar(150) [not null, note: "PaydoxId документа"]
+  OkvedPaydoxId nvarchar(150) [note: "Наименование - Внешний ИД справочника Коды ТМЦ"]
+  Code nvarchar(30) [note: "Код"]
+  Result       nvarchar(50)  [note: "Результат миграции: Migrated | MigratedWithNotes | MigratedError"]
+  MigrateTime  datetime2 [note: "Дата миграции"]
+  MigrateMessage nvarchar(max) [note: "Сообщение при миграции (обычно в случае ошибки)"]
+}
+
+// Таблица-коллекция «Внешние ссылки»
+Table ExternalLinksCollection [note: "Таблица-коллекция [Внешние ссылки]"]{
+  Id bigint       [pk, increment]
+  MigrationId int [ note: "Идентификатор номера итерации миграции"]
+  DocPaydoxId   nvarchar(150) [not null, note: "PaydoxId документа"]
+  Link nvarchar(250) [note: "Ссылка"]
+  Comment nvarchar(250) [note: "Комментарий"]
+  Result       nvarchar(50)  [note: "Результат миграции: Migrated | MigratedWithNotes | MigratedError"]
+  MigrateTime  datetime2 [note: "Дата миграции"]
+  MigrateMessage nvarchar(max) [note: "Сообщение при миграции (обычно в случае ошибки)"]
+}
+
+// Таблица «Права доступа»
+Table AccessRights [note: "Таблица [Права доступа]"]{
+  Id bigint       [pk, increment]
+  MigrationId int [ note: "Идентификатор номера итерации миграции"]
+  FirstDocPaydoxId   nvarchar(150) [not null, note: "PaydoxId документа"]
+  SecondDocPaydoxId   nvarchar(150) [not null, note: "PaydoxId документа"]
+  AccessRightType nvarchar(50) [not null, note: "Тип прав"]
+  Result       nvarchar(50)  [note: "Результат миграции: Migrated | MigratedWithNotes | MigratedError"]
+  MigrateTime  datetime2 [note: "Дата миграции"]
+  MigrateMessage nvarchar(max) [note: "Сообщение при миграции (обычно в случае ошибки)"]
+}
+
+// Таблица «Связи между документами»
+Table DocumentRelations [note: "Таблица [Связи между документами]"]{
+  Id bigint       [pk, increment]
+  MigrationId int [ note: "Идентификатор номера итерации миграции"]
+  FirstDocPaydoxId   nvarchar(150) [not null, note: "PaydoxId документа"]
+  SecondDocPaydoxId   nvarchar(150) [not null, note: "PaydoxId документа"]
+  RelationType nvarchar(50) [not null, note: "Тип связи"]
+  Result       nvarchar(50)  [note: "Результат миграции: Migrated | MigratedWithNotes | MigratedError"]
+  MigrateTime  datetime2 [note: "Дата миграции"]
+  MigrateMessage nvarchar(max) [note: "Сообщение при миграции (обычно в случае ошибки)"]
 }
 
 // Таблица «Версии документов»
 Table DocVersion [note: "Таблица [Версии документов]"] {
   Id              bigint          [pk, increment]
+  MigrationId int [ note: "Идентификатор номера итерации миграции"]
   PaydoxId  nvarchar(150)  [not null, note: "Идентификатор в системе PayDox"]
   AddendumPaydoxId  nvarchar(190)  [note: "Идентификатор приложения, сгенерированный DRX"]
-  MigrationId int [ note: "Идентификатор в системе PayDox"]
   RxId            bigint          [note: "Идентификатор в системе DRX"]
   Filepath        nvarchar(850)  [not null, unique, note: "Путь к файлу на сетевом диске"]
   Name            nvarchar(250)   [note: "Имя файла (приложения). Если это не основной документ, чтобы понимать как назвать карточку приложения"]
@@ -272,7 +576,7 @@ Table DocVersion [note: "Таблица [Версии документов]"] {
   IsMain          bit             [not null, note: "Признак основного документа"]
   IsSignature     bit             [not null, note: "Признак файла подписи"]
   MainDocFilepath nvarchar(850)  [ref: > DocVersion.Filepath, note: "Для подписи — ссылка на версию основного файла"]
-  Result          nvarchar(50)    [note: "Migrated | MigratedWithNotes | MigratedError"]
-  MigrateTime     datetime2
-  MigrateMessage  nvarchar(max)
+  Result       nvarchar(50)  [note: "Результат миграции: Migrated | MigratedWithNotes | MigratedError"]
+  MigrateTime  datetime2 [note: "Дата миграции"]
+  MigrateMessage nvarchar(max) [note: "Сообщение при миграции (обычно в случае ошибки)"]
 }
