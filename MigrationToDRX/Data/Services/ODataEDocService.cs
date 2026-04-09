@@ -100,10 +100,9 @@ public class ODataEDocService
                 { "type", 1 },
                 { "signatureBase64", Convert.ToBase64String(body)}
             };
-            await _odataClientService.ExecuteVoidBoundActionAsync(OdataNameSpaces.ExcelMigrator, OdataActionNames.ImportDocumentFromDb, dto, ct);
+            var result = await _odataClientService.ExecuteBoundActionAsSingleAsync<Dictionary<string, object>>(OdataNameSpaces.ExcelMigrator, OdataActionNames.ImportSignatureToDocumentAction, dto, ct);
+            return result;
         }
-
-        return eDoc;
     }
 
     /// <summary>

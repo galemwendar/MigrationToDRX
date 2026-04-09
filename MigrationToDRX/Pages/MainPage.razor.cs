@@ -1675,16 +1675,16 @@ public partial class MainPage
 
                             var rxDoxId = Convert.ToInt64(result.Entity["DocId"]);
                             var versionId = Convert.ToInt64(result.Entity?["VersionId"]);
-                            var paydoxId = result.Entity?["PaydoxId"].ToString() ?? string.Empty;
+                            var paydoxId = result.Entity?["PaydoxId"]?.ToString() ?? string.Empty;
 
                             await dbService.UpdateImportVersionDbMigrationResult(stage.SelectedTable,
                                 Convert.ToInt64(row["Id"]),
                                 rxDoxId,
                                 versionId,
                                 paydoxId,
-                                "Migrated", 
-                                DateTime.UtcNow, 
-                                MigrationId, 
+                                "Migrated",
+                                DateTime.UtcNow,
+                                MigrationId,
                                 result.EntityId);
                         }
                         else

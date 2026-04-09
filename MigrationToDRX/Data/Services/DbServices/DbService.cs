@@ -126,7 +126,8 @@ namespace MigrationToDRX.Data.Services.DbServices
             DateTime migrateDate,
             int migrationId,
             long? entityId,
-            string? message = null)
+            string? message = null,
+            string? mainFilePath = null)
         {
             var messageParam = message != null ? ", MigrateMessage = @Message" : "";
             var query = $"UPDATE {tablename} " +
@@ -140,9 +141,7 @@ namespace MigrationToDRX.Data.Services.DbServices
                 $"{messageParam} " +
                 $"WHERE Id = @RowId";
 
-            _logger.LogDebug("UpdateDbMigrationResult. Execute query {}", query);
-
-            await SqlConnection.ExecuteAsync(query, new
+            var parameters = new
             {
                 RxId = entityId,
                 MigrationId = migrationId,
@@ -152,8 +151,37 @@ namespace MigrationToDRX.Data.Services.DbServices
                 RxDocId = rxDocId,
                 RxVersionId = rxVersionId,
                 AddendumPaydoxId = addendumExternalId,
-                RowId = rowId
-            });
+                RowId = rowId,
+                MainFilePath = mainFilePath
+            };
+
+            _logger.LogDebug("UpdateDbMigrationResult. Execute query {}", query);
+
+            if (!string.IsNullOrEmpty(mainFilePath))
+            {
+                var query2 = $"UPDATE {tablename} " +
+                    $"SET RxId = @RxId, " +
+                    $"AddendumPaydoxId = @AddendumPaydoxId " +
+                    $"{messageParam} " +
+                    $"WHERE MainDocFilepath = @MainFilePath";
+
+                using var transaction = SqlConnection.BeginTransaction();
+                try
+                {
+                    await SqlConnection.ExecuteAsync(query, parameters, transaction);
+                    await SqlConnection.ExecuteAsync(query2, parameters, transaction);
+                    transaction.Commit();
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+            }
+            else
+            {
+                await SqlConnection.ExecuteAsync(query, parameters);
+            }
         }
 
         /// <summary>
