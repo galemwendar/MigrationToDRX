@@ -122,7 +122,7 @@ public class OperationService
 
             var searchEntity = await _odataClientService.GetEntityAsync(
                 dto.EntitySetName,
-                propertyName: "ExternalId",
+                propertyName: "ExternalIdrusal",
                 filterType: typeof(string),
                 filter: externalEntityId,
                 ct);

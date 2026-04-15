@@ -20,7 +20,7 @@ public static class OdataPropertyNames
     /// <summary>
     /// Строка для поиска свойства "ExternalId"
     /// </summary>
-    public const string ExternalId = "ExternalId";
+    public const string ExternalId = "ExternalIdrusal";
 
     /// <summary>
     /// Строка для поиска свойства "IsMainDoc"

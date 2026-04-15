@@ -24,5 +24,5 @@ public enum SearchEntityBy
     /// Идентификатор сущности
     /// </summary>
     [Display(Name = "Внешний идентификатор")]
-    ExternalId = 3
+    ExternalIdrusal = 3
 }
