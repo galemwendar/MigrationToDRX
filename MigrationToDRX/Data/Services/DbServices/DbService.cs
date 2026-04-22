@@ -90,8 +90,9 @@ namespace MigrationToDRX.Data.Services.DbServices
         /// <summary>
         /// Обновить состояние записи в БД
         /// </summary>
-        public async Task UpdateDbMigrationResult(string tablename, 
-            string externalId, 
+        public async Task UpdateDbMigrationResult(
+            long id,
+            string tablename, 
             string result, 
             DateTime migrateDate, 
             int migrationId, 
@@ -99,7 +100,12 @@ namespace MigrationToDRX.Data.Services.DbServices
             string? message = null)
         {
             var messageParam = message != null ? ", MigrateMessage = @Message" : "";
-            var query = $"UPDATE {tablename} SET RxId = @RxId, MigrationId = @MigrationId, Result = @Result, MigrateTime = @MigrateTime {messageParam} WHERE PaydoxId = @ExternalId";
+            var query = $"UPDATE {tablename} " +
+                $"SET RxId = @RxId, " +
+                $"MigrationId = @MigrationId, " +
+                $"Result = @Result, " +
+                $"MigrateTime = @MigrateTime {messageParam} " +
+                $"WHERE Id = @RowId";
 
             _logger.LogDebug("UpdateDbMigrationResult. Execute query {}", query);
 
@@ -110,7 +116,7 @@ namespace MigrationToDRX.Data.Services.DbServices
                 Result = result,
                 MigrateTime = migrateDate,
                 Message = message,
-                ExternalId = externalId
+                RowId = id,
             });
         }
 
@@ -127,7 +133,7 @@ namespace MigrationToDRX.Data.Services.DbServices
             int migrationId,
             long? entityId,
             string? message = null,
-            string? mainFilePath = null)
+            string? filepath = null)
         {
             var messageParam = message != null ? ", MigrateMessage = @Message" : "";
             var query = $"UPDATE {tablename} " +
@@ -152,18 +158,18 @@ namespace MigrationToDRX.Data.Services.DbServices
                 RxVersionId = rxVersionId,
                 AddendumPaydoxId = addendumExternalId,
                 RowId = rowId,
-                MainFilePath = mainFilePath
+                Filepath = filepath
             };
 
             _logger.LogDebug("UpdateDbMigrationResult. Execute query {}", query);
 
-            if (!string.IsNullOrEmpty(mainFilePath))
+            if (!string.IsNullOrEmpty(filepath))
             {
                 var query2 = $"UPDATE {tablename} " +
                     $"SET RxId = @RxId, " +
                     $"AddendumPaydoxId = @AddendumPaydoxId " +
                     $"{messageParam} " +
-                    $"WHERE MainDocFilepath = @MainFilePath";
+                    $"WHERE MainDocFilepath = @Filepath";
 
                 using var transaction = SqlConnection.BeginTransaction();
                 try

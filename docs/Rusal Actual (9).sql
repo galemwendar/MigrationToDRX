@@ -1,3 +1,14 @@
+IF NOT EXISTS (SELECT 1 FROM sys.databases WHERE name = 'RusalIntermediate')
+BEGIN
+    CREATE DATABASE [RusalIntermediate];
+    PRINT 'Database RusalIntermediate created';
+END
+GO
+
+-- Переключение на базу данных RusalIntermediate
+USE [RusalIntermediate];
+GO
+
 CREATE TABLE [UsdExchangeRatesByYear] (
   [Id] bigint PRIMARY KEY IDENTITY(1, 1),
   [PaydoxId] nvarchar(150) NOT NULL,
@@ -3889,3 +3900,20 @@ GO
 
 ALTER TABLE [DocVersion] ADD FOREIGN KEY ([MainDocFilepath]) REFERENCES [DocVersion] ([Filepath])
 GO
+
+
+INSERT INTO DocVersion
+(MigrationId, PaydoxId, AddendumPaydoxId, RxId, Filepath, Name, RxDocId, RxVersionId, IsMain, IsSignature, MainDocFilepath, [Result], MigrateTime, MigrateMessage)
+VALUES(1, N'Test', NULL, NULL, N'D:\Downloads\Выгрузка от 04.03.26 11_40_49\Версия документа.pdf', N'Договор №1', NULL, NULL, 1, 0, NULL, NULL, NULL, NULL);
+
+INSERT INTO DocVersion
+(MigrationId, PaydoxId, AddendumPaydoxId, RxId, Filepath, Name, RxDocId, RxVersionId, IsMain, IsSignature, MainDocFilepath, [Result], MigrateTime, MigrateMessage)
+VALUES(1, N'Test', NULL, NULL, N'D:\Downloads\Выгрузка от 04.03.26 11_40_49\Подпись к документу.sig', N'Договор №1 (подпись)', NULL, NULL, 0, 1, N'D:\Downloads\Выгрузка от 04.03.26 11_40_49\Версия документа.pdf', NULL, NULL, NULL);
+
+INSERT INTO DocVersion
+(MigrationId, PaydoxId, AddendumPaydoxId, RxId, Filepath, Name, RxDocId, RxVersionId, IsMain, IsSignature, MainDocFilepath, [Result], MigrateTime, MigrateMessage)
+VALUES(1, N'Test', NULL, NULL, N'D:\Downloads\Выгрузка от 04.03.26 11_40_49\Версия документа — копия.pdf', N'Договор №1', NULL, NULL, 0, 0, NULL, NULL, NULL, NULL);
+
+INSERT INTO DocVersion
+(MigrationId, PaydoxId, AddendumPaydoxId, RxId, Filepath, Name, RxDocId, RxVersionId, IsMain, IsSignature, MainDocFilepath, [Result], MigrateTime, MigrateMessage)
+VALUES(1, N'Test', NULL, NULL, N'D:\Downloads\Выгрузка от 04.03.26 11_40_49\Подпись к документу — копия.sig', N'Договор №1 (подпись)', NULL, NULL, 0, 1, N'D:\Downloads\Выгрузка от 04.03.26 11_40_49\Версия документа — копия.pdf', NULL, NULL, NULL);

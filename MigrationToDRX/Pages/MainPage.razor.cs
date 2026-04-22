@@ -1587,7 +1587,7 @@ public partial class MainPage
         using var dbService = new MssqlService(stage.ConnectionString, Logger);
         await dbService.ConnectAsync();
 
-        const int partition = 10;
+        const int partition = 1;
 
         // Получаем общее количество строк для корректного прогресс-бара
         var totalCount = await dbService.GetRowCountAsync(stage.SelectedTable, stage.SqlQuery, MigrationId);
@@ -1658,6 +1658,7 @@ public partial class MainPage
                 };
 
                 var externalId = row["PaydoxId"].ToString() ?? string.Empty;
+                var rowId = Convert.ToInt64(row["Id"]);
 
                 try
                 {
@@ -1675,35 +1676,37 @@ public partial class MainPage
 
                             var rxDoxId = Convert.ToInt64(result.Entity["DocId"]);
                             var versionId = Convert.ToInt64(result.Entity?["VersionId"]);
-                            var paydoxId = result.Entity?["PaydoxId"]?.ToString() ?? string.Empty;
+                            var paydoxId =  result.Entity?["PaydoxId"]?.ToString() ?? string.Empty;
+                            var filePath = row["Filepath"]?.ToString() ?? string.Empty;
 
                             await dbService.UpdateImportVersionDbMigrationResult(stage.SelectedTable,
                                 Convert.ToInt64(row["Id"]),
                                 rxDoxId,
                                 versionId,
-                                paydoxId,
+                                paydoxId,          
                                 "Migrated",
                                 DateTime.UtcNow,
                                 MigrationId,
-                                result.EntityId);
+                                result.EntityId,
+                                filepath: filePath);
                         }
                         else
                         {
-                            await dbService.UpdateDbMigrationResult(stage.SelectedTable, externalId, "Migrated", DateTime.UtcNow, MigrationId, result.EntityId);
+                            await dbService.UpdateDbMigrationResult(rowId, stage.SelectedTable, "Migrated", DateTime.UtcNow, MigrationId, result.EntityId);
                         }
                     }
                     else
                     {
                         Logger.LogError("ProcessMssqlStage. Ошибка обработки строки {}. Сообщение: {}", externalId, result.ErrorMessage);
                         errorRows++;
-                        await dbService.UpdateDbMigrationResult(stage.SelectedTable, externalId, "MigratedError", DateTime.UtcNow, MigrationId, result.EntityId, result.ErrorMessage);
+                        await dbService.UpdateDbMigrationResult(rowId, stage.SelectedTable, "MigratedError", DateTime.UtcNow, MigrationId, result.EntityId, result.ErrorMessage);
                     }
                 }
                 catch (Exception ex)
                 {
                     Logger.LogError(ex, "ProcessMssqlStage. Ошибка обработки строки {}", externalId);
                     errorRows++;
-                    await dbService.UpdateDbMigrationResult(stage.SelectedTable, externalId, "MigratedError", DateTime.UtcNow, MigrationId, null, ex.Message);
+                    await dbService.UpdateDbMigrationResult(rowId, stage.SelectedTable, "MigratedError", DateTime.UtcNow, MigrationId, null, ex.Message);
                 }
 
                 processedRows++;
@@ -1711,7 +1714,7 @@ public partial class MainPage
                 stage.LastProcessedRows = processedRows;
                 stage.LastSuccessfulRows = successRows;
                 stage.LastErrorRows = errorRows;
-                stage.ProgressPercent = totalCount > 0 ? (processedRows * 100) / totalCount : 100;
+                stage.ProgressPercent = totalCount > 0 ? processedRows * 100 / totalCount : 100;
                 await InvokeAsync(StateHasChanged);
             }
         }

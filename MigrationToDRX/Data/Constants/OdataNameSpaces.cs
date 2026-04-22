@@ -8,7 +8,7 @@ public static class OdataNameSpaces
     public const string Docflow = "Docflow";
 
     /// <summary>
-    /// namespace ExcelMigrator
+    /// namespace DatabaseMigrator
     /// </summary>
-    public const string ExcelMigrator = "ExcelMigrator";
+    public const string DatabaseMigrator = "DatabaseMigrator";
 }

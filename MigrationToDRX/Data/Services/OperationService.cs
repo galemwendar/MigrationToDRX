@@ -74,6 +74,7 @@ public class OperationService
     private async Task<OperationResult> CreateOrUpdateDocVersionOrLoadSignature(ProcessedEntityDto dto, CancellationToken ct)
     {
         var externalEntityId = EntityHelper.GetFieldValueFromEntityDtoString(dto, OdataPropertyNames.ExternalId);
+        var addendumExternalEntityId = EntityHelper.GetFieldValueFromEntityDtoString(dto, OdataPropertyNames.AddendumExternalId);
         var filePath = EntityHelper.GetFieldValueFromEntityDtoString(dto, OdataPropertyNames.Path);
         var isSignature = EntityHelper.GetFieldValueFromEntityDtoBoolean(dto, OdataPropertyNames.IsSignature);
         var isMainDoc = EntityHelper.GetFieldValueFromEntityDtoBoolean(dto, OdataPropertyNames.IsMainDoc);
@@ -96,10 +97,9 @@ public class OperationService
                 operationName: dto.Operation.GetDisplayName(),
                 errorMessage: $"CreateOrUpdateDocVersionOrLoadSignature. Не удалось найти сущность с ExternalId {externalEntityId} в DirectumRX");
 
-
-        var updatedEntity = await _odataEdocService.FindEdocAndSetBodyByExternalIdAsync(externalEntityId, filePath, isMainDoc, isSignature, ct);
-
-        return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName(), externalEntityId: externalEntityId, entity: updatedEntity);
+        var externalId = string.IsNullOrEmpty(addendumExternalEntityId) ? externalEntityId : addendumExternalEntityId;
+        var updatedEntity = await _odataEdocService.FindEdocAndSetBodyByExternalIdAsync(externalId, filePath, isMainDoc, isSignature, ct);
+        return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName(), externalEntityId: externalId, entity: updatedEntity);
     }
 
 
@@ -440,7 +440,7 @@ public class OperationService
     /// Переименовать примечание версии документа.
     /// </summary>
     private async Task<OperationResult> RenameVersionNoteAsync(ProcessedEntityDto dto, CancellationToken ct)
-        => await ExecuteSimpleActionAsync(OdataNameSpaces.ExcelMigrator, OdataActionNames.RenameVersionNoteAction, dto, ct);
+        => await ExecuteSimpleActionAsync(OdataNameSpaces.DatabaseMigrator, OdataActionNames.RenameVersionNoteAction, dto, ct);
 
     /// <summary>
     /// Выдать права на папку
@@ -482,7 +482,7 @@ public class OperationService
         {
             var parametres = await _entityService.BuildEntity(dto, ct);
             parametres = await _entityService.ReplaceFileContentInEntity(dto, parametres, OdataPropertyNames.Signature, ct);
-            return await _actionService.ExecuteActionAsync(OdataNameSpaces.ExcelMigrator, OdataActionNames.ImportSignatureToDocumentAction, parametres, ct);
+            return await _actionService.ExecuteActionAsync(OdataNameSpaces.DatabaseMigrator, OdataActionNames.ImportSignatureToDocumentAction, parametres, ct);
         }
         catch (Exception ex)
         {
@@ -532,7 +532,7 @@ public class OperationService
         {
             var parametres = await _entityService.BuildEntity(dto, ct);
             parametres = await _entityService.ReplaceFileContentInEntity(dto, parametres, OdataPropertyNames.Certificate, ct);
-            return await _actionService.ExecuteActionAsScalarAsync<long>(OdataNameSpaces.ExcelMigrator, OdataActionNames.ImportCertificateAction, parametres, ct);
+            return await _actionService.ExecuteActionAsScalarAsync<long>(OdataNameSpaces.DatabaseMigrator, OdataActionNames.ImportCertificateAction, parametres, ct);
         }
         catch (Exception ex)
         {

@@ -194,6 +194,7 @@ public static class OdataOperationHelper
                     StructuralProperies.IsMainDoc,
                     StructuralProperies.IsSignature,
                     StructuralProperies.MainDocFilepath,
+                    StructuralProperies.AddendumExternalId
                 });
                 break;
 

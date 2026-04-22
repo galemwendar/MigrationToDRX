@@ -31,6 +31,19 @@ public static class StructuralProperies
     };
 
     /// <summary>
+    /// Фейковое структурное поле Путь до файла
+    /// </summary>
+    /// <remarks>Является ключом для поиска файла на машине клиента
+    ///  при добавлении или обновлении версии документа
+    /// </remarks>
+    public static readonly StructuralPropertyDto AddendumExternalId = new()
+    {
+        Name = OdataPropertyNames.AddendumExternalId,
+        Type = "Edm.String",
+        Nullable = false
+    };
+
+    /// <summary>
     /// Фейковое структурное поле Признак основного документа
     /// </summary>
     /// <remarks>Является ключом для поиска файла на машине клиента
