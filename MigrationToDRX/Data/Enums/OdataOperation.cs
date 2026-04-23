@@ -109,6 +109,12 @@ public enum OdataOperation
     [Display(Name = "Создание версии документа по внешнему ключу или загрузка подписи")]
     CreateOrUpdateDocVersionOrLoadSignature = 17,
 
+    /// <summary>
+    /// Предоставление доступа к документу
+    /// </summary>
+    [Display(Name = "Выдача прав на документ по внешним ИД")]
+    GrantAccessRightsToDocumentFromExternalId = 18,
+
     #region Пакет разработки ExcelMigrator
 
     /// <summary>

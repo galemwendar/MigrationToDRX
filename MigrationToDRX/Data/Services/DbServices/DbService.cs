@@ -92,16 +92,18 @@ namespace MigrationToDRX.Data.Services.DbServices
         /// </summary>
         public async Task UpdateDbMigrationResult(
             long id,
-            string tablename, 
-            string result, 
-            DateTime migrateDate, 
-            int migrationId, 
-            long? entityId, 
-            string? message = null)
+            string tablename,
+            string result,
+            DateTime migrateDate,
+            int migrationId,
+            long? entityId,
+            string? message = null,
+            bool tableHasRxId = true)
         {
+            var updateRxIdSubquery = tableHasRxId ? "RxId = @RxId," : string.Empty;
             var messageParam = message != null ? ", MigrateMessage = @Message" : "";
             var query = $"UPDATE {tablename} " +
-                $"SET RxId = @RxId, " +
+                $"SET {updateRxIdSubquery} " +
                 $"MigrationId = @MigrationId, " +
                 $"Result = @Result, " +
                 $"MigrateTime = @MigrateTime {messageParam} " +

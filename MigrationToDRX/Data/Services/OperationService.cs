@@ -63,9 +63,21 @@ public class OperationService
             OdataOperation.ImportCertificate => await ImportCertificateAsync(dto, ct),
             OdataOperation.CreateOrUpdateEntity => await CreateOrUpdateEntityAsync(dto, ct),
             OdataOperation.CreateOrUpdateDocVersionOrLoadSignature => await CreateOrUpdateDocVersionOrLoadSignature(dto, ct),
+            OdataOperation.GrantAccessRightsToDocumentFromExternalId => await GrantAccessRightsToDocumentFromExternalId(dto, ct),
 
             _ => throw new ArgumentException("Не удалось обработать сценарий")
         };
+    }
+
+    /// <summary>
+    /// Выдать права на документ
+    /// </summary>
+    private async Task<OperationResult> GrantAccessRightsToDocumentFromExternalId(ProcessedEntityDto dto, CancellationToken ct)
+    {
+        var parametres = await _entityService.BuildEntity(dto, ct);
+        var result = await _odataClientService.ExecuteBoundActionAsSingleAsync<Dictionary<string, object>>(OdataNameSpaces.DatabaseMigrator, OdataActionNames.ImportAccessRightsCustom, parametres, ct);
+        var entityId = Convert.ToInt64(result["DocId"]);
+        return new OperationResult(success: true, operationName: dto.Operation.GetDisplayName(), entity: result, entityId: entityId);
     }
 
     /// <summary>

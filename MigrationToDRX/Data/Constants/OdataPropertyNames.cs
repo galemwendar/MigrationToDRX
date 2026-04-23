@@ -68,6 +68,21 @@ public static class OdataPropertyNames
     public const string RecipientId = "recipientId";
 
     /// <summary>
+    /// Строка для поиска свойства "recipientExternalId"
+    /// </summary>
+    public const string RecipientExternalId = "recipientExternalId";
+
+    /// <summary>
+    /// Строка для поиска свойства "docExternalId"
+    /// </summary>
+    public const string DocExternalId = "docExternalId";
+
+    /// <summary>
+    /// Строка для поиска свойства "recipientType"
+    /// </summary>
+    public const string RecipientType = "recipientType";
+
+    /// <summary>
     /// Строка для поиска свойства "taskId"
     /// </summary>
     public const string TaskId = "taskId";

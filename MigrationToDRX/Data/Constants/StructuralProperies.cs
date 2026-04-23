@@ -284,4 +284,34 @@ public static class StructuralProperies
         Type = "Edm.String",
         Nullable = false
     };
+
+    /// <summary>
+    /// Фейковое структурное поле recipientExternalId
+    /// </summary>
+    public static readonly StructuralPropertyDto RecipientExternalId = new()
+    {
+        Name = OdataPropertyNames.RecipientExternalId,
+        Type = "Edm.String",
+        Nullable = false
+    };
+
+    /// <summary>
+    /// Фейковое структурное поле docExternalId
+    /// </summary>
+    public static readonly StructuralPropertyDto DocExternalId = new()
+    {
+        Name = OdataPropertyNames.DocExternalId,
+        Type = "Edm.String",
+        Nullable = false
+    };
+
+    /// <summary>
+    /// Фейковое структурное поле docExternalId
+    /// </summary>
+    public static readonly StructuralPropertyDto RecipientType = new()
+    {
+        Name = OdataPropertyNames.RecipientType,
+        Type = "Edm.String",
+        Nullable = false
+    };
 }

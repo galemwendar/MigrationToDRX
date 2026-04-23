@@ -69,4 +69,9 @@ public static class OdataActionNames
     /// Наименования действия для импорта сертификата пользователя промежуточной БД
     /// </summary>
     public const string ImportDocumentFromDb = "ImportDocument";
+
+    /// <summary>
+    /// Импорт прав доступа
+    /// </summary>
+    public const string ImportAccessRightsCustom = "GrantAccessRightsToDocumentCustom";
 }

@@ -198,6 +198,16 @@ public static class OdataOperationHelper
                 });
                 break;
 
+            case OdataOperation.GrantAccessRightsToDocumentFromExternalId:
+                properties.AddFirstRange(new[]
+                {
+                    StructuralProperies.DocExternalId,
+                    StructuralProperies.RecipientExternalId,
+                    StructuralProperies.AccessRightTypeGuid,
+                    StructuralProperies.RecipientType
+                });
+                break;
+
             case OdataOperation.AddEntityToCollection:
             case OdataOperation.UpdateEntityInCollection:
                 properties.AddFirst(StructuralProperies.MainId);

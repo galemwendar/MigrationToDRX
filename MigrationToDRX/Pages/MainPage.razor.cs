@@ -1,17 +1,18 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.JSInterop;
 using Microsoft.OData.Edm;
 using MigrationToDRX.Data.Constants;
 using MigrationToDRX.Data.Enums;
 using MigrationToDRX.Data.Extensions;
 using MigrationToDRX.Data.Helpers;
 using MigrationToDRX.Data.Models.Dto;
-using MigrationToDRX.Data.Services;
-using Radzen;
-using Microsoft.JSInterop;
-using Radzen.Blazor;
-using MigrationToDRX.Data.Services.DbServices;
 using MigrationToDRX.Data.Models.ViewModels;
+using MigrationToDRX.Data.Services;
+using MigrationToDRX.Data.Services.DbServices;
 using MigrationToDRX.Data.Services.Settings;
+using Radzen;
+using Radzen.Blazor;
 namespace MigrationToDRX.Pages;
 
 public partial class MainPage
@@ -963,7 +964,8 @@ public partial class MainPage
         return operation == OdataOperation.ImportSignatureToDocument
             || operation == OdataOperation.RenameVersionNote
             || operation == OdataOperation.ImportCertificate
-            || operation == OdataOperation.CreateOrUpdateDocVersionOrLoadSignature;
+            || operation == OdataOperation.CreateOrUpdateDocVersionOrLoadSignature
+            || operation == OdataOperation.GrantAccessRightsToDocumentFromExternalId;
     }
 
     #region Управление этапами
@@ -1657,16 +1659,14 @@ public partial class MainPage
                     Operation = stage.Operation,
                 };
 
-                var externalId = row["PaydoxId"].ToString() ?? string.Empty;
                 var rowId = Convert.ToInt64(row["Id"]);
 
                 try
                 {
                     var result = await OperationService.ExecuteOperation(dto, ct);
-
                     if (result.Success)
                     {
-                        Logger.LogInformation("ProcessMssqlStage. Запись {} таблицы {} успешно загружена", externalId, stage.SelectedTable);
+                        Logger.LogInformation("ProcessMssqlStage. Запись {} таблицы {} успешно загружена", rowId, stage.SelectedTable);
                         successRows++;
 
                         if (stage.Operation == OdataOperation.CreateOrUpdateDocVersionOrLoadSignature)
@@ -1697,16 +1697,18 @@ public partial class MainPage
                     }
                     else
                     {
-                        Logger.LogError("ProcessMssqlStage. Ошибка обработки строки {}. Сообщение: {}", externalId, result.ErrorMessage);
+                        var tableHasRxId = stage.Operation != OdataOperation.GrantAccessRightsToDocumentFromExternalId && result.EntityId != null;
+                        Logger.LogError("ProcessMssqlStage. Ошибка обработки строки {}. Сообщение: {}", rowId, result.ErrorMessage);
                         errorRows++;
-                        await dbService.UpdateDbMigrationResult(rowId, stage.SelectedTable, "MigratedError", DateTime.UtcNow, MigrationId, result.EntityId, result.ErrorMessage);
+                        await dbService.UpdateDbMigrationResult(rowId, stage.SelectedTable, "MigratedError", DateTime.UtcNow, MigrationId, result.EntityId, result.ErrorMessage, tableHasRxId: tableHasRxId);
                     }
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, "ProcessMssqlStage. Ошибка обработки строки {}", externalId);
+                    var tableHasRxId = false;
+                    Logger.LogError(ex, "ProcessMssqlStage. Ошибка обработки строки {}", rowId);
                     errorRows++;
-                    await dbService.UpdateDbMigrationResult(rowId, stage.SelectedTable, "MigratedError", DateTime.UtcNow, MigrationId, null, ex.Message);
+                    await dbService.UpdateDbMigrationResult(rowId, stage.SelectedTable, "MigratedError", DateTime.UtcNow, MigrationId, null, ex.Message, tableHasRxId: tableHasRxId);
                 }
 
                 processedRows++;
