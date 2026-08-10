@@ -739,7 +739,7 @@ public class OdataClientService
         }
     }
 
-        /// <summary>
+    /// <summary>
     /// Выполнить действие на сервере, если действие существует (IsBound = true)
     /// </summary>
     /// <param name="actionName">Имя действия</param>

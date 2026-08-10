@@ -38,6 +38,8 @@ public static class OdataOperationHelper
         StructuralProperies.NumberVersionId,
         StructuralProperies.EmployeeId,
         StructuralProperies.Certificate,
+        StructuralProperies.XmlDataBase64,
+        StructuralProperies.SignatureDataBase64,
     };
 
     /// <summary>
@@ -65,7 +67,8 @@ public static class OdataOperationHelper
         OdataOperation.CreateEntity,
         OdataOperation.UpdateEntity,
         OdataOperation.CreateChildFolder,
-        OdataOperation.ImportCertificate
+        OdataOperation.ImportCertificate,
+        OdataOperation.ImportFormalizedPoABodyAndSign
     };
 
     /// <summary>
@@ -249,6 +252,12 @@ public static class OdataOperationHelper
             case OdataOperation.ImportCertificate:
                 properties.AddFirst(StructuralProperies.EmployeeId);
                 properties.AddFirst(StructuralProperies.Path);
+                break;
+
+            case OdataOperation.ImportFormalizedPoABodyAndSign:
+                properties.AddFirst(StructuralProperies.DocumentId);
+                properties.AddFirst(StructuralProperies.XmlDataBase64);
+                properties.AddFirst(StructuralProperies.SignatureDataBase64);
                 break;
 
             default:

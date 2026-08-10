@@ -52,6 +52,7 @@ public class OperationService
             OdataOperation.AddRelations => await AddRelationsAsync(dto, ct),
             OdataOperation.RenameVersionNote => await RenameVersionNoteAsync(dto, ct),
             OdataOperation.ImportCertificate => await ImportCertificateAsync(dto, ct),
+            OdataOperation.ImportFormalizedPoABodyAndSign => await ImportFormalizedPoABodyAndSignAsync(dto, ct),
 
             _ => throw new ArgumentException("Не удалось обработать сценарий")
         };
@@ -423,6 +424,12 @@ public class OperationService
             return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
         }
     }
+
+    /// <summary>
+    /// Импортировать xml фаил эл. доверенности и подпись в новую версию документа.
+    /// </summary>
+    private async Task<OperationResult> ImportFormalizedPoABodyAndSignAsync(ProcessedEntityDto dto, CancellationToken ct)
+        => await ExecuteSimpleActionAsync(OdataNameSpaces.Docflow, OdataActionNames.ImportFormalizedPoABodyAndSignAction, dto, ct);
 
     /// <summary> 
     /// Выполнить действие на сервере, если действие существует (IsBound = true) и возвращает void

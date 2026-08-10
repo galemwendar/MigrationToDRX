@@ -126,4 +126,14 @@ public static class OdataPropertyNames
     /// Строка для поиска свойства "certificateBase64"
     /// </summary>
     public const string Certificate = "certificateBase64";
+
+    /// <summary>
+    /// Строка для поиска свойства "xmlDataBase64"
+    /// </summary>
+    public const string XmlDataBase64 = "xmlDataBase64";
+
+    /// <summary>
+    /// Строка для поиска свойства "signatureDataBase64"
+    /// </summary>
+    public const string SignatureDataBase64 = "signatureDataBase64";
 }
