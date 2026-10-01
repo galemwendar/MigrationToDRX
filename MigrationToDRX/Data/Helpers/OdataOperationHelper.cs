@@ -255,9 +255,9 @@ public static class OdataOperationHelper
                 break;
 
             case OdataOperation.ImportFormalizedPoABodyAndSign:
-                properties.AddFirst(StructuralProperies.DocumentId);
-                properties.AddFirst(StructuralProperies.XmlDataBase64);
                 properties.AddFirst(StructuralProperies.SignatureDataBase64);
+                properties.AddFirst(StructuralProperies.XmlDataBase64);
+                properties.AddFirst(StructuralProperies.DocumentId);
                 break;
 
             default:

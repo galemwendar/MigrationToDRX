@@ -429,7 +429,19 @@ public class OperationService
     /// Импортировать xml фаил эл. доверенности и подпись в новую версию документа.
     /// </summary>
     private async Task<OperationResult> ImportFormalizedPoABodyAndSignAsync(ProcessedEntityDto dto, CancellationToken ct)
-        => await ExecuteSimpleActionAsync(OdataNameSpaces.Docflow, OdataActionNames.ImportFormalizedPoABodyAndSignAction, dto, ct);
+    {
+        try
+        {
+            var parametres = await _entityService.BuildEntity(dto, ct);
+            parametres = await _entityService.ReplaceXmlAndSignContentInEntity(dto, parametres, OdataPropertyNames.XmlDataBase64, OdataPropertyNames.SignatureDataBase64, ct);
+            return await _actionService.ExecuteActionAsScalarAsync<long>(OdataNameSpaces.Docflow, OdataActionNames.ImportFormalizedPoABodyAndSignAction, parametres, ct);
+        }
+        catch (Exception ex)
+        {
+            return new OperationResult(success: false, operationName: dto.Operation.GetDisplayName(), errorMessage: ex.Message);
+        }
+    }
+       // => await ExecuteSimpleActionAsync(OdataNameSpaces.Docflow, OdataActionNames.ImportFormalizedPoABodyAndSignAction, dto, ct);
 
     /// <summary> 
     /// Выполнить действие на сервере, если действие существует (IsBound = true) и возвращает void

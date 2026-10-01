@@ -63,6 +63,50 @@ public static class EntityHelper
     }
 
     /// <summary>
+    /// Получает путь к xml из EntityDto
+    /// </summary>
+    /// <param name="dto">Построенная сущность</param>
+    /// <returns>строка с путем для файла</returns>
+    public static string GetXmlPathFromEntityDto(ProcessedEntityDto dto)
+    {
+        var filePathKey = dto.ColumnMapping
+            .Where(kvp => kvp.Value is StructuralPropertyDto sf && sf.Name == OdataPropertyNames.XmlDataBase64)
+            .Select(kvp => kvp.Key)
+            .SingleOrDefault();
+
+        string filePath = "";
+
+        if (filePathKey != null && dto.Row.TryGetValue(filePathKey, out var raw) && !string.IsNullOrWhiteSpace(raw))
+        {
+            filePath = raw!.ToString()!.Trim();
+        }
+
+        return filePath;
+    }
+
+    /// <summary>
+    /// Получает путь к подписи xml из EntityDto
+    /// </summary>
+    /// <param name="dto">Построенная сущность</param>
+    /// <returns>строка с путем для файла</returns>
+    public static string GetSignPathFromEntityDto(ProcessedEntityDto dto)
+    {
+        var filePathKey = dto.ColumnMapping
+            .Where(kvp => kvp.Value is StructuralPropertyDto sf && sf.Name == OdataPropertyNames.SignatureDataBase64)
+            .Select(kvp => kvp.Key)
+            .SingleOrDefault();
+
+        string filePath = "";
+
+        if (filePathKey != null && dto.Row.TryGetValue(filePathKey, out var raw) && !string.IsNullOrWhiteSpace(raw))
+        {
+            filePath = raw!.ToString()!.Trim();
+        }
+
+        return filePath;
+    }
+
+    /// <summary>
     /// Получает список свойств сущности в зависимости от ее структуры в Odata
     /// </summary>
     /// <param name="dto">DTO сущности</param>
