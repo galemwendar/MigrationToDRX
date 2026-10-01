@@ -1,8 +1,9 @@
-using System.Text;
 using Microsoft.OData.Edm;
 using MigrationToDRX.Data.Models.Dto;
 using NLog;
 using Simple.OData.Client;
+using System.Net;
+using System.Text;
 
 namespace MigrationToDRX.Data.Services;
 
@@ -34,12 +35,20 @@ public class OdataClientService
     /// <returns>Возвращает true, если соединение установлено успешно, иначе false.</returns>
     public async Task<bool> SetConnection(string url, string userName, string password)
     {
-        var settings = new ODataClientSettings(new Uri(url));
+        var settings = new ODataClientSettings(new Uri(url), CredentialCache.DefaultNetworkCredentials)
+        {
+            OnApplyClientHandler = handler =>
+            {
+                handler.UseDefaultCredentials = true;
+                handler.ServerCertificateCustomValidationCallback = (message, cert, chain, sslPolicyErrors) => true;
+            }
+        };
         settings.IgnoreResourceNotFoundException = true;
         settings.OnTrace = (x, y) =>
         {
             logger.Trace(string.Format(x, y));
         };
+
         settings.RequestTimeout = new TimeSpan(0, 0, 600);
         settings.BeforeRequest += delegate (HttpRequestMessage message)
         {
@@ -49,7 +58,7 @@ public class OdataClientService
         settings.AfterResponse += httpResonse => { _ = httpResonse; };
 
         try
-        {
+        {          
             _client = new ODataClient(settings);
             _metadata = await _client.GetMetadataAsync<IEdmModel>();
             _container = _metadata.EntityContainer;
