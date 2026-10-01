@@ -88,4 +88,20 @@ public class EntityService
 
         return entity;
     }
+
+    public async Task<IDictionary<string, object>> ReplaceXmlAndSignContentInEntity(ProcessedEntityDto dto, IDictionary<string, object> entity, string odataProperyNameXml, string odataProperyNameSign, CancellationToken ct)
+    {
+        var pathToFileXml = EntityHelper.GetXmlPathFromEntityDto(dto);
+        var fileContentXml = await _fileService.GetFileAsBase64Async(pathToFileXml);
+
+        var pathToFileSign = EntityHelper.GetSignPathFromEntityDto(dto);
+        var fileContentSign = await _fileService.GetFileAsBase64Async(pathToFileSign);
+
+        entity.Remove(OdataPropertyNames.XmlDataBase64);
+        entity.Remove(OdataPropertyNames.SignatureDataBase64);
+        entity.Add(odataProperyNameXml, fileContentXml);
+        entity.Add(odataProperyNameSign, fileContentSign);
+
+        return entity;
+    }
 }

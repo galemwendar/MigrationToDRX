@@ -4,7 +4,7 @@ namespace MigrationToDRX.Data.Constants;
 
 public static class StructuralProperies
 {
-        /// <summary>
+    /// <summary>
     /// Фейковое структурное поле MainId
     /// </summary>
     /// <remarks>Является ключом для поиска сущности при обновлении 
@@ -216,6 +216,26 @@ public static class StructuralProperies
     public static readonly StructuralPropertyDto Certificate = new()
     {
         Name = OdataPropertyNames.Certificate,
+        Type = "Edm.String",
+        Nullable = false
+    };
+
+    /// <summary>
+    /// Фейковое структурное поле xmlDataBase64
+    /// </summary>
+    public static readonly StructuralPropertyDto XmlDataBase64 = new()
+    {
+        Name = OdataPropertyNames.XmlDataBase64,
+        Type = "Edm.String",
+        Nullable = false
+    };
+
+    /// <summary>
+    /// Фейковое структурное поле signatureDataBase64
+    /// </summary>
+    public static readonly StructuralPropertyDto SignatureDataBase64 = new()
+    {
+        Name = OdataPropertyNames.SignatureDataBase64,
         Type = "Edm.String",
         Nullable = false
     };

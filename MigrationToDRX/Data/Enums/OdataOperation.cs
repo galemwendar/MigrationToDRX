@@ -97,6 +97,11 @@ public enum OdataOperation
     [Display(Name = "Создание версии из шаблона")]
     CreateVersionFromTemplate = 15,
 
+    /// <summary>
+    /// Импортировать МЧД и подпись в новую версию документа
+    /// </summary>
+    [Display(Name = "Импортировать МЧД и подпись в новую версию документа")]
+    ImportFormalizedPoABodyAndSign = 16,
 
     #region Пакет разработки ExcelMigrator
 
